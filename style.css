@@ -1099,7 +1099,7 @@ input, textarea, select{font-size:16px}
 
 /* ponsel: lebih padat, seperti aplikasi (tampilan lebih kecil, area ketuk tetap 44px) */
 @media (max-width:480px){
-  body{font-size:14px;line-height:1.45}
+  body{font-size:15px;line-height:1.45}
   .col{padding-left:14px;padding-right:14px}
   .logo.sm{width:28px;height:28px}
   .brand{font-size:15px}
