@@ -1334,7 +1334,7 @@ function setView(v){
 window.addEventListener("hashchange", () => { const v = location.hash === "#admin" ? "admin" : (view === "admin" ? "shop" : view); if (v !== view) setView(v); });
 $("to-admin").onclick = () => setView("admin");
 $("to-shop").onclick = $("to-shop-top").onclick = () => setView("shop");
-document.querySelectorAll("[data-help]").forEach(b => { b.onclick = () => setView("help"); });
+document.querySelectorAll("[data-help]").forEach(b => { b.onclick = () => { setView("help"); const u = lsGet(LS.cust); if (u && u.hp && !$("ck-hp").value) $("ck-hp").value = u.hp; }; });
 $("help-back").onclick = () => setView("shop");
 document.querySelectorAll("[data-home]").forEach(l => { l.onclick = e => { e.preventDefault(); closeSheets(); setView("shop"); go(1); }; });
 
