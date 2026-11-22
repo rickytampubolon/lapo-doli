@@ -458,6 +458,12 @@ $$;
 revoke all on function public.po_remaining() from public;
 grant execute on function public.po_remaining() to anon, authenticated;
 
+-- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
+create or replace function public.schema_version()
+returns integer language sql immutable as $$ select 7 $$;
+revoke all on function public.schema_version() from public;
+grant execute on function public.schema_version() to anon, authenticated;
+
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to anon, authenticated;
 

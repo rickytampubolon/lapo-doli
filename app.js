@@ -1275,8 +1275,14 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
+const SCHEMA_VERSION = 7;
+async function checkSchema(){
+  let v = 0;
+  try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
+  $("schema-warn").hidden = v >= SCHEMA_VERSION;
+}
 function startAdmin(){
-  refreshOrders();
+  checkSchema(); refreshOrders();
   if (!ordersChannel) ordersChannel = sb.channel("lapo-orders").on("postgres_changes", { event:"*", schema:"public", table:"orders" }, () => debounced("orders", refreshOrders)).subscribe();
 }
 function stopAdmin(){ if (ordersChannel) { sb.removeChannel(ordersChannel); ordersChannel = null; } orders = []; ordersState = "loading"; }
