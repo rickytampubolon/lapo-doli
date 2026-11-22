@@ -264,7 +264,8 @@ function updateBar(){
   document.querySelectorAll("[data-wa]").forEach(x => { x.textContent = fmtWa(settings.waNumber); });
   document.querySelectorAll("[data-cutoff]").forEach(x => { x.textContent = cutoffLabel(); });
   $("closed-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, kapan PO berikutnya dibuka?")}`;
-  $("bar").hidden = screen !== 1 || (poList() !== null && openPos().length === 0);
+  const noPo = screen === 1 && poList() !== null && openPos().length === 0;
+  $("bar").hidden = screen !== 1 || noPo; $("shop").classList.toggle("no-po", noPo);
   $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
 }
 function summaryHTML(gs){

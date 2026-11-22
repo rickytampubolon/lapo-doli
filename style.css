@@ -58,11 +58,11 @@ button,input,textarea,select{font:inherit;color:inherit}
 #shop.has-bar{padding-bottom:150px}
 #shop section{display:none}
 #shop section.show{display:block}
-.closed{margin:44px 0 20px;color:var(--muted);max-width:26em}
-.closed .rebung{display:block;width:56px;height:14px;margin-bottom:16px;background:var(--accent);-webkit-mask:var(--tri) left bottom/14px 7px repeat-x;mask:var(--tri) left bottom/14px 7px repeat-x}
-.closed h2{margin:0 0 6px;font-family:var(--head);font-size:1.4rem;font-weight:600;color:var(--ink)}
-.closed p{margin:0 0 18px;line-height:1.55}
-.closed .btn{display:inline-block;width:auto;padding:12px 22px;text-decoration:none}
+.closed{display:flex;flex-direction:column;align-items:center;text-align:center;margin:0 auto;padding:8px 0 24px}
+.closed .emptylogo{width:148px;height:148px;margin-bottom:8px}
+.closed h2{margin:0 0 6px;font-family:var(--head);font-size:1.5rem;font-weight:600;color:var(--ink)}
+.closed p{margin:0 0 22px;color:var(--muted);max-width:20em;text-wrap:balance}
+.closed .btn{display:inline-flex;align-items:center;justify-content:center;width:auto;padding:12px 26px;text-decoration:none}
 .chips{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 6px;margin:0 -2px;scrollbar-width:none;scroll-snap-type:x proximity}
 .chips::-webkit-scrollbar{display:none}
 .cbtn{flex:none;scroll-snap-align:start;position:relative;display:grid;justify-items:center;gap:0;min-width:74px;padding:10px 14px 9px;border:1px solid var(--line);background:#fff;border-radius:14px;font-weight:500;cursor:pointer;color:var(--ink);line-height:1.15}
@@ -477,3 +477,9 @@ textarea{min-height:84px;resize:vertical}
   #admin .toolbar .sel{flex:1 1 0;min-width:0}
   #admin .rk-tools .sel{flex:1 1 100%}
 }
+
+/* PO kosong: satu layar tenang, tanpa sampul */
+.no-po .cover{display:none}
+.no-po main{min-height:calc(100svh - 80px);display:flex;align-items:center;justify-content:center}
+.no-po main > section{width:100%}
+.no-po #foot{display:none}
