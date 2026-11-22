@@ -684,10 +684,9 @@ textarea{min-height:84px;resize:vertical}
 
 /* =========================================================
    Tampilan pembeli: penyegaran
-   Kebraniannya di dua tempat: keranjang melayang berujung kain ulos, dan penanda langkah.
+   Kebraniannya di dua tempat: keranjang melayang dan penanda langkah. Aksen ulos hanya di header.
    ========================================================= */
 :root{
-  --ulos-edge:linear-gradient(to right,#9a3b2f 0 2px,#f1e0c8 2px 3px,#6a2b24 3px 4px,#9a3b2f 4px 6px);
   --lift:0 10px 28px rgba(59,44,39,.15);
   --lift-s:0 2px 10px rgba(59,44,39,.07);
 }
@@ -714,10 +713,9 @@ textarea{min-height:84px;resize:vertical}
 .meta span{background:var(--soft);padding:6px 12px 6px 9px;border-radius:999px;color:var(--ink);font-size:.86rem}
 .meta .ic{color:var(--accent)}
 
-/* kartu tanggal: tepi ulos saat dipilih */
+/* kartu tanggal */
 .cbtn{border-radius:14px;box-shadow:var(--lift-s)}
 .cbtn[aria-pressed=true]{padding-top:13px;box-shadow:0 6px 16px rgba(125,58,49,.28)}
-.cbtn[aria-pressed=true]::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;border-radius:14px 14px 0 0;background:var(--ulos-h)}
 .cbtn .dnum{font-size:1.45rem}
 
 /* daftar menu */
@@ -726,16 +724,14 @@ textarea{min-height:84px;resize:vertical}
 .item h3{font-family:var(--head);font-size:1.12rem;letter-spacing:.005em}
 .price{font-family:var(--head);font-weight:600;font-size:1.02rem}
 .item.on{position:relative;padding-left:18px;box-shadow:none;border-radius:0 16px 16px 0;background:linear-gradient(to right,var(--amber-soft),transparent 90%)}
-.item.on::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:6px;border-radius:4px;background:var(--ulos-edge)}
 .item .vpanel{border:1px solid var(--line);border-radius:14px;padding:4px 12px;background:rgba(251,248,242,.7)}
 .vrow{padding:7px 0;border-top:1px dashed var(--line)}
 .vrow:first-child{border-top:0}
 .pickbtn{border-radius:999px;background:var(--card);box-shadow:var(--lift-s)}
 .left{font-weight:600}
 
-/* keranjang melayang berujung ulos */
+/* keranjang melayang */
 .bar{left:50%;right:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 24px));transform:translateX(-50%);padding:15px 10px 10px 12px;border:1px solid var(--line);border-radius:20px;background:var(--card);box-shadow:var(--lift);overflow:hidden}
-.bar::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--ulos-h)}
 .bar .in{max-width:none;gap:12px}
 .cartic{position:relative;flex:none;width:44px;height:44px;border-radius:14px;background:var(--amber-soft);color:var(--accent);display:grid;place-items:center}
 .cartic .ic{width:22px;height:22px}
@@ -762,7 +758,6 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 
 /* layar bayar */
 .paybox{position:relative;overflow:hidden;padding-top:24px;border-radius:18px;box-shadow:var(--lift)}
-.paybox::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--ulos-h)}
 .payamt b{color:var(--accent);font-size:2.15rem}
 .status .title{font-size:1.45rem}
 .proofok{border-radius:14px}
@@ -782,8 +777,12 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 #form .err{min-height:0;margin-top:3px}
 .meta{gap:6px}
 .meta span{padding:5px 9px 5px 7px}
-.cbtn[aria-pressed=true]::before{height:5px}
 .meta span{font-size:.8rem;gap:5px}
 .meta .ic{width:16px;height:16px}
-.cbtn[aria-pressed=true]::before{top:6px;left:14px;right:14px;height:3px;border-radius:0;background:none;border-top:1px solid rgba(243,223,203,.65);border-bottom:1px solid rgba(227,169,95,.95)}
 .dlv:empty{display:none}
+
+/* aksen ulos hanya di header: kembalikan jarak dan tanda terpilih yang polos */
+.cbtn[aria-pressed=true]{padding-top:7px;box-shadow:0 4px 10px rgba(125,58,49,.22)}
+.item.on{padding-left:14px;box-shadow:inset 3px 0 0 var(--amber)}
+.bar{padding:10px 10px 10px 12px}
+.paybox{padding-top:14px}
