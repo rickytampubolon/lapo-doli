@@ -681,3 +681,109 @@ textarea{min-height:84px;resize:vertical}
 .schemawarn{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:var(--amber-soft);border:1px solid var(--amber);color:var(--warn);font-size:.9rem;line-height:1.45}
 .schemawarn .ic{width:20px;height:20px;margin-top:1px}
 .schemawarn code{background:rgba(59,44,39,.08);padding:1px 6px;border-radius:6px;font-size:.88em}
+
+/* =========================================================
+   Tampilan pembeli: penyegaran
+   Kebraniannya di dua tempat: keranjang melayang berujung kain ulos, dan penanda langkah.
+   ========================================================= */
+:root{
+  --ulos-edge:linear-gradient(to right,#9a3b2f 0 2px,#f1e0c8 2px 3px,#6a2b24 3px 4px,#9a3b2f 4px 6px);
+  --lift:0 10px 28px rgba(59,44,39,.15);
+  --lift-s:0 2px 10px rgba(59,44,39,.07);
+}
+
+/* penanda langkah: hanya di layar data dan bayar */
+.steps{display:flex;align-items:center;list-style:none;margin:14px 0 2px;padding:0}
+.home .steps,.no-po .steps{display:none}
+.steps li{display:flex;align-items:center;gap:8px;flex:1;color:var(--muted);font-size:.86rem;font-weight:500;white-space:nowrap}
+.steps li:last-child{flex:none}
+.steps li:not(:last-child)::after{content:"";flex:1;height:2px;margin:0 10px;border-radius:2px;background:var(--line)}
+.steps li.done:not(:last-child)::after{background:var(--accent)}
+.steps i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);background:var(--card);font-size:.78rem;font-weight:600}
+.steps i .ic{width:14px;height:14px}
+.steps li.now{color:var(--ink);font-weight:600}
+.steps li.now i{background:var(--hero);border-color:var(--hero);color:var(--on-accent)}
+.steps li.done i{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+/* beranda: dua langkah bernomor, info jam sebagai pil lembut */
+#s1{counter-reset:st}
+#s1 .label{counter-increment:st;display:flex;align-items:center;font-family:var(--head);font-size:1.05rem;font-weight:600;margin:18px 0 10px}
+#s1 .label::before{content:counter(st);display:inline-grid;place-items:center;width:24px;height:24px;margin-right:10px;border-radius:50%;background:var(--hero);color:var(--on-accent);font-family:var(--font);font-size:.78rem;font-weight:600}
+#s1 .label small{font-family:var(--font);margin-left:8px}
+.meta{gap:8px}
+.meta span{background:var(--soft);padding:6px 12px 6px 9px;border-radius:999px;color:var(--ink);font-size:.86rem}
+.meta .ic{color:var(--accent)}
+
+/* kartu tanggal: tepi ulos saat dipilih */
+.cbtn{border-radius:14px;box-shadow:var(--lift-s)}
+.cbtn[aria-pressed=true]{padding-top:13px;box-shadow:0 6px 16px rgba(125,58,49,.28)}
+.cbtn[aria-pressed=true]::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;border-radius:14px 14px 0 0;background:var(--ulos-h)}
+.cbtn .dnum{font-size:1.45rem}
+
+/* daftar menu */
+.thumb{width:86px;height:86px;border-radius:18px;box-shadow:var(--lift-s),inset 0 0 0 1px rgba(59,44,39,.06)}
+.item{padding:14px 0}
+.item h3{font-family:var(--head);font-size:1.12rem;letter-spacing:.005em}
+.price{font-family:var(--head);font-weight:600;font-size:1.02rem}
+.item.on{position:relative;padding-left:18px;box-shadow:none;border-radius:0 16px 16px 0;background:linear-gradient(to right,var(--amber-soft),transparent 90%)}
+.item.on::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:6px;border-radius:4px;background:var(--ulos-edge)}
+.item .vpanel{border:1px solid var(--line);border-radius:14px;padding:4px 12px;background:rgba(251,248,242,.7)}
+.vrow{padding:7px 0;border-top:1px dashed var(--line)}
+.vrow:first-child{border-top:0}
+.pickbtn{border-radius:999px;background:var(--card);box-shadow:var(--lift-s)}
+.left{font-weight:600}
+
+/* keranjang melayang berujung ulos */
+.bar{left:50%;right:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 24px));transform:translateX(-50%);padding:15px 10px 10px 12px;border:1px solid var(--line);border-radius:20px;background:var(--card);box-shadow:var(--lift);overflow:hidden}
+.bar::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--ulos-h)}
+.bar .in{max-width:none;gap:12px}
+.cartic{position:relative;flex:none;width:44px;height:44px;border-radius:14px;background:var(--amber-soft);color:var(--accent);display:grid;place-items:center}
+.cartic .ic{width:22px;height:22px}
+.cartic i{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--hero);color:var(--on-accent);font-style:normal;font-size:.72rem;font-weight:600;display:grid;place-items:center}
+.bar .t b{font-family:var(--head);font-size:1.15rem}
+.bar .btn{border-radius:14px;padding:12px 22px}
+#shop.has-bar{padding-bottom:132px}
+@keyframes bump{40%{transform:scale(1.16)}}
+@media (prefers-reduced-motion:no-preference){.cartic.bump{animation:bump .32s ease}}
+
+/* checkout */
+#s2 .title,#s3 .title{font-family:var(--head)}
+#s2 .sum{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--lift-s)}
+.sum .total{font-family:var(--head);font-size:1.2rem}
+#s2 .label{font-family:var(--head);font-size:1.02rem;margin:22px 0 10px}
+.seg{background:var(--card);border-radius:14px;box-shadow:var(--lift-s)}
+.seg label{border-radius:11px}
+.seg .sl{display:flex;align-items:center;justify-content:center;gap:7px}
+.seg .sl .ic{width:18px;height:18px}
+.lb .ic{width:15px;height:15px;margin-right:7px;vertical-align:-3px;color:var(--accent)}
+input[type=text],input[type=tel],input[type=number],input[type=date],textarea,select{background:var(--card);border-radius:12px}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(154,59,47,.14)}
+#paid{border-radius:14px;padding:14px;font-size:1.02rem}
+
+/* layar bayar */
+.paybox{position:relative;overflow:hidden;padding-top:24px;border-radius:18px;box-shadow:var(--lift)}
+.paybox::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--ulos-h)}
+.payamt b{color:var(--accent);font-size:2.15rem}
+.status .title{font-size:1.45rem}
+.proofok{border-radius:14px}
+#d-up{border-radius:14px;padding:14px}
+.lastcard{border-radius:16px;box-shadow:var(--lift-s)}
+
+/* bantuan */
+.faq{border-top:0}
+.faq details{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;padding:0 14px}
+.faq summary{padding:13px 0}
+.checkcard{border-radius:16px;box-shadow:var(--lift-s)}
+
+/* penyesuaian setelah review */
+.meta span{font-size:.82rem;padding:5px 10px 5px 8px}
+.cbtn[aria-pressed=true]{box-shadow:0 4px 10px rgba(125,58,49,.22)}
+#form .lb{margin-top:14px}
+#form .err{min-height:0;margin-top:3px}
+.meta{gap:6px}
+.meta span{padding:5px 9px 5px 7px}
+.cbtn[aria-pressed=true]::before{height:5px}
+.meta span{font-size:.8rem;gap:5px}
+.meta .ic{width:16px;height:16px}
+.cbtn[aria-pressed=true]::before{top:6px;left:14px;right:14px;height:3px;border-radius:0;background:none;border-top:1px solid rgba(243,223,203,.65);border-bottom:1px solid rgba(227,169,95,.95)}
+.dlv:empty{display:none}
