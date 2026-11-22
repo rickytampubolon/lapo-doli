@@ -158,7 +158,7 @@ function renderPoChips(){
   if (!list.length) { el.innerHTML = ""; $("poinfo").textContent = ""; return; }
   if (!list.some(x => x.id === activePo)) activePo = list[0].id;
   el.innerHTML = list.map(po => { const n = countFor(po.id);
-    return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}">${esc(dShort(po.date))}${n ? `<span class="cnt">${n}</span>` : ""}</button>`; }).join("");
+    return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const act = list.find(x => x.id === activePo);
   $("poinfo").textContent = (hours() === pickHours() ? `Antar di Jakarta atau ambil sendiri, jam ${hours()}.` : `Antar di Jakarta jam ${hours()}, ambil sendiri jam ${pickHours()}.`) + ` Pesan paling lambat pukul ${cutoffLabel()} hari itu.` + (list.length > 1 ? " Boleh pilih lebih dari satu tanggal." : "");
 }
@@ -262,6 +262,8 @@ function updateBar(){
   document.querySelectorAll("[data-pickhours]").forEach(x => { x.textContent = pickHours(); });
   document.querySelectorAll("[data-wa]").forEach(x => { x.textContent = fmtWa(settings.waNumber); });
   document.querySelectorAll("[data-cutoff]").forEach(x => { x.textContent = cutoffLabel(); });
+  $("closed-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, kapan PO berikutnya dibuka?")}`;
+  $("bar").hidden = screen !== 1 || (poList() !== null && openPos().length === 0);
   $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
 }
 function summaryHTML(gs){

@@ -6,6 +6,7 @@
 <title>Lapo Doli</title>
 <meta name="description" content="Lapo Doli: masakan Batak rumahan. Pre-order tiap minggu, antar di Jakarta atau ambil sendiri.">
 <meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="light">
 <link rel="icon" href="/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/favicon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&display=swap">
@@ -29,12 +30,21 @@
     <div class="brandrow"><span class="logo sm" role="img" aria-label="Logo Lapo Doli"></span><span class="brand">Lapo Doli</span></div>
     <button class="hlink" data-help type="button">Bantuan</button>
   </div></header>
+  <div class="cover"><div class="col">
+    <h1 class="title">Masakan Batak rumahan, pre‑order tiap minggu.</h1>
+    <p class="lede">Dimasak tiap minggu dan hanya lewat pre‑order. Pilih tanggal, pilih menu, lalu bayar.</p>
+    <span class="logo big" role="img" aria-label="Logo Lapo Doli"></span>
+  </div></div>
   <div class="pattern" aria-hidden="true"></div>
   <main class="col">
 
     <section id="s1" class="show">
-      <h1 class="title">Masakan Batak rumahan, pre-order tiap minggu.</h1>
-      <div class="closed" id="closed" hidden>Belum ada PO yang dibuka. PO berikutnya segera dibuka, pantau terus ya.</div>
+      <div class="closed" id="closed" hidden>
+        <span class="rebung" aria-hidden="true"></span>
+        <h2>PO belum dibuka</h2>
+        <p>Kami membuka pre-order tiap minggu. Chat admin untuk tahu jadwal berikutnya.</p>
+        <a class="btn" id="closed-wa" target="_blank" rel="noopener">Chat admin di WhatsApp</a>
+      </div>
       <div id="po-wrap">
         <div class="label">Pilih tanggal PO</div>
         <div class="chips" id="pochips"></div>
