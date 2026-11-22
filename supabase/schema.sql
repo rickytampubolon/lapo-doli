@@ -92,7 +92,7 @@ create table if not exists public.orders (
   pay_status  text not null default 'cek' check (pay_status in ('cek', 'lunas', 'ditolak')),
   status      text not null default 'baru' check (status in ('baru', 'diproses', 'diantar', 'selesai', 'batal'))
 );
--- kode unik 1-499 yang ditambahkan ke jumlah bayar (hanya di pesanan pertama dari satu kali checkout)
+-- kode unik 1-100 yang ditambahkan ke jumlah bayar (hanya di pesanan pertama dari satu kali checkout)
 alter table public.orders add column if not exists kode integer not null default 0 check (kode between 0 and 999);
 -- jalur foto bukti bayar di bucket privat 'proofs' (kosong = belum ada)
 alter table public.orders add column if not exists proof_path text not null default '';
@@ -338,7 +338,7 @@ begin
           select coalesce(sum((i.value ->> 'qty')::integer), 0) into v_sold
           from public.orders o, jsonb_array_elements(o.items) i
           where o.po_id = po.id and o.status <> 'batal' and o.pay_status <> 'ditolak'
-            and not (o.pay_status = 'cek' and o.proof_path = '' and o.created_at < now() - interval '3 hours')
+            and not (o.pay_status = 'cek' and o.proof_path = '' and o.created_at < now() - interval '1 hour')
             and i.value ->> 'pid' = k and not coalesce((i.value ->> 'addon')::boolean, false);
           if v_sold + (mainq ->> k)::integer > v_quota then
             raise exception 'sold_out:%:%', k, greatest(0, v_quota - v_sold);
@@ -358,14 +358,14 @@ begin
   end loop;
   v_count := jsonb_array_length(built);
 
-  -- Kode unik 1-499 dibuat di server: tidak sama dengan pesanan lain yang masih menunggu bayar dengan total yang sama
+  -- Kode unik 1-100 dibuat di server: tidak sama dengan pesanan lain yang masih menunggu bayar dengan total yang sama
   if v_use_kode then
-    for n_try in 1..40 loop
-      v_kode := 1 + floor(random() * 499)::integer;
+    for n_try in 1..100 loop
+      v_kode := 1 + floor(random() * 100)::integer;
       exit when not exists (
         select 1 from public.orders o
         where o.kode = v_kode and o.group_total = v_total_all and o.pay_status = 'cek'
-          and o.status <> 'batal' and o.created_at > now() - interval '3 hours');
+          and o.status <> 'batal' and o.created_at > now() - interval '1 hour');
     end loop;
   end if;
 
@@ -453,6 +453,27 @@ $$;
 revoke all on function public.attach_proof(text, text, text) from public;
 grant execute on function public.attach_proof(text, text, text) to anon, authenticated;
 
+-- Pembeli membatalkan pesanannya sendiri selama belum ada bukti bayar dan belum dikonfirmasi.
+-- Dicocokkan dengan kode gabungan (gid) dan nomor HP yang sama. Setelah bukti terkirim, pembatalan lewat admin.
+create or replace function public.cancel_orders(p_gid text, phone text)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare n integer;
+begin
+  if p_gid !~ '^[A-Z0-9]{8}$' then return 0; end if;
+  update public.orders set status = 'batal'
+   where gid = p_gid and public.norm_hp(hp) = public.norm_hp(phone)
+     and status = 'baru' and pay_status = 'cek' and proof_path = '';
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+revoke all on function public.cancel_orders(text, text) from public;
+grant execute on function public.cancel_orders(text, text) to anon, authenticated;
+
 -- ---------------------------------------------------------------------
 -- 6b. Sisa kuota per menu dan tanggal PO (dibaca publik, hanya angka)
 -- ---------------------------------------------------------------------
@@ -469,7 +490,7 @@ as $$
     select o.po_id, i.value ->> 'pid' as pid, sum((i.value ->> 'qty')::integer) as sold
     from public.orders o, jsonb_array_elements(o.items) i
     where o.status <> 'batal' and o.pay_status <> 'ditolak'
-      and not (o.pay_status = 'cek' and o.proof_path = '' and o.created_at < now() - interval '3 hours')
+      and not (o.pay_status = 'cek' and o.proof_path = '' and o.created_at < now() - interval '1 hour')
       and not coalesce((i.value ->> 'addon')::boolean, false)
     group by 1, 2
   ) s on s.po_id = p.id and s.pid = pr.id
@@ -480,7 +501,7 @@ grant execute on function public.po_remaining() to anon, authenticated;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 12 $$;
+returns integer language sql immutable as $$ select 13 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

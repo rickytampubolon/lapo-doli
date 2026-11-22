@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261122i">
+<link rel="stylesheet" href="/style.css?v=20261122m">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -61,8 +61,10 @@
         <div class="meta np" id="np" hidden></div>
         <a class="btn" id="closed-wa" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg><span id="closed-wa-t">Chat admin</span></a>
       </div>
+      <div class="quick" id="quick" hidden>
       <button class="lastcard" id="lastorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span class="lc-t"><b id="lc-id"></b></span><span class="chip" id="lc-chip"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button>
       <button class="reorder" id="reorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg><span id="reorder-t">Pesan seperti sebelumnya</span></button>
+      </div>
       <div id="po-wrap">
         <div class="label">Pilih tanggal <small>dimasak khusus di tanggal itu</small></div>
         <div class="chips" id="pochips"></div>
@@ -141,6 +143,7 @@
         <label class="btn filebtn" id="d-up"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg><span id="d-up-t">Unggah bukti bayar</span><input type="file" accept="image/*" id="d-file" aria-label="Unggah foto bukti bayar"></label>
       </div>
       <p class="proofok" id="d-proofok" hidden><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>Bukti terkirim. Kami cek secepatnya.</span></p>
+      <button class="textbtn cancelbtn" id="cancel-order" type="button" hidden>Batalkan pesanan</button>
       <ul class="dlv" id="track" style="margin-top:18px"></ul>
       <button class="textbtn" id="copy-status" type="button">Salin link status pesanan</button>
       <div class="sum" id="sum3" style="margin-top:18px"></div>
@@ -175,8 +178,8 @@
       <details><summary>Apa itu PO?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Boleh pesan beberapa tanggal sekaligus dan bayar sekali. PO tutup pukul <span data-cutoff></span> di hari itu.</p></details>
       <details><summary>Antar atau ambil sendiri?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Antar ke Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir <span data-ongkir></span> per tanggal. Ambil sendiri di <span data-pickloc></span>, jam <span data-pickhours></span>, tanpa ongkir.</p></details>
       <details><summary>Nasi dan sop tambahan<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Muncul setelah menu utama dipilih. Jumlahnya maksimal sama dengan menu utama.</p></details>
-      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah kamu transfer dan mengunggah bukti bayar di halaman pesanan, admin mengecek lalu mengubah statusnya. Transfer paling lambat 3 jam setelah memesan, lewat itu porsimu bisa dipakai orang lain.</p></details>
-      <details><summary>Ubah atau batalkan pesanan?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Hubungi admin lewat WhatsApp dengan nomor pesanan.</p></details>
+      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah kamu transfer dan mengunggah bukti bayar di halaman pesanan, admin mengecek lalu mengubah statusnya. Transfer paling lambat 1 jam setelah memesan, lewat itu porsimu bisa dipakai orang lain.</p></details>
+      <details><summary>Ubah atau batalkan pesanan?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Selama belum kirim bukti bayar, batalkan sendiri lewat tombol Batalkan pesanan di halaman bayar. Kalau sudah kirim bukti, hubungi admin lewat WhatsApp dengan nomor pesanan.</p></details>
     </div>
     <a class="btn ink" id="help-wa" style="margin-top:20px" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Chat admin</a>
   </main>
@@ -225,7 +228,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261122i"></script>
+<script defer src="/app.js?v=20261122m"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

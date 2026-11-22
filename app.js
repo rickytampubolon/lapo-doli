@@ -83,6 +83,7 @@ const api = {
     const path = gid + "/" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + ".jpg";
     must(await sb.storage.from("proofs").upload(path, blob, { contentType:blob.type || "image/jpeg", cacheControl:"3600", upsert:false })); return path;
   },
+  cancelOrders: async (gid, phone) => must(await sb.rpc("cancel_orders", { p_gid:gid, phone })),
   attachProof: async (gid, phone, path) => must(await sb.rpc("attach_proof", { p_gid:gid, phone, p_path:path })),
   proofUrl: async path => { const r = await sb.storage.from("proofs").createSignedUrl(path, 600); if (r.error) throw r.error; return r.data.signedUrl; },
   trackOrders: async (ids, phone) => must(await sb.rpc("track_orders", { ids, phone }))
@@ -192,7 +193,7 @@ function renderMenu(){
   const act = pl.find(x => x.id === activePo) || pl[0];
   el.innerHTML = list.map((p, i) => {
     const opts = optsOf(p), adds = addonsOf(p), k = act.id + "::" + p.id, img = imgSrc(p), rem = remainOf(act.id, p.id), off = p.available === false || rem === 0, showP = opts.some(o => o.custom);
-    const thumb = img ? `<img class="thumb" src="${esc(img)}" alt="${esc(p.name)}" width="96" height="96" loading="${i < 2 ? "eager" : "lazy"}" decoding="async">` : `<div class="thumb tile" aria-hidden="true">${esc(p.emoji || "🍽️")}</div>`;
+    const thumb = img ? `<img class="thumb" src="${esc(img)}" alt="${esc(p.name)}" width="96" height="96" loading="${i < 2 ? "eager" : "lazy"}" decoding="async" data-fallback="${esc(p.emoji || "🍽️")}">` : `<div class="thumb tile" aria-hidden="true">${esc(p.emoji || "🍽️")}</div>`;
     const custom = !off && (opts.length > 0 || adds.length > 0);
     const ctl = off ? '<span class="soldout">Habis</span>' : custom ? '<button type="button" class="addbtn" data-pick aria-haspopup="dialog" aria-expanded="false">Tambah</button>' : stepper(k, p.name);
     const addsHTML = !off && adds.length ? `<div class="subs adds" data-po="${esc(act.id)}" data-pid="${esc(p.id)}" hidden><div class="subs-title">Tambahan</div>${adds.map(a => { const ak = addonKey(act.id, p.id, a.id);
@@ -353,7 +354,9 @@ function renderReorder(){
   const snap = lsGet(LS.snap), mains = snap ? Object.keys(snap.cart).filter(k => !isAddonKey(k)).reduce((t, k) => t + snap.cart[k], 0) : 0;
   const show = screen === 1 && mains > 0 && !qtyTotal() && openPos().length > 0 && dbState === "ok";
   $("reorder").hidden = !show; if (show) $("reorder-t").textContent = "Pesan seperti sebelumnya (" + mains + " porsi)";
+  syncQuick();
 }
+function syncQuick(){ const q = $("quick"); if (q) q.hidden = $("lastorder").hidden && $("reorder").hidden; }
 function reorder(){
   const snap = lsGet(LS.snap), po = openPos().find(x => x.id === activePo) || openPos()[0]; if (!snap || !po) return;
   let skipped = 0; const pids = new Set();
@@ -449,14 +452,15 @@ function renderCheckout(){
   renderPayInfo();
 }
 let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false, placedRejected = false, placedAt = 0;
-const PAY_WINDOW_MS = 3 * 36e5;   // sama dengan aturan server: belum bayar dan belum ada bukti > 3 jam tidak menahan kuota
+const PAY_WINDOW_MS = 36e5;   // sama dengan aturan server: belum bayar dan belum ada bukti > 1 jam tidak menahan kuota
 function renderTtl(){
   const el = $("d-ttl"), on = payVisible && !placedProof && placedAt > 0;
   el.hidden = !on; if (!on) return;
-  const ms = placedAt + PAY_WINDOW_MS - Date.now(), m = Math.max(0, Math.floor(ms / 6e4)), h = Math.floor(m / 60);
+  const ms = placedAt + PAY_WINDOW_MS - Date.now(), s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), d = s % 60;
   el.classList.toggle("late", ms <= 0);
-  el.textContent = ms <= 0 ? "Batas 3 jam sudah lewat, porsimu bisa sudah terpakai orang lain. Unggah bukti, admin akan memeriksa." : "Bayar dalam " + (h >= 1 ? h + " jam " + (m % 60) + " menit" : m + " menit") + " supaya porsimu aman.";
+  el.textContent = ms <= 0 ? "Batas 1 jam sudah lewat, porsimu bisa sudah terpakai orang lain. Unggah bukti, admin akan memeriksa." : "Bayar dalam " + (m >= 1 ? m + " menit " + d + " detik" : d + " detik") + " supaya porsimu aman.";
 }
+setInterval(() => { if (screen === 3 && !document.hidden && !$("d-ttl").hidden) renderTtl(); }, 1000);
 document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; saveCart(); renderCheckout(); });
 function renderPayInfo(){
   const hasQ = !!settings.qrisUrl;
@@ -469,6 +473,7 @@ function renderPay(){
   const need = payVisible && (!placedProof || placedRejected);
   $("d-proofwrap").hidden = !need; $("d-proofok").hidden = !(payVisible && placedProof && !placedRejected);
   $("d-up-t").textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar";
+  $("cancel-order").hidden = !(payVisible && !placedProof); if ($("cancel-order").hidden) resetCancel();
   renderTtl();
   const box = $("d-pay"); box.hidden = !payVisible; if (!payVisible) return;
   $("d-amt").textContent = rp(placedPay.total + placedPay.kode);
@@ -505,6 +510,22 @@ $("d-file").onchange = async e => {
     toast("Bukti terkirim"); renderTracker(); track("bukti_terkirim");
   } catch (err) { toast("Bukti belum terkirim. Periksa koneksi lalu coba lagi."); }
   finally { lab.classList.remove("busy"); t.textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar"; }
+};
+let cancelArmT = null;
+function resetCancel(){ clearTimeout(cancelArmT); const b = $("cancel-order"); b.classList.remove("arm"); b.textContent = "Batalkan pesanan"; }
+$("cancel-order").onclick = async () => {
+  const b = $("cancel-order"), gid = placed[0] && placed[0].gid; if (!gid || !sb) return;
+  if (!b.classList.contains("arm")) { b.classList.add("arm"); b.textContent = "Yakin batalkan pesanan?"; clearTimeout(cancelArmT); cancelArmT = setTimeout(resetCancel, 5000); return; }
+  clearTimeout(cancelArmT); b.disabled = true; b.textContent = "Membatalkan...";
+  try {
+    const n = await api.cancelOrders(gid, trackHp);
+    if (n > 0) {
+      placed.forEach(o => { const c = trackConf[o.id] || (trackConf[o.id] = { payStatus:"cek", status:"baru" }); c.status = "batal"; });
+      lsSet(LS.last, null); lastData = null; renderLast(); toast("Pesanan dibatalkan"); track("pesanan_dibatalkan");
+      renderTracker();
+    } else { toast("Pesanan ini sudah tidak bisa dibatalkan di sini. Hubungi admin."); pollTrack(); }
+  } catch (err) { toast("Belum berhasil membatalkan. Periksa koneksi lalu coba lagi."); }
+  finally { b.disabled = false; resetCancel(); }
 };
 $("copy-status").onclick = () => copyText(location.origin + "/?cek=" + placed.map(o => o.id).join(","), $("copy-status"), "Link status disalin");
 $("copy-no").onclick = () => copyText(String(settings.bankNumber), $("d-bank-no"), "Nomor rekening disalin");
@@ -626,12 +647,12 @@ $("again").onclick = () => {
 let lastData = null, lastRows = {};
 function renderLast(){
   const el = $("lastorder");
-  if (!lastData) { el.hidden = true; return; }
+  if (!lastData) { el.hidden = true; syncQuick(); return; }
   const cs = lastData.placed.map(o => lastRows[o.id] || { payStatus:"cek", status:"baru" });
-  if (cs.every(c => c.status === "selesai" || c.status === "batal")) { lsSet(LS.last, null); lastData = null; el.hidden = true; return; }
+  if (cs.every(c => c.status === "selesai" || c.status === "batal")) { lsSet(LS.last, null); lastData = null; el.hidden = true; syncQuick(); return; }
   const i = Math.max(0, cs.findIndex(c => c.payStatus !== "lunas")), [lb, cl] = statusLabel({ fulfil:lastData.placed[i].fulfil, payStatus:cs[i].payStatus, status:cs[i].status, proof:cs[i].proof || lastData.proof });
   $("lc-id").textContent = lastData.placed.map(o => o.id).join(", ");
-  $("lc-chip").className = "chip " + cl; $("lc-chip").textContent = lb; el.hidden = false;
+  $("lc-chip").className = "chip " + cl; $("lc-chip").textContent = lb; el.hidden = false; syncQuick();
 }
 async function pollLast(){
   if (!lastData || !sb) return;
@@ -652,10 +673,12 @@ function initLast(){
 /* ================= ADMIN ================= */
 const NEXT = { baru:"diproses", diproses:"diantar", diantar:"selesai" };
 const nextLabel = o => (o.fulfil === "ambil" ? { baru:"Mulai proses", diproses:"Tandai siap diambil", diantar:"Tandai sudah diambil" } : { baru:"Mulai proses", diproses:"Tandai sudah dikirim", diantar:"Tandai sudah sampai" })[o.status];
+const LATE_MS = 36e5;
+const isLate = o => o.payStatus === "cek" && !o.proofPath && o.status !== "batal" && o.source !== "wa" && Date.now() - new Date(o.createdAt).getTime() > LATE_MS;
 function statusChip(o){
   if (o.status === "batal") return ["Dibatalkan", ""];
   if (o.payStatus === "ditolak") return ["Bayar ditolak", "bad"];
-  if (o.payStatus !== "lunas") return ["Menunggu cek bayar", "warn"];
+  if (o.payStatus !== "lunas") return isLate(o) ? ["Lewat batas", "bad"] : o.proofPath ? ["Cek bukti", "warn"] : ["Belum bayar", "warn"];
   const pk = o.fulfil === "ambil";
   return ({ baru:["Siap diproses", "info"], diproses:["Sedang diproses", "info"], diantar:[pk ? "Siap diambil" : "Dalam pengiriman", "info"], selesai:[pk ? "Sudah diambil" : "Terkirim", "ok"] })[o.status] || ["Siap diproses", "info"];
 }
@@ -666,7 +689,7 @@ function primaryAct(o){
   return null;
 }
 let orders = [], ordersState = "loading", filter = null, poFilter = "semua", tab = "orders";
-const busy = new Set(), expanded = new Set(); let armCancel = null, armDel = null, armPoDel = null;
+const busy = new Set(), expanded = new Set(); let armCancel = null, armDel = null, armPoDel = null, armLate = false;
 
 function setOrders(rows){
   orders = rows.slice().sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
@@ -697,7 +720,7 @@ function orderRow(o){
     if (o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")) sec += `<button class="btn line sm" data-act="pay_undo" ${dis}>${ic("undo")}Batalkan konfirmasi</button>`;
     if (o.status !== "selesai") sec += armCancel === o.id ? `<button class="btn danger sm cancel" data-act="cancel" ${dis}>Yakin batalkan?</button>` : `<button class="btn line sm cancel" data-act="arm_cancel" ${dis}>${ic("ban")}Batalkan pesanan</button>`;
   }
-  return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
+  return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${isLate(o) ? "late" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
       <span class="num">${esc(o.id)}</span>
       <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}</div><div class="o3">${esc(summary)}</div></div>
@@ -723,6 +746,11 @@ function orderRow(o){
       <div class="acts full">${o.proofPath ? `<button class="btn line sm" data-proof="${esc(o.proofPath)}" type="button">${ic("image")}Lihat bukti</button>` : ""}<a class="btn line sm" href="${esc(wa)}" target="_blank" rel="noopener">${ic("chat")}Chat pelanggan</a>${sec}</div>
     </div>` : ""}</article>`;
 }
+const lateOrders = () => orders.filter(o => (poFilter === "semua" || o.poId === poFilter) && isLate(o));
+function lateBar(base, cur){
+  const n = base.filter(isLate).length; if (!n || (cur !== "cek" && cur !== "semua")) return "";
+  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam. Porsinya sudah tidak ditahan.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
+}
 function renderAdminOrders(){
   const el = $("a-orders");
   if (ordersState === "loading") { el.innerHTML = '<p class="note">Memuat pesanan...</p>'; return; }
@@ -743,6 +771,7 @@ function renderAdminOrders(){
       <select id="f-po" class="sel" aria-label="Filter tanggal PO"><option value="semua">Semua tanggal</option>${poOpts.map(p => `<option value="${esc(p.id)}" ${p.id === poFilter ? "selected" : ""}>${esc(dShort(p.date))}</option>`).join("")}</select>
       <button class="btn sm add" data-newopen type="button">${ic("plus")}Pesanan</button>
     </div>
+    ${lateBar(base, cur)}
     ${dates.length ? dates.map(d => { const os = byPo[d], por = os.reduce((a, o) => a + o.items.filter(i => !i.addon).reduce((s, i) => s + (Number(i.qty) || 0), 0), 0);
       const sum = os.filter(o => o.status !== "batal" && o.payStatus !== "ditolak").reduce((t, o) => t + o.total, 0);
       return `<div class="group"><span>${d === "-" ? "Tanggal PO tidak tercatat" : esc(dLong(d))}</span><span>${os.length} pesanan, ${por} porsi, <b>${rp(sum)}</b></span></div><div class="olist">${os.map(orderRow).join("")}</div>`; }).join("")
@@ -762,7 +791,15 @@ $("a-orders").addEventListener("click", async e => {
   if (pb) { try { openLightbox(await api.proofUrl(pb.dataset.proof)); } catch (err) { toast("Bukti belum bisa dibuka. Coba lagi."); } return; }
   if (e.target.closest("[data-newopen]")) { openNew(); return; }
   const fb = e.target.closest("[data-filter]");
-  if (fb) { filter = fb.dataset.filter; armCancel = null; renderAdminOrders(); return; }
+  if (fb) { filter = fb.dataset.filter; armCancel = null; armLate = false; renderAdminOrders(); return; }
+  if (e.target.closest("[data-late]")) {
+    const ls = lateOrders(); if (!ls.length) { armLate = false; renderAdminOrders(); return; }
+    if (!armLate) { armLate = true; renderAdminOrders(); return; }
+    armLate = false; ls.forEach(x => busy.add(x.id)); renderAdminOrders();
+    try { await api.updateOrders(ls.map(x => x.id), { status:"batal" }); await refreshOrders(); toast(ls.length + " pesanan dibatalkan"); }
+    catch (err) { toast("Gagal menyimpan. Coba lagi."); }
+    ls.forEach(x => busy.delete(x.id)); renderAdminOrders(); return;
+  }
   const row = e.target.closest("[data-oid]");
   if (e.target.closest("[data-toggle]") && row) { const id = row.dataset.oid; if (expanded.has(id)) { expanded.delete(id); armCancel = null; } else expanded.add(id); renderAdminOrders(); return; }
   const b = e.target.closest("[data-act]"); if (!b || !row) return;
@@ -1000,7 +1037,7 @@ function renderAdminMenu(){
           <button class="textbtn ${armDel === p.id ? "dangerbtn" : ""}" data-del type="button">${armDel === p.id ? "Yakin hapus menu ini?" : ic("trash") + "Hapus"}</button></div>
       </div></div>`).join("");
   el.innerHTML = `
-    <div class="toolbar"><span></span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
+    <div class="toolbar"><span class="note" style="margin:0">${assetsNs ? "Ketuk gambar untuk ganti foto. Foto dipotong persegi dari tengah, paling bagus terang dan dari atas." : ""}</span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
     ${rows || `<div class="empty">Belum ada menu.<br><button class="btn sm" style="display:inline-block;margin-top:12px" data-seed>Isi menu awal</button></div>`}`;
 }
 const menuEl = $("a-menu");
@@ -1012,11 +1049,16 @@ function renderMenuSafe(){
 }
 menuEl.addEventListener("focusout", () => setTimeout(() => { if (menuDirty) renderMenuSafe(); }, 50));
 menuEl.addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.adv) { if (d.open) advOpen.add(d.dataset.adv); else advOpen.delete(d.dataset.adv); } }, true);
-async function shrink(file, max = 900){
+async function shrink(file, max = 900, square = false){
   try {
-    const bmp = await createImageBitmap(file), s = Math.min(1, max / Math.max(bmp.width, bmp.height));
-    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
-    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    const bmp = await createImageBitmap(file), c = document.createElement("canvas");
+    if (square) {   /* foto menu dipotong persegi dari tengah supaya seragam */
+      const side = Math.min(bmp.width, bmp.height), out = Math.min(800, side);
+      c.width = c.height = out; c.getContext("2d").drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, out, out);
+    } else {
+      const s = Math.min(1, max / Math.max(bmp.width, bmp.height)); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+      c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    }
     return await new Promise(r => c.toBlob(r, "image/jpeg", 0.82)) || file;
   } catch (e) { return file; }
 }
@@ -1027,7 +1069,7 @@ menuEl.addEventListener("change", async e => {
     if (t.matches("[data-up]")) {
       const f = t.files[0]; if (!f || !assetsNs) return;
       toast("Mengunggah foto...");
-      const blob = await shrink(f);
+      const blob = await shrink(f, 900, true);
       const path = await api.uploadImage(blob);
       await api.updateProduct(pid, { image:path }); await refreshProducts(); toast("Foto tersimpan");
       return;
@@ -1087,7 +1129,7 @@ function renderAdminSet(){
       <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti" : "Unggah"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus QRIS</button>' : ""}</div></div></div></section>
     <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("check")}</span><div><h3>Kode unik</h3></div></div>
       <label class="switch"><input type="checkbox" id="s-uc" data-s="uniqueCode" ${s.uniqueCode !== false ? "checked" : ""}><span class="track"></span><span>${s.uniqueCode !== false ? "Aktif" : "Mati"}</span></label>
-      <p class="fhint">Tambah Rp 1 sampai 499 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
+      <p class="fhint">Tambah Rp 1 sampai 100 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
     <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("phone")}</span><div><h3>Kontak</h3></div></div><div class="fgrid">
       ${f("s-wa", "waNumber", "WhatsApp admin (62...)", s.waNumber, 'inputmode="numeric"')}
     </div></section>`;
@@ -1425,7 +1467,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 12;
+const SCHEMA_VERSION = 13;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
@@ -1466,3 +1508,9 @@ async function init(){
   setInterval(() => { if (document.hidden) return; refreshProducts(); refreshPos(); refreshSettings(); if (isAdmin) refreshOrders(); }, 45000);
 }
 init();
+
+/* foto gagal dimuat: ganti dengan ubin emoji supaya tidak ada kotak rusak */
+document.addEventListener("error", e => {
+  const im = e.target; if (!im || im.tagName !== "IMG" || !im.classList.contains("thumb") || im.dataset.fallback == null) return;
+  const d = document.createElement("div"); d.className = "thumb tile"; d.setAttribute("aria-hidden", "true"); d.textContent = im.dataset.fallback; im.replaceWith(d);
+}, true);
