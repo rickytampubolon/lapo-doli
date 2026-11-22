@@ -1,0 +1,11 @@
+{
+  "name": "Lapo Doli",
+  "short_name": "Lapo Doli",
+  "description": "Pre-order masakan Batak rumahan.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf7f0",
+  "theme_color": "#000000",
+  "lang": "id",
+  "icons": [{ "src": "/favicon.png", "sizes": "any", "type": "image/png" }]
+}

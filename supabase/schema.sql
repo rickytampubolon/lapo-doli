@@ -155,6 +155,7 @@ returns text language sql immutable as $$
   select case when d like '0%' then '62' || substr(d, 2) else d end
   from (select regexp_replace(coalesce(t, ''), '\D', '', 'g') as d) s;
 $$;
+create index if not exists orders_hp_idx on public.orders (public.norm_hp(hp), created_at desc);
 
 -- ---------------------------------------------------------------------
 -- 5. Membuat pesanan (dipanggil pembeli dan admin)
@@ -217,6 +218,13 @@ begin
     v_area := ''; v_alamat := '';
   end if;
   v_notes := left(btrim(coalesce(payload ->> 'notes', '')), 300);
+  -- Batasi spam: satu nomor HP maksimal 5 kali kirim pesanan dalam 10 menit (admin dikecualikan)
+  if not as_admin and (
+       select count(distinct o.gid) from public.orders o
+       where o.created_at > now() - interval '10 minutes' and public.norm_hp(o.hp) = public.norm_hp(v_hp)
+     ) >= 5 then
+    raise exception 'rate_limited';
+  end if;
   v_source := case when as_admin then coalesce(nullif(payload ->> 'source', ''), 'wa') else 'web' end;
   v_paid := as_admin and coalesce((payload ->> 'paid')::boolean, false);
 
@@ -308,6 +316,12 @@ begin
       on conflict (po_id) do update set n = public.counters.n + 1
       returning n into seq;
     oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || lpad(seq::text, 2, '0');
+    -- Tanggal yang sama di tahun berikutnya memakai awalan DDMM yang sama: lewati nomor yang sudah terpakai
+    while exists (select 1 from public.orders where id = oid) loop
+      seq := seq + 1;
+      oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || lpad(seq::text, 2, '0');
+    end loop;
+    update public.counters set n = greatest(n, seq) where po_id = g ->> 'po_id';
     insert into public.orders (id, gid, po_id, po_date, source, nama, hp, fulfil, area, alamat, pickup_loc,
                                notes, method, items, ongkir, total, group_total, group_count, hours, pay_status)
     values (oid, v_gid, g ->> 'po_id', (g ->> 'po_date')::date, v_source, v_nama, v_hp, v_fulfil, v_area, v_alamat,
