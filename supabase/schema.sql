@@ -44,6 +44,8 @@ create table if not exists public.products (
   image       text not null default '',
   created_at  timestamptz not null default now()
 );
+-- batas porsi per tanggal PO; kosong = tanpa batas
+alter table public.products add column if not exists quota integer check (quota is null or quota >= 0);
 
 create table if not exists public.pos (
   id         text primary key,
@@ -184,7 +186,7 @@ declare
   p public.products; po public.pos;
   built jsonb := '[]'::jsonb; items jsonb; food integer; qty integer; price integer;
   opts jsonb; opt jsonb; idx integer; ad jsonb; addon_id text;
-  mainq jsonb; addq jsonb; k text; seq integer; oid text; out jsonb := '[]'::jsonb;
+  mainq jsonb; addq jsonb; k text; seq integer; v_quota integer; v_sold integer; oid text; out jsonb := '[]'::jsonb;
 begin
   if as_admin and not public.is_admin() then
     raise exception 'forbidden' using errcode = '42501';
@@ -299,6 +301,22 @@ begin
       end if;
     end loop;
 
+    -- Kuota porsi per menu untuk tanggal PO ini (baris menu dikunci supaya dua pembeli tidak sama-sama lolos)
+    if not as_admin then
+      for k in select jsonb_object_keys(mainq) loop
+        select quota into v_quota from public.products where id = k for update;
+        if v_quota is not null then
+          select coalesce(sum((i.value ->> 'qty')::integer), 0) into v_sold
+          from public.orders o, jsonb_array_elements(o.items) i
+          where o.po_id = po.id and o.status <> 'batal' and o.pay_status <> 'ditolak'
+            and i.value ->> 'pid' = k and not coalesce((i.value ->> 'addon')::boolean, false);
+          if v_sold + (mainq ->> k)::integer > v_quota then
+            raise exception 'sold_out:%:%', k, greatest(0, v_quota - v_sold);
+          end if;
+        end if;
+      end loop;
+    end if;
+
     if as_admin and nullif(payload ->> 'ongkir', '') is not null then
       v_ongkir := greatest(0, (payload ->> 'ongkir')::integer);
     else
@@ -363,6 +381,30 @@ $$;
 
 revoke all on function public.track_orders(text[], text) from public;
 grant execute on function public.track_orders(text[], text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6b. Sisa kuota per menu dan tanggal PO (dibaca publik, hanya angka)
+-- ---------------------------------------------------------------------
+create or replace function public.po_remaining()
+returns table (po_id text, pid text, remaining integer)
+language sql stable security definer
+set search_path = public
+as $$
+  select p.id as po_id, pr.id as pid,
+         greatest(0, pr.quota - coalesce(s.sold, 0))::integer as remaining
+  from public.pos p
+  cross join public.products pr
+  left join (
+    select o.po_id, i.value ->> 'pid' as pid, sum((i.value ->> 'qty')::integer) as sold
+    from public.orders o, jsonb_array_elements(o.items) i
+    where o.status <> 'batal' and o.pay_status <> 'ditolak'
+      and not coalesce((i.value ->> 'addon')::boolean, false)
+    group by 1, 2
+  ) s on s.po_id = p.id and s.pid = pr.id
+  where pr.quota is not null;
+$$;
+revoke all on function public.po_remaining() from public;
+grant execute on function public.po_remaining() to anon, authenticated;
 
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to anon, authenticated;

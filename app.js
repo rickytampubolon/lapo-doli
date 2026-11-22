@@ -34,13 +34,13 @@ const parseOptions = list => (list || []).map(s => String(s).trim()).filter(Bool
   const i = s.lastIndexOf("="), digits = i > 0 ? s.slice(i + 1).replace(/\D/g, "") : "", nm = (i > 0 ? s.slice(0, i) : s).trim();
   return digits !== "" && i > 0 ? { name:nm, price:Number(digits) } : { name:nm };
 }).filter(o => o.name);
-const fromProduct = r => ({ id:r.id, name:r.name, desc:r.description, price:r.price, emoji:r.emoji, available:r.available, sort:r.sort,
+const fromProduct = r => ({ id:r.id, name:r.name, desc:r.description, price:r.price, emoji:r.emoji, available:r.available, sort:r.sort, quota:r.quota == null ? null : Number(r.quota),
   options:(r.options || []).map(o => o.price != null ? `${o.name}=${o.price}` : o.name), addons:r.addons || [], image:r.image, imageUrl:assetUrl(r.image) });
 const toProductRow = patch => {
   const m = {};
   for (const k in patch) { const v = patch[k];
     if (k === "desc") m.description = v; else if (k === "options") m.options = parseOptions(v);
-    else if (["name", "price", "emoji", "available", "sort", "addons", "image"].includes(k)) m[k] = v; }
+    else if (["name", "price", "emoji", "available", "sort", "addons", "image", "quota"].includes(k)) m[k] = v; }
   return m;
 };
 const fromOrder = r => ({ id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
@@ -67,8 +67,11 @@ const api = {
   saveSettings: async data => must(await sb.from("settings").upsert({ id:"shop", data })),
   setOrder: async (id, p) => must(await sb.from("orders").update({ pay_status:p.payStatus, status:p.status }).eq("id", id)),
   createOrders: async (payload, asAdmin) => must(await sb.rpc("create_orders", { payload, as_admin:!!asAdmin })),
+  loadRemaining: async () => must(await sb.rpc("po_remaining")),
   trackOrders: async (ids, phone) => must(await sb.rpc("track_orders", { ids, phone }))
 };
+let remaining = {};                // sisa kuota: "poId::pid" -> angka (hanya menu yang punya kuota)
+const remainOf = (poId, pid) => Object.prototype.hasOwnProperty.call(remaining, poId + "::" + pid) ? remaining[poId + "::" + pid] : null;
 const serverClosed = new Set();   // tanggal PO yang ditolak server (jam server lebih akurat dari jam perangkat)
 
 let products = null, pos = null;   // null sampai data pertama dimuat
@@ -175,14 +178,14 @@ function renderMenu(){
   if (!list.length) { el.innerHTML = '<div class="empty">Menu belum tersedia. Silakan cek lagi nanti.</div>'; updateBar(); return; }
   const act = pl.find(x => x.id === activePo) || pl[0];
   el.innerHTML = list.map((p, i) => {
-    const opts = optsOf(p), adds = addonsOf(p), k = act.id + "::" + p.id, img = imgSrc(p), off = p.available === false, showP = opts.some(o => o.custom);
+    const opts = optsOf(p), adds = addonsOf(p), k = act.id + "::" + p.id, img = imgSrc(p), rem = remainOf(act.id, p.id), off = p.available === false || rem === 0, showP = opts.some(o => o.custom);
     const thumb = img ? `<img class="thumb" src="${esc(img)}" alt="${esc(p.name)}">` : `<div class="thumb tile" aria-hidden="true">${esc(p.emoji || "🍽️")}</div>`;
     const ctl = off ? '<span class="soldout">Habis</span>' : opts.length ? '<button type="button" class="pickbtn" data-pick aria-expanded="false">Pilih</button>' : stepper(k, p.name);
     const addsHTML = !off && adds.length ? `<div class="subs adds" data-po="${esc(act.id)}" data-pid="${esc(p.id)}" hidden><div class="subs-title">Tambahan</div>${adds.map(a => { const ak = addonKey(act.id, p.id, a.id);
       return `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${stepper(ak, a.name + " untuk " + p.name, (cart[ak] || 0) >= mainQty(act.id, p.id))}</div>`; }).join("")}</div>` : "";
     const panel = !off && opts.length ? `<div class="vpanel">${variantsHTML(p, k, stepper)}${addsHTML}</div>` : addsHTML;
     return `<div class="item ${off ? "off" : ""}" data-pid="${esc(p.id)}" data-po="${esc(act.id)}" style="--i:${i}">
-      <div class="ihead">${thumb}<div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="ifoot"><span class="price">${showP ? "Mulai " + rp(fromPrice(p)) : rp(p.price)}</span>${ctl}</div></div></div>
+      <div class="ihead">${thumb}<div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="ifoot"><span class="pricebox"><span class="price">${showP ? "Mulai " + rp(fromPrice(p)) : rp(p.price)}</span>${rem != null && rem > 0 && rem <= 10 ? `<span class="left">Sisa ${rem}</span>` : ""}</span>${ctl}</div></div></div>
       ${opts.length && !off ? '<div class="picked" hidden></div>' : ""}${panel}${off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note maxlength="120" placeholder="Catatan untuk ${esc(p.name)}, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}" value="${esc(itemNotes[act.id + "::" + p.id] || "")}"></div>`}</div>`;
   }).join("");
   syncMenuDom();
@@ -211,6 +214,8 @@ $("menu").addEventListener("click", e => {
   if (pb) { const it = pb.closest(".item"), id = it.dataset.po + "::" + it.dataset.pid; if (openItems.has(id)) openItems.delete(id); else openItems.add(id); syncMenuDom(); return; }
   const b = e.target.closest("button[data-d]"); if (!b) return;
   const key = b.closest("[data-key]").dataset.key, [poId, pid] = key.split("::");
+  const rem = isAddonKey(key) ? null : remainOf(poId, pid);
+  if (Number(b.dataset.d) > 0 && rem != null && mainQty(poId, pid) >= rem) { toast("Sisa " + rem + " porsi untuk menu ini"); return; }
   cart[key] = Math.max(0, (cart[key] || 0) + Number(b.dataset.d));
   if (!cart[key]) delete cart[key];
   if (!isAddonKey(key)) clampAddons(poId, pid);
@@ -335,6 +340,8 @@ function orderFailed(e){
     pruneClosed(); renderMenu(); if (qtyTotal()) renderCheckout(); else go(1);
     return;
   }
+  const sold = /sold_out:([^:]+):(\d+)/.exec(m);
+  if (sold) { toast("Porsi tidak cukup. Sisa " + sold[2] + " untuk menu ini. Kurangi jumlahnya lalu coba lagi."); refreshRemaining(); return; }
   if (/menu_unavailable/.test(m)) { toast("Ada menu yang sudah habis. Muat ulang halaman lalu pilih lagi."); refreshProducts(); return; }
   if (/rate_limited/.test(m)) { toast("Terlalu banyak pesanan dari nomor ini. Tunggu 10 menit lalu coba lagi."); return; }
   if (/invalid_hp/.test(m)) { toast("Nomor HP tidak valid."); return; }
@@ -741,6 +748,7 @@ function renderAdminMenu(){
         <div class="fgrid">
           <div><label class="fl" for="n-${esc(p.id)}">Nama menu</label><input type="text" id="n-${esc(p.id)}" data-f="name" value="${esc(p.name)}"></div>
           <div><label class="fl" for="pr-${esc(p.id)}">Harga (Rp)</label><input type="number" id="pr-${esc(p.id)}" data-f="price" value="${Number(p.price) || 0}" min="0" step="500" inputmode="numeric"></div>
+          <div><label class="fl" for="q-${esc(p.id)}">Kuota porsi per tanggal PO</label><input type="number" id="q-${esc(p.id)}" data-f="quota" value="${p.quota == null ? "" : p.quota}" min="0" step="1" inputmode="numeric" placeholder="Tanpa batas"></div>
           <div class="full"><label class="fl" for="d-${esc(p.id)}">Deskripsi</label><input type="text" id="d-${esc(p.id)}" data-f="desc" value="${esc(p.desc)}"></div>
         </div>
         <details class="adv" data-adv="${esc(p.id)}" ${advOpen.has(p.id) ? "open" : ""}><summary>Varian, tambahan, dan ikon</summary>
@@ -788,6 +796,7 @@ menuEl.addEventListener("change", async e => {
     const k = t.dataset.f; if (!k) return;
     let v;
     if (k === "available") v = t.checked;
+    else if (k === "quota") v = t.value.trim() === "" ? null : Math.max(0, Math.round(Number(t.value) || 0));
     else if (k === "price") v = Math.max(0, Math.round(Number(t.value) || 0));
     else if (k === "options") v = t.value.split(",").map(s => s.trim()).filter(Boolean);
     else if (k === "addons") v = parseAddons(t.value);
@@ -888,7 +897,7 @@ function colChart(items){
   return `<div class="cchart"><div class="yax" aria-hidden="true">${ticks.slice().reverse().map(t => `<span>${t ? fmtShort(t) : "0"}</span>`).join("")}</div>
     <div class="plotwrap"><div style="min-width:${items.length * 52}px">
       <div class="plot"><div class="grid">${ticks.map(() => "<i></i>").join("")}</div>
-      <div class="cols">${items.map(i => `<button type="button" class="ccol ${i.dim ? "dim" : ""}" data-spo="${esc(i.id)}" data-tip data-a="${esc(rp(i.value))}" data-b="${esc(i.full)}" data-c="${esc(i.count + " pesanan")}" aria-label="${esc(i.full + ": " + rp(i.value) + ", " + i.count + " pesanan")}"><span class="cap">${i === top && i.value ? esc(fmtShort(i.value)) : ""}</span><span class="cbar" style="height:${mx ? (i.value / mx * 100).toFixed(1) : 0}%"></span></button>`).join("")}</div></div>
+      <div class="cols">${items.map(i => `<button type="button" class="ccol ${i.dim ? "dim" : ""}" data-spo="${esc(i.id)}" data-tip data-a="${esc(rp(i.value))}" data-b="${esc(i.full)}" data-c="${esc(i.count + " pesanan")}" aria-label="${esc(i.full + ": " + rp(i.value) + ", " + i.count + " pesanan")}"><span class="cap">${i === top && i.value ? esc(fmtShort(i.value)) : ""}</span><span class="cbar" style="height:${mx ? (i.value / mx * 100).toFixed(1) : 0}%;${i.value > 0 ? "min-height:3px" : ""}"></span></button>`).join("")}</div></div>
       <div class="xrow">${items.map(i => `<span>${esc(i.label)}</span>`).join("")}</div></div></div></div>`;
 }
 function hbars(rows){
@@ -973,11 +982,75 @@ salesEl.addEventListener("click", e => {
 });
 salesEl.addEventListener("change", e => { if (e.target.id === "s-po") { salesPo = e.target.value; renderSales(); } });
 
+/* --- rekap dapur dan ekspor --- */
+let rekapPo = null, rekapBasis = "semua";
+const dayStart = () => { const d = new Date(); return d.toISOString().slice(0, 10); };
+function rekapData(){
+  const poSorted = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  if (!rekapPo || !poSorted.some(p => p.id === rekapPo)) { const up = poSorted.find(p => p.date >= dayStart()); rekapPo = (up || poSorted[poSorted.length - 1] || {}).id || null; }
+  const list = orders.filter(o => o.poId === rekapPo && o.status !== "batal" && o.payStatus !== "ditolak" && (rekapBasis === "semua" || o.payStatus === "lunas"));
+  const cook = {}, add = {};
+  list.forEach(o => o.items.forEach(i => { const q = Number(i.qty) || 0;
+    if (i.addon) { add[i.name] = (add[i.name] || 0) + q; return; }
+    const m = cook[i.name] || (cook[i.name] = { total:0, opts:{} }); m.total += q; const k = i.option || "Biasa"; m.opts[k] = (m.opts[k] || 0) + q; }));
+  return { poSorted, list, cook, add, antar:list.filter(o => o.fulfil !== "ambil"), ambil:list.filter(o => o.fulfil === "ambil") };
+}
+const itemLine = o => o.items.map(i => `${i.qty}x ${i.name}${i.option && !i.addon ? " (" + i.option + ")" : i.addon ? " (" + i.option + ")" : ""}${i.note ? " [" + i.note + "]" : ""}`).join(", ");
+function rekapText(r){
+  const po = r.poSorted.find(p => p.id === rekapPo); if (!po) return "";
+  const L = [`Rekap PO ${dLong(po.date)}`, `${r.list.length} pesanan`, "", "Yang dimasak:"];
+  Object.keys(r.cook).forEach(n => L.push(`- ${n}: ${r.cook[n].total} porsi` + (Object.keys(r.cook[n].opts).length > 1 || !r.cook[n].opts["Biasa"] ? " (" + Object.keys(r.cook[n].opts).map(k => `${k} ${r.cook[n].opts[k]}`).join(", ") + ")" : "")));
+  Object.keys(r.add).forEach(n => L.push(`- ${n}: ${r.add[n]}`));
+  if (r.antar.length) { L.push("", "Antar:"); r.antar.forEach(o => L.push(`- ${o.id} ${o.nama} (${o.hp}), ${o.area}, ${o.alamat}: ${itemLine(o)}${o.notes ? " | " + o.notes : ""}`)); }
+  if (r.ambil.length) { L.push("", "Ambil sendiri:"); r.ambil.forEach(o => L.push(`- ${o.id} ${o.nama} (${o.hp}): ${itemLine(o)}${o.notes ? " | " + o.notes : ""}`)); }
+  return L.join("\n");
+}
+const csvCell = v => { let s = String(v ?? ""); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+function exportCsv(){
+  const head = ["No. pesanan", "Tanggal PO", "Dibuat", "Nama", "No. HP", "Antar/Ambil", "Wilayah", "Alamat", "Pesanan", "Catatan", "Ongkir", "Total", "Metode", "Status bayar", "Status", "Sumber"];
+  const rows = orders.map(o => [o.id, o.poDate, o.createdAt, o.nama, o.hp, o.fulfil, o.area, o.alamat, itemLine(o), o.notes, o.ongkir, o.total, o.method, o.payStatus, o.status, o.source]);
+  const csv = "﻿" + [head, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })), link = document.createElement("a");
+  link.href = url; link.download = "pesanan-lapo-doli-" + dayStart() + ".csv"; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function renderRekap(){
+  const el = $("a-rekap");
+  if (ordersState === "loading" || pos === null) { el.innerHTML = '<p class="note">Memuat rekap...</p>'; return; }
+  const r = rekapData();
+  const orderCard = o => `<div class="rk-o"><div><b>${esc(o.nama)}</b> <span class="muted">${esc(o.id)} · ${esc(o.hp)}</span></div>${o.fulfil !== "ambil" ? `<div class="muted">${esc(o.alamat)}</div>` : ""}<div>${esc(itemLine(o))}</div>${o.notes ? `<div class="rk-note">Catatan: ${esc(o.notes)}</div>` : ""}</div>`;
+  const areas = {}; r.antar.forEach(o => { (areas[o.area || "Tanpa wilayah"] = areas[o.area || "Tanpa wilayah"] || []).push(o); });
+  el.innerHTML = `<div class="kitchen">
+    <div class="ph rk-tools"><div><h2>Rekap dapur</h2><p>Jumlah yang harus dimasak dan daftar kirim untuk satu tanggal PO.</p></div>
+      <div class="acts"><button class="btn line sm" data-rk="copy" type="button">Salin rekap</button><button class="btn line sm" data-rk="print" type="button">Cetak</button><button class="btn line sm" data-rk="csv" type="button">Ekspor semua ke CSV</button></div></div>
+    <div class="toolbar rk-tools">
+      <select id="rk-po" class="sel" aria-label="Tanggal PO">${r.poSorted.map(p => `<option value="${esc(p.id)}" ${p.id === rekapPo ? "selected" : ""}>${esc(dLong(p.date))}</option>`).join("")}</select>
+      <div class="stabs" role="group" aria-label="Pesanan yang dihitung"><button type="button" data-rkb="semua" aria-pressed="${rekapBasis === "semua"}">Semua yang masuk</button><button type="button" data-rkb="lunas" aria-pressed="${rekapBasis === "lunas"}">Lunas saja</button></div>
+    </div>
+    ${r.list.length ? `
+    <div class="panels">
+      <div class="panel"><h3>Yang harus dimasak</h3><p class="psub">${r.list.length} pesanan, tidak termasuk yang batal atau ditolak.</p>
+        <table class="rk-t"><tbody>${Object.keys(r.cook).map(n => `<tr><th scope="row">${esc(n)}</th><td class="r"><b>${r.cook[n].total}</b> porsi</td></tr>${Object.keys(r.cook[n].opts).filter(k => k !== "Biasa" || Object.keys(r.cook[n].opts).length > 1).map(k => `<tr class="sub"><td colspan="2"><span>${esc(k)}</span><span>${r.cook[n].opts[k]}</span></td></tr>`).join("")}`).join("")}
+        ${Object.keys(r.add).map(n => `<tr class="add"><th scope="row">${esc(n)}</th><td class="r"><b>${r.add[n]}</b></td></tr>`).join("")}</tbody></table></div>
+      <div class="panel"><h3>Antar (${r.antar.length})</h3><p class="psub">Dikelompokkan per wilayah.</p>${r.antar.length ? Object.keys(areas).sort().map(k => `<h4 class="rk-h">${esc(k)} <span class="muted">${areas[k].length}</span></h4>${areas[k].map(orderCard).join("")}`).join("") : '<p class="note">Tidak ada pesanan antar.</p>'}</div>
+      <div class="panel"><h3>Ambil sendiri (${r.ambil.length})</h3><p class="psub">${esc(pickLoc())}, ${esc(pickHours())}.</p>${r.ambil.length ? r.ambil.map(orderCard).join("") : '<p class="note">Tidak ada pesanan ambil sendiri.</p>'}</div>
+    </div>` : '<div class="empty">Belum ada pesanan untuk tanggal ini.</div>'}
+  </div>`;
+}
+$("a-rekap").addEventListener("change", e => { if (e.target.id === "rk-po") { rekapPo = e.target.value; renderRekap(); } });
+$("a-rekap").addEventListener("click", async e => {
+  const b = e.target.closest("[data-rkb]"); if (b) { rekapBasis = b.dataset.rkb; renderRekap(); return; }
+  const k = e.target.closest("[data-rk]"); if (!k) return;
+  if (k.dataset.rk === "print") window.print();
+  else if (k.dataset.rk === "csv") { exportCsv(); toast("File CSV diunduh"); }
+  else if (k.dataset.rk === "copy") { try { await navigator.clipboard.writeText(rekapText(rekapData())); toast("Rekap disalin"); } catch (err) { toast("Tidak bisa menyalin. Coba cetak atau ekspor."); } }
+});
+
 /* --- tab dan navigasi --- */
 function renderAdmin(){
   if (view !== "admin" || !isAdmin) return;
   renderAdminOrders();
   if (tab === "sales") renderSales();
+  if (tab === "rekap") renderRekap();
   if (tab === "po") renderPoSafe();
   if (tab === "menu") renderMenuSafe();
   if (tab === "set") renderSetSafe();
@@ -986,7 +1059,9 @@ function setTab(t){
   tab = t;
   document.querySelectorAll("#tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
   $("a-orders").hidden = t !== "orders" || newOpen; $("a-new").hidden = !(t === "orders" && newOpen); $("a-sales").hidden = t !== "sales"; $("a-po").hidden = t !== "po"; $("a-menu").hidden = t !== "menu"; $("a-set").hidden = t !== "set";
+  $("a-rekap").hidden = t !== "rekap";
   if (t === "sales") renderSales();
+  if (t === "rekap") renderRekap();
   if (t === "po") renderAdminPo();
   if (t === "menu") renderAdminMenu();
   if (t === "set") renderAdminSet();
@@ -1065,10 +1140,14 @@ $("ck-go").onclick = async () => {
 /* ================= MULAI ================= */
 let refetchT = {};
 const debounced = (name, fn) => { clearTimeout(refetchT[name]); refetchT[name] = setTimeout(fn, 250); };
+async function refreshRemaining(){
+  try { const m = {}; (await api.loadRemaining() || []).forEach(r => { m[r.po_id + "::" + r.pid] = Number(r.remaining); }); remaining = m; } catch (e) {}
+  renderMenu();
+}
 async function refreshProducts(){
   try { products = await api.loadProducts(); dbState = "ok"; }
   catch (e) { if (products === null) dbState = "error"; renderMenu(); return; }
-  renderMenu(); if (view === "admin" && tab === "menu") renderMenuSafe();
+  await refreshRemaining(); if (view === "admin" && tab === "menu") renderMenuSafe();
 }
 async function refreshPos(){
   try { pos = await api.loadPos(); } catch (e) { if (pos === null) pos = []; }
