@@ -400,11 +400,7 @@ async function shareToFriend(){
   if (navigator.share) { try { await navigator.share({ title:"Lapo Doli", text:shareText, url }); } catch (e) { /* ditutup pembeli */ } return; }
   window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + url)}`, "_blank", "noopener");
 }
-document.querySelectorAll("[data-linktxt]").forEach(x => { x.textContent = shareUrl().replace(/^https?:\/\//, "").replace(/\/$/, ""); });
-document.addEventListener("click", e => {
-  const s = e.target.closest("[data-share]"); if (s) { shareToFriend(); return; }
-  const c = e.target.closest("[data-copylink]"); if (c) copyText(shareUrl(), c.parentElement.querySelector("[data-linktxt]"), "Link disalin");
-});
+document.addEventListener("click", e => { if (e.target.closest("[data-share]")) shareToFriend(); });
 async function copyText(text, el, okMsg){
   try { await navigator.clipboard.writeText(text); toast(okMsg); return; } catch (e) {}
   try { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); if (document.execCommand && document.execCommand("copy")) { toast(okMsg); return; } } catch (e) {}

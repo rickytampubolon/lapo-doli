@@ -100,7 +100,7 @@ Aturan penting yang tertanam:
 
 ## Bagikan ke teman dan pratinjau link
 
-Beranda dan layar "pesanan dicatat" punya kartu **Ajak teman pesan**: tombol bagikan memakai lembar bagikan bawaan HP (atau membuka WhatsApp bila tidak ada), plus tombol salin link.
+Beranda dan layar "pesanan dicatat" punya kartu **Ajak teman pesan**: satu baris dengan tombol **Bagikan**: memakai lembar bagikan bawaan HP (yang sudah punya "Salin link"), atau membuka WhatsApp bila tidak tersedia.
 
 Pratinjau saat link dibagikan (WhatsApp, Instagram, Threads) dibaca dari tag `og:*` dan `twitter:*` di `<head>` `index.html`, dengan gambar `assets/og.png` (1200x630, logo di atas krem). Tag ini harus berisi alamat penuh. Kalau nanti pakai domain sendiri, ganti `https://lapo-doli.vercel.app` di `index.html`.
 WhatsApp menyimpan pratinjau lama selama berhari-hari. Setelah mengganti gambar, bagikan link dengan akhiran baru (misalnya `/?v=2`) untuk melihat yang terbaru.
