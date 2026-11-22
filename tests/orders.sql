@@ -183,6 +183,47 @@ begin
   r := public.create_orders(t.base('081200000063') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
   update public.orders set pay_status = 'lunas' where id = r->0->>'id';
   perform t.ck('13 sudah lunas: tidak bisa dibatalkan pembeli', public.cancel_orders(r->0->>'gid', '081200000063') = 0);
+
+  -- 14. lokasi Google Maps
+  delete from public.orders; delete from public.counters;
+  r := public.create_orders(t.base('081200000071') || '{"maps":"https://maps.google.com/?cid=123456","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('14 tautan Google Maps tersimpan', (select maps_url from public.orders where id = r->0->>'id') = 'https://maps.google.com/?cid=123456');
+  r := public.create_orders(t.base('081200000072') || '{"maps":"https://evil.example/maps","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('14 tautan non-Google dibuang', (select maps_url from public.orders where id = r->0->>'id') = '');
+  r := public.create_orders(t.base('081200000073') || '{"maps":"https://www.google.com.evil.com/maps","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('14 domain tiruan mirip Google dibuang', (select maps_url from public.orders where id = r->0->>'id') = '');
+  r := public.create_orders(t.base('081200000074', 'ambil') || '{"maps":"https://maps.google.com/?cid=1","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('14 ambil sendiri: tautan tidak disimpan', (select maps_url from public.orders where id = r->0->>'id') = '');
+
+  -- 15. kuota dan batas tutup per PO, edit jumlah oleh admin
+  delete from public.orders; delete from public.counters;
+  update public.products set quota = 3 where id = 'teri';
+  update public.pos set quotas = '{"teri": 1}'::jsonb where id = 'po-a';
+  perform t.ck('15 kuota PO: pesanan pertama lolos', t.err(t.base('081200000081') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') = 'OK');
+  perform t.ck('15 kuota PO: melebihi kuota PO ditolak', t.err(t.base('081200000082') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') like 'sold_out:teri:0');
+  select remaining into n from public.po_remaining() where po_id = 'po-a' and pid = 'teri';
+  perform t.ck('15 po_remaining memakai kuota PO (0)', n = 0, n::text);
+  select remaining into n from public.po_remaining() where po_id = 'po-b' and pid = 'teri';
+  perform t.ck('15 PO lain tetap pakai kuota menu', n = 3, n::text);
+  update public.products set quota = null where id = 'teri';
+  update public.pos set quotas = '{}'::jsonb where id = 'po-a';
+  delete from public.orders; delete from public.counters;
+  insert into public.pos(id, date, open, cutoff) values ('po-today', (now() at time zone 'Asia/Jakarta')::date, true, '00:00') on conflict (id) do update set cutoff = '00:00';
+  perform t.ck('15 batas tutup PO 00:00: PO hari ini tertutup', t.err(t.base('081200000083') || '{"groups":[{"po_id":"po-today","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') like 'po_closed:%');
+  update public.pos set cutoff = '23:59' where id = 'po-today';
+  perform t.ck('15 batas tutup PO 23:59: PO hari ini masih buka', t.err(t.base('081200000083') || '{"groups":[{"po_id":"po-today","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') = 'OK' or (now() at time zone 'Asia/Jakarta')::time > time '23:58');
+  delete from public.orders; delete from public.counters;
+  r := public.create_orders(t.base('081200000084') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":2}]}]}');
+  perform set_config('request.jwt.claims', '', false);
+  begin perform public.admin_edit_items(r->0->>'id', array[3]); perform t.ck('15 edit jumlah tanpa admin ditolak', false); exception when others then perform t.ck('15 edit jumlah tanpa admin ditolak', sqlerrm = 'not_admin', sqlerrm); end;
+  perform set_config('request.jwt.claims', '{"email":"Admin@Test.id"}', false);
+  perform t.ck('15 edit jumlah: total dihitung ulang (3 x 25.000 + ongkir 10.000)', public.admin_edit_items(r->0->>'id', array[3]) = 85000);
+  perform t.ck('15 total tersimpan di pesanan', (select total from public.orders where id = r->0->>'id') = 85000 and (select group_total from public.orders where id = r->0->>'id') = 85000);
+  begin perform public.admin_edit_items(r->0->>'id', array[0]); perform t.ck('15 kosongkan semua ditolak', false); exception when others then perform t.ck('15 kosongkan semua ditolak', sqlerrm = 'empty_order', sqlerrm); end;
+  begin perform public.admin_edit_items(r->0->>'id', array[1, 2]); perform t.ck('15 jumlah baris tidak cocok ditolak', false); exception when others then perform t.ck('15 jumlah baris tidak cocok ditolak', sqlerrm = 'bad_items', sqlerrm); end;
+  r := public.create_orders(t.base('081200000085') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]},{"po_id":"po-b","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  begin perform public.admin_edit_items(r->0->>'id', array[2]); perform t.ck('15 pesanan gabungan tidak bisa diedit jumlahnya', false); exception when others then perform t.ck('15 pesanan gabungan tidak bisa diedit jumlahnya', sqlerrm = 'group_order', sqlerrm); end;
+  perform set_config('request.jwt.claims', '', false);
 end $$;
 
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;

@@ -152,3 +152,30 @@ Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`,
 - Link status pesanan: `/?cek=NOMOR` membuka Bantuan dan langsung mencari.
 - Tombol bawah di checkout memakai kapsul yang sama dengan keranjang.
 - Pembeli bisa membatalkan pesanan sendiri di halaman bayar selama belum ada bukti bayar (`cancel_orders`, skema v13).
+
+## Pilih alamat dari Google Maps
+
+Di halaman pesanan, pembeli yang memilih "Antar" bisa mencari alamat lewat Google Maps. Pilihan mengisi alamat dan wilayah otomatis, dan tautan peta ikut tersimpan di pesanan (tombol "Buka peta" di detail pesanan admin). Alamat di luar Jakarta ditolak.
+
+Aktifkan dengan satu kunci:
+
+1. Di Google Cloud Console buat project, aktifkan **Places API (New)**, dan pasang billing (ada kuota gratis bulanan).
+2. Buat **API key**. Batasi di bagian *Application restrictions* ke **Websites** dengan alamat `https://lapo-doli.vercel.app/*` (tambah domain lain jika ada), dan di *API restrictions* hanya **Places API (New)**.
+3. Isi `GOOGLE_MAPS_KEY` di `config.js`. Kunci browser memang terlihat publik, karena itu pembatasan domain wajib.
+4. Jalankan ulang `supabase/schema.sql` (v14) untuk kolom `maps_url`.
+
+Tanpa kunci, kolom pencarian tersembunyi dan pembeli mengetik alamat seperti biasa. Pasang juga pagu anggaran (budget alert) di Google Cloud supaya biaya tidak mengejutkan.
+
+## Fitur admin
+
+- **Pesanan**: cari (nomor, nama, HP), pilih beberapa lalu konfirmasi bayar sekaligus, tombol Urungkan setelah tiap perubahan status, pesan WhatsApp siap kirim (konfirmasi, minta bukti, sedang diantar, batalkan), Ubah pesanan (nama, HP, alamat, catatan, jumlah item dengan total dihitung ulang di server), Cetak nota.
+- **Notifikasi**: bunyi pendek dan jumlah di judul tab saat ada pesanan baru atau bukti bayar masuk. Bunyi bisa dimatikan dengan ikon lonceng. Browser baru berbunyi setelah ada satu ketukan di halaman.
+- **Pesanan lewat batas bayar** (1 jam tanpa bukti) diberi tanda dan bisa dibatalkan massal.
+- **Rekap dapur**: tautan peta di tiap alamat antar dan tombol "Salin daftar antar untuk kurir".
+- **Penjualan**: rentang 4 atau 8 PO terakhir, perbandingan dengan PO sebelumnya, ekspor CSV per PO, dan angka pelanggan berulang yang bisa diklik.
+- **Pelanggan**: riwayat pesanan, total belanja, dan catatan per pelanggan.
+- **PO**: batas tutup dan kuota khusus per PO, tombol Gandakan ke minggu berikutnya.
+- **Menu**: harga berformat ribuan, urutan bisa digeser.
+- **Pengaturan**: Aktivitas terbaru (log siapa mengubah apa).
+
+Semua ini memakai skema v15: jalankan ulang `supabase/schema.sql`.
