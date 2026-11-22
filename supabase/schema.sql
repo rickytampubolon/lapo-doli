@@ -55,6 +55,10 @@ create table if not exists public.pos (
 );
 -- PO terjadwal: belum bisa dipesan sebelum waktu ini (kosong = langsung buka)
 alter table public.pos add column if not exists opens_at timestamptz;
+-- batas tutup khusus PO ini (HH:MM, jam Jakarta). Kosong = pakai jam di Pengaturan.
+alter table public.pos add column if not exists cutoff text not null default '' check (cutoff = '' or cutoff ~ '^[0-2][0-9]:[0-5][0-9]$');
+-- kuota khusus PO ini per menu, mis. {"kecap": 12}. Menu yang tidak ada di sini ikut kuota menu.
+alter table public.pos add column if not exists quotas jsonb not null default '{}'::jsonb;
 
 create table if not exists public.settings (
   id   text primary key default 'shop',
@@ -278,7 +282,7 @@ begin
       if po.opens_at is not null and now() < po.opens_at then
         raise exception 'po_not_open:%', to_char(po.date, 'YYYY-MM-DD');
       end if;
-      if not po.open or now() >= ((po.date::text || ' ' || v_cutoff || ':00+07')::timestamptz) then
+      if not po.open or now() >= ((po.date::text || ' ' || coalesce(nullif(po.cutoff, ''), v_cutoff) || ':00+07')::timestamptz) then
         raise exception 'po_closed:%', to_char(po.date, 'YYYY-MM-DD');
       end if;
     end if;
@@ -338,6 +342,7 @@ begin
     if not as_admin then
       for k in select jsonb_object_keys(mainq) loop
         select quota into v_quota from public.products where id = k for update;
+        v_quota := coalesce(nullif(po.quotas ->> k, '')::integer, v_quota);
         if v_quota is not null then
           select coalesce(sum((i.value ->> 'qty')::integer), 0) into v_sold
           from public.orders o, jsonb_array_elements(o.items) i
@@ -487,7 +492,7 @@ language sql stable security definer
 set search_path = public
 as $$
   select p.id as po_id, pr.id as pid,
-         greatest(0, pr.quota - coalesce(s.sold, 0))::integer as remaining
+         greatest(0, coalesce(nullif(p.quotas ->> pr.id, '')::integer, pr.quota) - coalesce(s.sold, 0))::integer as remaining
   from public.pos p
   cross join public.products pr
   left join (
@@ -498,14 +503,85 @@ as $$
       and not coalesce((i.value ->> 'addon')::boolean, false)
     group by 1, 2
   ) s on s.po_id = p.id and s.pid = pr.id
-  where pr.quota is not null;
+  where coalesce(nullif(p.quotas ->> pr.id, '')::integer, pr.quota) is not null;
 $$;
 revoke all on function public.po_remaining() from public;
 grant execute on function public.po_remaining() to anon, authenticated;
 
+-- ---------------------------------------------------------------------
+-- 6d. Admin: ubah jumlah item pesanan (harga satuan tetap dari pesanan, total dihitung ulang di server)
+--     Hanya untuk pesanan satu tanggal. Jumlah 0 menghapus baris. Tambahan tidak boleh melebihi menu utama.
+-- ---------------------------------------------------------------------
+create or replace function public.admin_edit_items(p_id text, p_qty integer[])
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare o public.orders%rowtype; it jsonb; n jsonb := '[]'::jsonb; i integer; q integer; food integer := 0; mainq jsonb := '{}'::jsonb;
+begin
+  if not public.is_admin() then raise exception 'not_admin'; end if;
+  select * into o from public.orders where id = p_id for update;
+  if not found then raise exception 'not_found'; end if;
+  if o.group_count > 1 then raise exception 'group_order'; end if;
+  if jsonb_array_length(o.items) <> coalesce(array_length(p_qty, 1), 0) then raise exception 'bad_items'; end if;
+  i := 0;
+  for it in select value from jsonb_array_elements(o.items) loop
+    i := i + 1; q := p_qty[i];
+    if q is null or q < 0 or q > 99 then raise exception 'bad_qty'; end if;
+    if not coalesce((it ->> 'addon')::boolean, false) then
+      mainq := mainq || jsonb_build_object(it ->> 'pid', coalesce((mainq ->> (it ->> 'pid'))::integer, 0) + q);
+    end if;
+  end loop;
+  i := 0;
+  for it in select value from jsonb_array_elements(o.items) loop
+    i := i + 1; q := p_qty[i];
+    if coalesce((it ->> 'addon')::boolean, false) and q > coalesce((mainq ->> (it ->> 'pid'))::integer, 0) then
+      raise exception 'addon_exceeds_main';
+    end if;
+    if q > 0 then n := n || jsonb_set(it, '{qty}', to_jsonb(q)); food := food + (it ->> 'price')::integer * q; end if;
+  end loop;
+  if not exists (select 1 from jsonb_array_elements(n) e where not coalesce((e ->> 'addon')::boolean, false)) then
+    raise exception 'empty_order';
+  end if;
+  update public.orders set items = n, total = food + ongkir, group_total = food + ongkir where id = p_id;
+  return food + o.ongkir;
+end;
+$$;
+revoke all on function public.admin_edit_items(text, integer[]) from public;
+grant execute on function public.admin_edit_items(text, integer[]) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6e. Log aktivitas admin dan catatan pelanggan (hanya admin)
+-- ---------------------------------------------------------------------
+create table if not exists public.activity_log (
+  id     bigint generated always as identity primary key,
+  at     timestamptz not null default now(),
+  actor  text not null default '',
+  action text not null,
+  target text not null default '',
+  detail text not null default ''
+);
+alter table public.activity_log enable row level security;
+drop policy if exists activity_admin on public.activity_log;
+create policy activity_admin on public.activity_log for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+revoke all on public.activity_log from anon;
+
+create table if not exists public.customer_notes (
+  hp         text primary key,
+  note       text not null default '' check (char_length(note) <= 500),
+  updated_at timestamptz not null default now()
+);
+alter table public.customer_notes enable row level security;
+drop policy if exists customer_notes_admin on public.customer_notes;
+create policy customer_notes_admin on public.customer_notes for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+revoke all on public.customer_notes from anon;
+
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 14 $$;
+returns integer language sql immutable as $$ select 15 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

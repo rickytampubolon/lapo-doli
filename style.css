@@ -1180,3 +1180,38 @@ img.thumb{background:var(--soft)}
 #addr-hint .ic{flex:none;width:16px;height:16px;color:var(--accent)}
 .ofacts .maplink{margin-left:auto;flex:none;color:var(--accent);white-space:nowrap}
 #addr-q{scroll-margin-top:56px}
+
+/* admin: cari, pilih massal, undo, pesan WhatsApp, ubah pesanan, nota */
+.osearch{display:flex;align-items:center;gap:var(--sp-2);flex:1 1 220px;min-width:0;max-width:340px;padding:0 var(--sp-3);border:1px solid var(--border-default);border-radius:999px;background:#fff;min-height:40px}
+.osearch:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(154,59,47,.2)}
+.osearch .ic{width:18px;height:18px;color:var(--text-secondary)}
+.osearch input{flex:1;min-width:0;border:0;outline:0;background:none;font-size:14px;min-height:38px;padding:0}
+.osearch input::-webkit-search-cancel-button{cursor:pointer}
+.selbox{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;cursor:pointer}
+.selbox input{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
+.selbar{position:sticky;top:8px;z-index:12;display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-3) 0 0;padding:var(--sp-2) var(--sp-4);border:1px solid var(--accent);border-radius:var(--r-md);background:#fff;box-shadow:var(--shadow-high);font-size:14px}
+.selbar .sp{flex:1}
+.toast{max-width:min(92vw,520px);text-align:center}
+.toast:has(.toast-undo){pointer-events:auto}
+.toast-undo{margin-left:var(--sp-2);padding:4px 10px;border:1px solid rgba(255,255,255,.7);border-radius:999px;background:none;color:inherit;font:inherit;font-weight:700;cursor:pointer;min-height:32px}
+.wachips{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;font-size:13px;color:var(--text-secondary)}
+.wachip{padding:6px 12px;border:1px solid var(--border-default);border-radius:999px;background:#fff;color:var(--accent);font-weight:600;text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
+.wachip:hover{border-color:var(--accent)}
+.editbox{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.editbox .full{grid-column:1/-1}
+.ef{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--text-secondary)}
+.ef input,.ef select,.ef textarea{font-weight:400;color:var(--text-primary);min-height:40px}
+.ef textarea{min-height:64px}
+.eq{display:grid;gap:var(--sp-2);font-size:13px;font-weight:600;color:var(--text-secondary)}
+.eqrow{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-3);font-weight:400;color:var(--text-primary)}
+.eqrow input{width:84px;min-height:36px;text-align:center}
+.eq small{font-weight:400}
+@media (max-width:640px){.editbox{grid-template-columns:minmax(0,1fr)!important}.osearch{max-width:none;flex-basis:100%}}
+#print-area{display:none}
+@media print{
+  body.print-nota > *:not(#print-area){display:none!important}
+  body.print-nota #print-area{display:block!important}
+  .nota{font:13px/1.4 Figtree,system-ui,sans-serif;color:#3b2c27;max-width:320px;margin:0 auto}
+  .nota h2{margin:0;font-size:18px}.nota p{margin:6px 0}.nota .nid{font-weight:700;font-size:16px}
+  .nota table{width:100%;border-collapse:collapse;margin:8px 0}.nota td{padding:2px 0;vertical-align:top}.nota td:last-child{text-align:right;white-space:nowrap}.nota tr.tot td{border-top:1px solid #3b2c27;font-weight:700;padding-top:4px}
+}
