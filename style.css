@@ -7,26 +7,23 @@ img{max-width:100%}
 :root{color-scheme:light}
 /* Konsep: kertas hangat, huruf cokelat tua. Merah dan amber diambil dari logo.
    Sampul hitam menyatu dengan latar logo, satu deret segitiga (pucuk rebung) sebagai pembatas, sisanya polos. */
-:root{
-  --bg:#f6f0e6; --card:#fbf8f2; --soft:#eee5d6; --line:#e0d4c2; --ink:#3b2c27; --muted:#6c5d53;
+:root{--bg:#f6f0e6; --card:#fbf8f2; --soft:#eee5d6; --line:#e0d4c2; --ink:#3b2c27; --muted:#6c5d53;
   --accent:#9a3b2f; --on-accent:#fffaf3; --amber:#e3a95f; --amber-soft:#f6e8d0; --hero:#7d3a31;
   --ok:#3a7452; --warn:#845712; --bad:#a8392f;
   --head:Figtree,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --font:Figtree,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --tri:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10'%3E%3Cpolygon points='0,10 10,0 20,10'/%3E%3C/svg%3E");
-  --logo:url("/assets/logo-mark.png");
-}
+  --logo:url("/assets/logo-mark.png");}
 :root{--chart-a:var(--accent);--chart-b:#7a6c61}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;margin:0;-webkit-font-smoothing:antialiased}
-button,input,textarea,select{font:inherit;color:inherit}
+button, input, textarea, select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 [hidden]{display:none!important}
 .col{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .muted{color:var(--muted)}
 .note{font-size:14px;color:var(--muted)}
-.mono{font-family:var(--mono)}
 .top .col{display:flex;align-items:center;justify-content:space-between;padding-top:8px;padding-bottom:7px}
 .brandrow{display:flex;align-items:center;gap:8px}
 .brand{font-family:var(--head);font-weight:600;font-size:16px;}
@@ -50,15 +47,12 @@ button,input,textarea,select{font:inherit;color:inherit}
 .home .cover{display:block}
 .cover .col{position:relative;padding-top:18px;padding-bottom:34px}
 .cover .title{font-size:clamp(2rem,8.4vw,2.7rem);line-height:1.08;margin:0;max-width:11em;color:#fff8ee}
-.cover .lede{margin:14px 0 0;max-width:30em;color:#f3dfcb;font-size:16px;line-height:1.5}
-.logo.big{display:none;background-color:transparent;pointer-events:none}
-@media (min-width:600px){.logo.big{display:block;position:absolute;right:0;top:14px;width:132px;height:132px}}
 .home .top .textbtn{color:#f3dfcb}
-.home .top .brand{color:#fbefdf}.intro{margin:0;color:var(--muted)}
+.home .top .brand{color:#fbefdf}
+.intro{margin:0;color:var(--muted)}
 .label{font-size:14px;font-weight:600;color:var(--ink);margin:30px 0 10px}
-
 /* ---------- toko ---------- */
-#shop,#help-view{padding-bottom:40px}
+#shop, #help-view{padding-bottom:40px}
 #shop.has-bar{padding-bottom:150px}
 #shop section{display:none}
 #shop section.show{display:block}
@@ -75,9 +69,8 @@ button,input,textarea,select{font:inherit;color:inherit}
 .cbtn .mon{font-size:12px;color:var(--muted)}
 .cbtn:hover{border-color:var(--ink)}
 .cbtn[aria-pressed=true]{background:var(--hero);color:#fff8ee;border-color:var(--hero)}
-.cbtn[aria-pressed=true] .dow,.cbtn[aria-pressed=true] .mon{color:#f3dfcb}
+.cbtn[aria-pressed=true] .dow, .cbtn[aria-pressed=true] .mon{color:#f3dfcb}
 .cbtn .cnt{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--amber);color:var(--ink);font-size:12px;font-weight:600;display:grid;place-items:center;font-variant-numeric:tabular-nums}
-.hint{margin:10px 0 0;font-size:14px;color:var(--muted)}
 .menu{display:grid;gap:0;margin-top:2px}
 .item{border:0;border-bottom:1px solid var(--line);border-radius:0;padding:18px 0}
 .item:last-child{border-bottom:0}
@@ -92,12 +85,6 @@ button,input,textarea,select{font:inherit;color:inherit}
 .ifoot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:auto;padding-top:8px;min-height:42px}
 .price{font-variant-numeric:tabular-nums;font-size:16px;font-weight:600;color:var(--accent)}
 .soldout{color:var(--muted);font-size:14px}
-.pickbtn{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
-.pickbtn:hover{border-color:var(--ink)}
-.pickbtn::after{content:"\00a0\25BE"}
-.item.open .pickbtn::after{content:"\00a0\25B4"}
-.item.on .pickbtn{border-color:var(--amber)}
-.picked{margin-top:10px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--amber) 16%,transparent);font-size:14px;overflow-wrap:anywhere}
 .item:not(.open) .vpanel{display:none}
 .vpanel{margin-top:10px;padding-top:6px;border-top:1px solid var(--line)}
 .item.on .vpanel{border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}
@@ -135,8 +122,8 @@ button,input,textarea,select{font:inherit;color:inherit}
 .bar .btn{width:auto;padding:12px 28px}
 .back{background:none;border:0;color:var(--muted);cursor:pointer;padding:18px 0 0;font-size:14px}
 label.lb{display:block;font-weight:600;margin:16px 0 6px;font-size:14px}
-input[type=text],input[type=tel],input[type=number],input[type=date],textarea,select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
-input:focus,textarea:focus,select:focus{border-color:var(--ink);outline:none}
+input[type=text], input[type=tel], input[type=number], input[type=date], textarea, select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+input:focus, textarea:focus, select:focus{border-color:var(--ink);outline:none}
 textarea{min-height:84px;resize:vertical}
 .err{color:var(--bad);font-size:12px;margin-top:4px;min-height:1em}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
@@ -156,14 +143,11 @@ textarea{min-height:84px;resize:vertical}
 .copybtn:hover{border-color:var(--ink)}
 .qris{max-width:340px;margin:0 auto}
 .qris img{width:100%;height:auto;border-radius:8px;display:block}
-.paytotal{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
-.paytotal b{font-size:26px;font-weight:600;}
-.payinfo{display:none;margin-top:12px}
-.payinfo.show{display:block}
 .actions{display:grid;gap:10px;margin-top:28px}
 .status{display:flex;align-items:center;gap:10px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--warn);flex:none}
-.dot.ok{background:var(--ok)}.dot.bad{background:var(--bad)}
+.dot.ok{background:var(--ok)}
+.dot.bad{background:var(--bad)}
 .dlv{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
 .dlv li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
 .dlv b{font-family:var(--mono);font-weight:600;font-size:16px}
@@ -171,12 +155,13 @@ textarea{min-height:84px;resize:vertical}
 .faq{margin:20px 0 28px}
 .faq dt{font-weight:600;margin-top:20px}
 .faq dd{margin:4px 0 0;color:var(--muted)}
-
 /* ---------- chip status ---------- */
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:var(--soft);white-space:nowrap}
 .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
-.chip.ok::before{background:var(--ok)}.chip.warn::before{background:var(--warn)}.chip.bad::before{background:var(--bad)}.chip.info::before{background:var(--ink)}
-
+.chip.ok::before{background:var(--ok)}
+.chip.warn::before{background:var(--warn)}
+.chip.bad::before{background:var(--bad)}
+.chip.info::before{background:var(--ink)}
 /* ---------- admin ---------- */
 .ahead{background:var(--hero);color:#fbefdf;position:relative;padding-bottom:8px}
 .ahead::after{content:"";position:absolute;left:0;right:0;bottom:0;height:8px;background:var(--amber);-webkit-mask:var(--tri) left bottom/16px 8px repeat-x;mask:var(--tri) left bottom/16px 8px repeat-x}
@@ -205,7 +190,6 @@ textarea{min-height:84px;resize:vertical}
 .panel{border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
 .panel.wide{grid-column:1/-1}
 .panel h3{margin:0;font-size:16px;font-weight:600}
-.panel .psub{margin:2px 0 14px;color:var(--muted);font-size:14px}
 .cchart{display:grid;grid-template-columns:auto 1fr;gap:8px}
 .yax{height:calc(170px + .9em);margin-top:-.45em;display:flex;flex-direction:column;justify-content:space-between;font-size:12px;line-height:1;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
 .plotwrap{overflow-x:auto;min-width:0}
@@ -216,29 +200,31 @@ textarea{min-height:84px;resize:vertical}
 .ccol{flex:1;min-width:44px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:none;border:0;padding:0;cursor:pointer}
 .ccol .cbar{width:24px;border-radius:4px 4px 0 0;background:var(--chart-a)}
 .ccol.dim .cbar{background:var(--chart-b);opacity:.5}
-.ccol:hover .cbar,.ccol:focus-visible .cbar{filter:brightness(1.15);opacity:1}
+.ccol:hover .cbar, .ccol:focus-visible .cbar{filter:brightness(1.15);opacity:1}
 .cap{font-size:12px;color:var(--muted);margin-bottom:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .xrow{display:flex;margin-top:6px}
 .xrow span{flex:1;min-width:44px;text-align:center;font-size:12px;color:var(--muted)}
 .hbars{display:grid}
 .hrow{display:grid;grid-template-columns:minmax(80px,36%) 1fr;gap:12px;align-items:center;padding:7px 0;border-radius:6px}
-.hrow:hover,.hrow:focus-visible{background:var(--soft)}
+.hrow:hover, .hrow:focus-visible{background:var(--soft)}
 .hl{font-size:14px;overflow-wrap:anywhere}
 .ht{display:flex;align-items:center;gap:8px;min-width:0}
 .hb{display:block;height:14px;width:calc((100% - 44px) * var(--w));min-width:2px;border-radius:0 4px 4px 0;background:var(--chart-a)}
 .hv{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
 .stack{display:flex;gap:2px;height:24px;border-radius:4px;overflow:hidden}
 .stack .sg{display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-size:12px;font-weight:600;min-width:0}
-.sg.a{background:var(--chart-a)}.sg.b{background:var(--chart-b)}
+.sg.a{background:var(--chart-a)}
+.sg.b{background:var(--chart-b)}
 .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:14px}
 .legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
-.legend .sw.a{background:var(--chart-a)}.legend .sw.b{background:var(--chart-b)}
+.legend .sw.a{background:var(--chart-a)}
+.legend .sw.b{background:var(--chart-b)}
 .legend b{font-variant-numeric:tabular-nums}
 .tview summary{cursor:pointer;color:var(--muted);font-size:14px;padding:6px 0}
 .tview table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
-.tview th,.tview td{text-align:left;padding:8px 10px 8px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.tview th, .tview td{text-align:left;padding:8px 10px 8px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 .tview th{font-weight:600;color:var(--muted);font-size:12px}
-.tview td.r,.tview th.r{text-align:right}
+.tview td.r, .tview th.r{text-align:right}
 .tview .tw{overflow-x:auto}
 .tip{position:fixed;z-index:20;pointer-events:none;background:var(--hero);color:#fff8ee;border-radius:8px;padding:8px 12px;font-size:12px;display:grid;gap:1px;max-width:240px}
 .tip b{font-size:16px;font-weight:600}
@@ -255,9 +241,6 @@ textarea{min-height:84px;resize:vertical}
 .okbox{border:1px solid var(--ok);border-radius:14px;padding:16px;margin-bottom:14px}
 .okbox h3{margin:0 0 4px;font-size:16px}
 .col.wide{max-width:920px}
-.ph{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:2px 0 16px}
-.ph h2{margin:0;font-size:20px;font-weight:600}
-.ph p{margin:2px 0 0;color:var(--muted);font-size:14px}
 .toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:6px}
 .stabs{display:flex;gap:2px;overflow-x:auto;padding:3px;border-radius:12px;max-width:100%;scrollbar-width:none;background:linear-gradient(to right,var(--soft) 60%,transparent) left center/44px 100% no-repeat local,linear-gradient(to left,var(--soft) 60%,transparent) right center/44px 100% no-repeat local,linear-gradient(to right,rgba(0,0,0,.14),transparent) left center/10px 100% no-repeat scroll,linear-gradient(to left,rgba(0,0,0,.14),transparent) right center/10px 100% no-repeat scroll var(--soft);}
 .stabs button{border:0;background:none;border-radius:9px;padding:7px 12px;cursor:pointer;white-space:nowrap;font-size:14px;color:var(--muted)}
@@ -272,25 +255,25 @@ textarea{min-height:84px;resize:vertical}
 .orow:last-child{border-bottom:0}
 .orow.attn{box-shadow:inset 3px 0 0 var(--warn)}
 .orow-h{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center}
-@media (max-width:620px){.orow-h{grid-template-columns:minmax(0,1fr)}.oside{justify-content:flex-start;display:grid;grid-template-columns:1fr 1fr;gap:8px}.oside>:first-child:not(.btn){grid-column:1/-1;justify-self:start}.oside .btn{width:100%;text-align:center}}
+@media (max-width:620px){
+  .orow-h{grid-template-columns:minmax(0,1fr)}
+  .oside{justify-content:flex-start;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .oside>:first-child:not(.btn){grid-column:1/-1;justify-self:start}
+  .oside .btn{width:100%;text-align:center}
+}
 .o1{display:flex;gap:4px 10px;align-items:baseline;flex-wrap:wrap}
 .num{font-family:var(--mono);font-weight:600}
 .oname{font-weight:600;overflow-wrap:anywhere}
 .otag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:0 6px}
-.o2{color:var(--muted);font-size:14px;margin-top:2px;overflow-wrap:anywhere}
 .o3{font-size:14px;margin-top:4px;overflow-wrap:anywhere}
 .oside{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .odetail{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);display:grid;gap:14px}
-.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 24px}
-.kv small{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
-.kv span{overflow-wrap:anywhere}
-.kv a{color:var(--ink)}
 .itl{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .itl li{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
 .ototal{display:flex;justify-content:space-between;font-weight:600;border-top:1px solid var(--line);padding-top:8px;font-variant-numeric:tabular-nums}
 .onote{margin:0;font-size:14px;background:var(--soft);border-radius:8px;padding:8px 12px;overflow-wrap:anywhere}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
-.acts .btn,.btn.sm{width:auto;padding:8px 14px;font-size:14px;border-radius:10px}
+.acts .btn, .btn.sm{width:auto;padding:8px 14px;font-size:14px;border-radius:10px}
 .fl{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 16px}
 .fgrid .full{grid-column:1/-1}
@@ -312,11 +295,14 @@ textarea{min-height:84px;resize:vertical}
 .pimg small{position:absolute;left:0;right:0;bottom:0;background:rgba(59,44,39,.72);color:var(--on-accent);font-size:12px;text-align:center;padding:3px}
 .pimg input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .pmain{flex:1;min-width:0;display:grid;gap:12px}
-.pmain input[type=text],.pmain input[type=number]{padding:9px 12px}
+.pmain input[type=text], .pmain input[type=number]{padding:9px 12px}
 .pbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .adv summary{cursor:pointer;color:var(--muted);font-size:14px;padding:2px 0}
 .adv .fgrid{margin-top:10px}
-@media (max-width:560px){.prow{flex-direction:column;gap:12px}.pimg{flex-basis:auto;width:88px;height:88px}}
+@media (max-width:560px){
+  .prow{flex-direction:column;gap:12px}
+  .pimg{flex-basis:auto;width:88px;height:88px}
+}
 .setsec{margin-bottom:14px}
 .qrisbox{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:14px}
 .qrisbox img{width:140px;height:140px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:var(--card)}
@@ -328,38 +314,37 @@ textarea{min-height:84px;resize:vertical}
 .po-h h3{margin:0;font-size:16px;font-weight:600}
 .newpo{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .newpo input{width:auto}
-.rowbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .noterow{margin-top:10px}
 .gate{max-width:420px;margin:32px auto 0}
 .inote{width:100%;padding:9px 12px!important;font-size:14px;border-radius:10px!important}
 .sum .lnote{display:block;color:var(--muted);font-size:14px;padding:0 0 4px 12px}
 .itl li.inl{display:block;color:var(--muted);font-size:14px;padding-left:12px}
-.notelist{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--hero);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
-@media (prefers-reduced-motion:reduce){ .toast{transition:none} }
-
-.pricebox{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){
+  .toast{transition:none}
+}
 .left{font-size:12px;font-weight:600;color:var(--warn);background:var(--amber-soft);border-radius:999px;padding:2px 8px;white-space:nowrap}
-
 /* rekap dapur */
 .rk-t{width:100%;border-collapse:collapse;font-size:14px}
-.rk-t th,.rk-t td{padding:8px 0;border-bottom:1px solid var(--line);text-align:left;font-weight:600}
+.rk-t th, .rk-t td{padding:8px 0;border-bottom:1px solid var(--line);text-align:left;font-weight:600}
 .rk-t td.r{text-align:right;font-variant-numeric:tabular-nums}
 .rk-t tr.rk-sub td{padding:3px 0 3px 14px;color:var(--muted);font-size:14px;border-bottom:0}
-.rk-t tr.rk-add th,.rk-t tr.rk-add td{color:var(--muted)}
+.rk-t tr.rk-add th, .rk-t tr.rk-add td{color:var(--muted)}
 .rk-h{margin:16px 0 6px;font-size:14px}
 .rk-o{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;display:grid;gap:2px}
 .rk-note{color:var(--warn);font-weight:600}
 @media print{
-  .ahead,#tabs,.rk-tools,.toast,.tip{display:none!important}
+  .ahead, #tabs, .rk-tools, .toast, .tip{display:none!important}
   body{background:#fff}
   .panel{break-inside:avoid;border-color:#bbb}
 }
-
 .kitchen .panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;margin-top:16px}
 .kitchen .panels .panel:first-child{grid-row:span 2}
-@media (max-width:820px){.kitchen .panels{grid-template-columns:minmax(0,1fr)}.kitchen .panels .panel:first-child{grid-row:auto}}
+@media (max-width:820px){
+  .kitchen .panels{grid-template-columns:minmax(0,1fr)}
+  .kitchen .panels .panel:first-child{grid-row:auto}
+}
 .rk-t td:last-child{width:1%;white-space:nowrap;padding-right:0;text-align:right}
 .rk-t tr.rk-sub td:last-child{padding-right:0}
 @media (max-width:620px){
@@ -369,11 +354,10 @@ textarea{min-height:84px;resize:vertical}
 }
 .rk-t tr.rk-sub td{padding:3px 0;border-bottom:0;font-variant-numeric:tabular-nums}
 .rk-t tr.rk-sub td:first-child{padding-left:14px;width:auto;text-align:left}
-
 /* ---------- admin: sidebar ---------- */
 .ahead .menubtn{display:none;align-items:center;gap:8px;min-height:40px;padding:8px 14px;border:0;border-radius:10px;background:rgba(255,255,255,.12);color:#fbefdf;font-weight:600;cursor:pointer}
-.ahead .menubtn .n,.side .tabs .n{min-width:20px;padding:0 6px;border-radius:10px;background:var(--amber);color:var(--ink);font-size:12px;font-weight:600;text-align:center;line-height:20px}
-.ahead .menubtn:focus-visible,.side :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.ahead .menubtn .n, .side .tabs .n{min-width:20px;padding:0 6px;border-radius:10px;background:var(--amber);color:var(--ink);font-size:12px;font-weight:600;text-align:center;line-height:20px}
+.ahead .menubtn:focus-visible, .side :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .side{display:none}
 .side-scrim{display:none}
 #admin.authed .ahead .menubtn{display:inline-flex}
@@ -401,13 +385,16 @@ textarea{min-height:84px;resize:vertical}
   .side{position:sticky;top:0;height:100vh;width:auto;transform:none;transition:none;z-index:1;overflow:visible;padding-bottom:18px}
   .content{padding:36px clamp(24px,4vw,56px) 80px;width:100%;margin:0}
 }
-@media (prefers-reduced-motion:reduce){.side{transition:none}}
-@media print{.side,.side-scrim{display:none!important}}
-
+@media (prefers-reduced-motion:reduce){
+  .side{transition:none}
+}
+@media print{
+  .side, .side-scrim{display:none!important}
+}
 /* ikon */
 .ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.btn .ic,.textbtn .ic,.back .ic{margin-right:8px;vertical-align:-4px}
-.btn.iconbtn,.iconbtn{display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding-left:10px;padding-right:10px}
+.btn .ic, .textbtn .ic, .back .ic{margin-right:8px;vertical-align:-4px}
+.btn.iconbtn, .iconbtn{display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding-left:10px;padding-right:10px}
 .iconbtn .ic{margin:0}
 .ic.flip{transform:rotate(180deg)}
 .hlink .ic{width:24px;height:24px;margin:0}
@@ -424,11 +411,14 @@ textarea{min-height:84px;resize:vertical}
 .side-foot .textbtn{display:flex;align-items:center;gap:12px}
 .side-foot .textbtn .ic{margin:0}
 .closed .btn .ic{margin-right:8px}
-@media (max-width:620px){.oside .iconbtn{width:100%}}
-
+@media (max-width:620px){
+  .oside .iconbtn{width:100%}
+}
 /* admin: padat */
 #admin .content{padding-top:18px;padding-bottom:48px}
-@media (min-width:860px){#admin .content{padding:20px clamp(20px,3vw,40px) 56px}}
+@media (min-width:860px){
+  #admin .content{padding:20px clamp(20px,3vw,40px) 56px}
+}
 #admin .toolbar{gap:8px;margin:0 0 10px;align-items:center}
 #admin .toolbar .add{margin-left:auto;white-space:nowrap}
 #admin .toolbar .tools{display:flex;gap:6px;margin-left:auto}
@@ -437,25 +427,24 @@ textarea{min-height:84px;resize:vertical}
 #admin .group{margin:14px 0 6px;font-size:14px}
 #admin .orow{padding:10px 14px}
 #admin .orow-h{gap:8px 12px}
-#admin .o2{font-size:14px}
 #admin .o3{font-size:14px;margin-top:2px}
 #admin .odetail{margin-top:10px;padding-top:10px;gap:10px}
 #admin .card{padding:12px 14px;margin-bottom:10px}
-#admin .card h3,#admin .panel h3{font-size:16px;margin-bottom:8px}
+#admin .card h3, #admin .panel h3{font-size:16px;margin-bottom:8px}
 #admin .setsec{margin-bottom:10px}
 #admin .fgrid{gap:10px 12px}
 #admin .fl{font-size:12px;margin-bottom:3px}
-#admin input[type=text],#admin input[type=number],#admin input[type=date],#admin input[type=tel],#admin select,#admin textarea{padding:8px 12px}
+#admin input[type=text], #admin input[type=number], #admin input[type=date], #admin input[type=tel], #admin select, #admin textarea{padding:8px 12px}
 #admin .sales{gap:12px}
 #admin .herostat b{font-size:34px}
-#admin .herostat .s,#admin .herostat .k{font-size:14px}
+#admin .herostat .s, #admin .herostat .k{font-size:14px}
 #admin .tile{padding:9px 14px}
 #admin .tile b{font-size:20px}
 #admin .panels{gap:12px}
 #admin .panel{padding:12px 14px}
 #admin .kitchen .panels{margin-top:10px;gap:12px}
 #admin .rk-o{padding:8px 0}
-#admin .rk-t th,#admin .rk-t td{padding:6px 0}
+#admin .rk-t th, #admin .rk-t td{padding:6px 0}
 #admin .prow{padding:12px;margin-bottom:8px;gap:12px}
 #admin .pmain{gap:8px}
 #admin .pbar{margin-top:2px}
@@ -468,7 +457,9 @@ textarea{min-height:84px;resize:vertical}
 #admin .iconbtn-t{display:inline-grid;place-items:center;min-width:36px;min-height:36px;padding:0 6px}
 #admin .iconbtn-t .ic{margin:0}
 #admin .empty{padding:14px}
-@media (max-width:560px){#admin .po-h h3{font-size:14px}}
+@media (max-width:560px){
+  #admin .po-h h3{font-size:14px}
+}
 #admin .nform{max-width:720px}
 #admin .nform .lb{margin-top:10px}
 #admin textarea{min-height:60px;height:60px}
@@ -481,17 +472,13 @@ textarea{min-height:84px;resize:vertical}
   #admin .toolbar .sel{flex:1 1 0;min-width:0}
   #admin .rk-tools .sel{flex:1 1 100%}
 }
-
 /* PO kosong: satu layar tenang, tanpa sampul */
 .no-po .cover{display:none}
 .no-po main{min-height:calc(100svh - 80px);display:flex;align-items:center;justify-content:center}
 .no-po main > section{width:100%}
 .no-po #foot{display:none}
-
 /* aksen ulos: pita merah, garis anggur tua, garis krem. Menggantikan deret segitiga */
-:root{
-  --ulos-h:linear-gradient(to bottom,#6a2b24 0 2px,#f1e0c8 2px 3px,#9a3b2f 3px 7px,#52211b 7px 9px,#9a3b2f 9px 13px,#f1e0c8 13px 14px,#6a2b24 14px 16px);
-}
+:root{--ulos-h:linear-gradient(to bottom,#6a2b24 0 2px,#f1e0c8 2px 3px,#9a3b2f 3px 7px,#52211b 7px 9px,#9a3b2f 9px 13px,#f1e0c8 13px 14px,#6a2b24 14px 16px);}
 .pattern{height:16px;background:var(--ulos-h)}
 .pattern::before{content:none}
 .ahead{padding-bottom:16px}
@@ -499,7 +486,6 @@ textarea{min-height:84px;resize:vertical}
 .side-brand{flex-wrap:nowrap}
 .side-brand .brand{white-space:nowrap}
 .side-brand .logo.sm{width:36px;height:36px}
-
 /* detail pesanan: baris berikon, daftar item satu kali, aksi dipisah */
 .orow.open .o3{display:none}
 #admin .odetail{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:12px 28px;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
@@ -519,7 +505,10 @@ textarea{min-height:84px;resize:vertical}
 .odetail .onote{font-size:14px;padding:7px 12px}
 .odetail .acts{gap:8px;align-items:center}
 .odetail .acts .cancel{margin-left:auto}
-@media (max-width:700px){#admin .odetail{grid-template-columns:minmax(0,1fr)}.odetail .acts .cancel{margin-left:0}}
+@media (max-width:700px){
+  #admin .odetail{grid-template-columns:minmax(0,1fr)}
+  .odetail .acts .cancel{margin-left:0}
+}
 @media (max-width:620px){
   #admin .oside{grid-template-columns:minmax(0,1fr) auto}
   #admin .oside .iconbtn{width:auto;min-width:46px;grid-column:2}
@@ -527,7 +516,6 @@ textarea{min-height:84px;resize:vertical}
   #admin .odetail .acts .btn{width:100%;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:8px 8px;font-size:14px}
   #admin .odetail .acts .btn .ic{margin-right:6px;width:18px;height:18px}
 }
-
 /* bantuan: daftar lipat */
 .faq{margin:6px 0 24px;border-top:1px solid var(--line)}
 .faq details{border-bottom:1px solid var(--line)}
@@ -539,7 +527,9 @@ textarea{min-height:84px;resize:vertical}
 .faq summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
 .checkcard .ct{margin:0 0 10px;font-size:16px;font-weight:600}
 .ckrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:420px){.ckrow{grid-template-columns:1fr}}
+@media (max-width:420px){
+  .ckrow{grid-template-columns:1fr}
+}
 #help-view .label{margin-top:22px}
 .dlv small{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dlv small .ic{width:15px;height:15px;margin-right:-2px}
@@ -559,26 +549,22 @@ textarea{min-height:84px;resize:vertical}
 .rk-i .q{color:var(--muted);font-variant-numeric:tabular-nums}
 .rk-i em{color:var(--muted);font-style:normal;font-size:14px}
 .rk-note{border-left:3px solid var(--amber);padding:3px 10px;background:var(--amber-soft);border-radius:0 8px 8px 0;font-size:14px}
-
 /* beranda: ringkas */
 .cover .title{font-size:clamp(2rem,9vw,2.6rem);max-width:9em}
-.cover .lede{margin-top:8px;font-size:16px}
 .cover .col{padding-bottom:26px}
 .meta{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 0;color:var(--muted);font-size:14px}
 .meta span{display:inline-flex;align-items:center;gap:6px}
 .meta .ic{width:17px;height:17px}
 .item p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-
 /* beranda: padat */
 .cover .col{padding-top:6px;padding-bottom:14px}
 .cover .title{font-size:clamp(1.6rem,7.4vw,2.2rem);line-height:1.1;max-width:none;white-space:nowrap}
-.cover .lede{margin-top:2px;font-size:16px}
 .pattern{height:12px}
 .pattern{background:linear-gradient(to bottom,#6a2b24 0 2px,#f1e0c8 2px 3px,#9a3b2f 3px 5px,#52211b 5px 7px,#9a3b2f 7px 9px,#f1e0c8 9px 10px,#6a2b24 10px 12px)}
 .chips{margin-top:14px}
 .cbtn{min-width:62px;padding:7px 12px 6px;border-radius:12px}
 .cbtn .dnum{font-size:20px;margin:1px 0}
-.cbtn .dow,.cbtn .mon{font-size:12px}
+.cbtn .dow, .cbtn .mon{font-size:12px}
 .meta{margin-top:10px}
 .menu{margin-top:6px}
 .item{padding:12px 0}
@@ -586,17 +572,18 @@ textarea{min-height:84px;resize:vertical}
 .thumb{width:78px;height:78px;border-radius:12px}
 .item h3{font-size:16px}
 .ifoot{padding-top:4px;min-height:38px}
-@media (min-width:600px){.cover .col{padding-top:8px;padding-bottom:20px}.cover .title{white-space:normal;max-width:12em}}
-
+@media (min-width:600px){
+  .cover .col{padding-top:8px;padding-bottom:20px}
+  .cover .title{white-space:normal;max-width:12em}
+}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .chips{margin-top:16px}
-
 /* header lembut: krem amber, teks cokelat tua */
 .top{background:var(--amber-soft);color:var(--ink);border-bottom:1px solid var(--line)}
 .home .top{background:var(--amber-soft);color:var(--ink);border-bottom:0}
-.top .brand,.home .top .brand{color:var(--ink)}
-.hlink,.home .top .hlink{color:var(--ink)}
-.hlink:hover,.home .top .hlink:hover{color:var(--accent)}
+.top .brand, .home .top .brand{color:var(--ink)}
+.hlink, .home .top .hlink{color:var(--ink)}
+.hlink:hover, .home .top .hlink:hover{color:var(--accent)}
 .hlink:focus-visible{outline-color:var(--accent)}
 .ahead{background:var(--amber-soft);color:var(--ink)}
 .ahead .brand{color:var(--ink)}
@@ -605,17 +592,14 @@ textarea{min-height:84px;resize:vertical}
 .ahead .tag{color:var(--muted);border:1px solid var(--line)}
 .ahead .menubtn{background:rgba(154,59,47,.1);color:var(--ink)}
 .ahead .menubtn:focus-visible{outline-color:var(--accent)}
-
 /* aksen ulos tipis */
 :root{--ulos-h:linear-gradient(to bottom,#9a3b2f 0 2px,#f1e0c8 2px 3px,#6a2b24 3px 4px,#9a3b2f 4px 6px)}
 .pattern{height:6px;background:var(--ulos-h)}
 .ahead{padding-bottom:6px}
 .ahead::after{height:6px;background:var(--ulos-h)}
-
 #s1 .label{margin:16px 0 8px;font-size:14px}
 #s1 .chips{margin-top:0}
 .bar .btn:disabled{white-space:nowrap}
-
 /* alur pembeli: kartu pesanan terakhir, kotak bayar, kerangka, tombol lebih besar */
 .label small{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
 .lastcard{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:10px 12px;margin:14px 0 0;cursor:pointer;color:var(--ink)}
@@ -644,7 +628,9 @@ textarea{min-height:84px;resize:vertical}
 .skel b:nth-child(2){width:92%}
 .skel b:nth-child(3){width:38%}
 @keyframes skelpulse{50%{opacity:.5}}
-@media (prefers-reduced-motion:no-preference){.skel i,.skel b{animation:skelpulse 1.2s ease-in-out infinite}}
+@media (prefers-reduced-motion:no-preference){
+  .skel i, .skel b{animation:skelpulse 1.2s ease-in-out infinite}
+}
 .step{gap:10px}
 .step button{width:40px;height:40px;font-size:20px}
 .item.inl .vpanel{margin-top:8px}
@@ -653,9 +639,7 @@ textarea{min-height:84px;resize:vertical}
 .lastcard b{font-family:var(--mono);font-weight:600}
 .dlv li > div{min-width:0}
 .dlv .chip{flex:none}
-
 /* unggah bukti bayar */
-.actions.duo{display:grid;gap:8px}
 #d-up{display:flex;align-items:center;justify-content:center}
 #d-up .ic{margin-right:8px}
 .filebtn.btn{position:relative}
@@ -667,7 +651,6 @@ textarea{min-height:84px;resize:vertical}
 .lightbox{position:fixed;inset:0;z-index:60;background:rgba(59,44,39,.82);display:grid;place-items:center;padding:16px}
 .lightbox img{max-width:100%;max-height:88vh;border-radius:12px;background:var(--card)}
 .lb-x{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
-
 /* PO terjadwal */
 .closed .np{justify-content:center;margin:0 0 20px;font-size:16px}
 .closed .np span{color:var(--ink)}
@@ -675,23 +658,18 @@ textarea{min-height:84px;resize:vertical}
 #admin .newpo input[type=datetime-local]{width:auto;min-width:190px}
 .opennow{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:600}
 .opennow .ic{width:16px;height:16px;margin:0}
-
 .schemawarn{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:var(--amber-soft);border:1px solid var(--amber);color:var(--warn);font-size:14px;line-height:1.45}
 .schemawarn .ic{width:20px;height:20px;margin-top:1px}
 .schemawarn code{background:rgba(59,44,39,.08);padding:1px 6px;border-radius:6px;font-size:.88em}
-
 /* =========================================================
    Tampilan pembeli: penyegaran
    Kebraniannya di dua tempat: keranjang melayang dan penanda langkah. Aksen ulos hanya di header.
    ========================================================= */
-:root{
-  --lift:0 10px 28px rgba(59,44,39,.15);
-  --lift-s:0 2px 10px rgba(59,44,39,.07);
-}
-
+:root{--lift:0 10px 28px rgba(59,44,39,.15);
+  --lift-s:0 2px 10px rgba(59,44,39,.07);}
 /* penanda langkah: hanya di layar data dan bayar */
 .steps{display:flex;align-items:center;list-style:none;margin:14px 0 2px;padding:0}
-.home .steps,.no-po .steps{display:none}
+.home .steps, .no-po .steps{display:none}
 .steps li{display:flex;align-items:center;gap:8px;flex:1;color:var(--muted);font-size:14px;font-weight:600;white-space:nowrap}
 .steps li:last-child{flex:none}
 .steps li:not(:last-child)::after{content:"";flex:1;height:2px;margin:0 10px;border-radius:2px;background:var(--line)}
@@ -701,7 +679,6 @@ textarea{min-height:84px;resize:vertical}
 .steps li.now{color:var(--ink);font-weight:600}
 .steps li.now i{background:var(--hero);border-color:var(--hero);color:var(--on-accent)}
 .steps li.done i{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-
 /* beranda: dua langkah bernomor, info jam sebagai pil lembut */
 #s1{counter-reset:st}
 #s1 .label{counter-increment:st;display:flex;align-items:center;font-family:var(--head);font-size:16px;font-weight:600;margin:18px 0 10px}
@@ -710,12 +687,10 @@ textarea{min-height:84px;resize:vertical}
 .meta{gap:8px}
 .meta span{background:var(--soft);padding:6px 12px 6px 9px;border-radius:999px;color:var(--ink);font-size:14px}
 .meta .ic{color:var(--accent)}
-
 /* kartu tanggal */
 .cbtn{border-radius:14px;box-shadow:var(--lift-s)}
 .cbtn[aria-pressed=true]{padding-top:13px;box-shadow:0 6px 16px rgba(125,58,49,.28)}
 .cbtn .dnum{font-size:26px}
-
 /* daftar menu */
 .thumb{width:86px;height:86px;border-radius:18px;box-shadow:var(--lift-s),inset 0 0 0 1px rgba(59,44,39,.06)}
 .item{padding:14px 0}
@@ -725,23 +700,16 @@ textarea{min-height:84px;resize:vertical}
 .item .vpanel{border:1px solid var(--line);border-radius:14px;padding:4px 12px;background:rgba(251,248,242,.7)}
 .vrow{padding:7px 0;border-top:1px dashed var(--line)}
 .vrow:first-child{border-top:0}
-.pickbtn{border-radius:999px;background:var(--card);box-shadow:var(--lift-s)}
 .left{font-weight:600}
-
 /* keranjang melayang */
 .bar{left:50%;right:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 24px));transform:translateX(-50%);padding:15px 10px 10px 12px;border:1px solid var(--line);border-radius:20px;background:var(--card);box-shadow:var(--lift);overflow:hidden}
 .bar .in{max-width:none;gap:12px}
-.cartic{position:relative;flex:none;width:44px;height:44px;border-radius:14px;background:var(--amber-soft);color:var(--accent);display:grid;place-items:center}
-.cartic .ic{width:22px;height:22px}
-.cartic i{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--hero);color:var(--on-accent);font-style:normal;font-size:12px;font-weight:600;display:grid;place-items:center}
 .bar .t b{font-family:var(--head);font-size:20px}
 .bar .btn{border-radius:14px;padding:12px 22px}
 #shop.has-bar{padding-bottom:132px}
 @keyframes bump{40%{transform:scale(1.16)}}
-@media (prefers-reduced-motion:no-preference){.cartic.bump{animation:bump .32s ease}}
-
 /* checkout */
-#s2 .title,#s3 .title{font-family:var(--head)}
+#s2 .title, #s3 .title{font-family:var(--head)}
 #s2 .sum{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--lift-s)}
 .sum .total{font-family:var(--head);font-size:20px}
 #s2 .label{font-family:var(--head);font-size:16px;margin:22px 0 10px}
@@ -750,10 +718,9 @@ textarea{min-height:84px;resize:vertical}
 .seg .sl{display:flex;align-items:center;justify-content:center;gap:7px}
 .seg .sl .ic{width:18px;height:18px}
 .lb .ic{width:15px;height:15px;margin-right:7px;vertical-align:-3px;color:var(--accent)}
-input[type=text],input[type=tel],input[type=number],input[type=date],textarea,select{background:var(--card);border-radius:12px}
-input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(154,59,47,.14)}
+input[type=text], input[type=tel], input[type=number], input[type=date], textarea, select{background:var(--card);border-radius:12px}
+input:focus, textarea:focus, select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(154,59,47,.14)}
 #paid{border-radius:14px;padding:14px;font-size:16px}
-
 /* layar bayar */
 .paybox{position:relative;overflow:hidden;padding-top:24px;border-radius:18px;box-shadow:var(--lift)}
 .payamt b{color:var(--accent);font-size:34px}
@@ -761,13 +728,11 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 .proofok{border-radius:14px}
 #d-up{border-radius:14px;padding:14px}
 .lastcard{border-radius:16px;box-shadow:var(--lift-s)}
-
 /* bantuan */
 .faq{border-top:0}
 .faq details{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;padding:0 14px}
 .faq summary{padding:13px 0}
 .checkcard{border-radius:16px;box-shadow:var(--lift-s)}
-
 /* penyesuaian setelah review */
 .meta span{font-size:12px;padding:5px 10px 5px 8px}
 .cbtn[aria-pressed=true]{box-shadow:0 4px 10px rgba(125,58,49,.22)}
@@ -778,13 +743,11 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 .meta span{font-size:12px;gap:5px}
 .meta .ic{width:16px;height:16px}
 .dlv:empty{display:none}
-
 /* aksen ulos hanya di header: kembalikan jarak dan tanda terpilih yang polos */
 .cbtn[aria-pressed=true]{padding-top:7px;box-shadow:0 4px 10px rgba(125,58,49,.22)}
 .item.on{padding-left:14px;box-shadow:inset 3px 0 0 var(--amber)}
 .bar{padding:10px 10px 10px 12px}
 .paybox{padding-top:14px}
-
 /* =========================================================
    Admin selaras dengan tampilan pembeli: kartu lembut, sudut membulat, huruf judul Fredoka,
    kapsul status, bayangan tipis. Garis hanya seperlunya.
@@ -792,7 +755,6 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 #admin .group{margin:24px 2px 10px;align-items:baseline;font-weight:400;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
 #admin .group span:first-child{font-family:var(--head);font-size:20px;font-weight:600;color:var(--ink)}
 #admin .group span:last-child b{color:var(--ink);font-weight:600}
-
 /* pesanan: satu kartu per tanggal, baris dipisah garis sangat tipis */
 #admin .olist{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--lift-s)}
 #admin .orow{padding:12px 16px;border-bottom:1px solid rgba(47,41,38,.07)}
@@ -813,17 +775,15 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
   #admin .orow .st{justify-self:start}
 }
 #admin .odetail{border-top:1px dashed var(--line);margin-top:10px;padding-top:12px}
-
 /* kartu dan judul kartu */
-#admin .panel,#admin .card,#admin .porow,#admin .prow,#admin .tview{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--lift-s)}
-#admin .porow.off,#admin .prow.off{background:var(--soft);box-shadow:none}
-#admin .panel,#admin .tview{padding:16px}
-#admin .panel h3,#admin .card h3,#admin .porow h3{font-family:var(--head);font-weight:600;font-size:16px}
+#admin .panel, #admin .card, #admin .porow, #admin .prow, #admin .tview{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--lift-s)}
+#admin .porow.off, #admin .prow.off{background:var(--soft);box-shadow:none}
+#admin .panel, #admin .tview{padding:16px}
+#admin .panel h3, #admin .card h3, #admin .porow h3{font-family:var(--head);font-weight:600;font-size:16px}
 #admin .tiles{border-radius:16px;box-shadow:var(--lift-s);background:var(--line)}
 #admin .tile{background:var(--card)}
-#admin .tile b,#admin .herostat b{font-family:var(--head);font-weight:600}
+#admin .tile b, #admin .herostat b{font-family:var(--head);font-weight:600}
 #admin .setsec{margin-bottom:12px}
-
 /* tata letak menu yang rapat */
 @media (min-width:1000px){
   #admin .pmain{grid-template-columns:minmax(0,1fr) 150px;gap:6px 24px;align-items:start}
@@ -832,9 +792,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
   #admin .pmain > .adv{grid-column:1}
   #admin .pmain > .pbar{grid-column:2;grid-row:1 / span 2;flex-direction:column;align-items:flex-start;gap:14px;padding-top:20px}
 }
-
 #a-new .nitem:not(.on) .noterow{display:none}
-
 /* =========================================================
    Asphalt (struktur) dengan warna Lapo Doli.
    Dari dokumentasi Asphalt Aloha: kisi 4px, skala huruf 12px x 1,3 dengan tinggi baris kelipatan 4,
@@ -843,8 +801,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
    Ukuran tombol dan radius tidak tertulis di dokumentasi publiknya, jadi itu keputusan kami sendiri.
    Warna merek tetap merah ulos. Font Figtree menggantikan Maison Neue yang berlisensi komersial.
    ========================================================= */
-:root{
-  /* jarak: kelipatan 4px */
+:root{/* jarak: kelipatan 4px */
   --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--sp-10:40px;
   /* peran warna */
   --bg:#ffffff;--card:#ffffff;--soft:#f4f2ee;--line:#e6e2da;
@@ -854,83 +811,66 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
   /* bayangan: rendah untuk kartu, tinggi untuk lapisan melayang */
   --shadow-low:0 1px 3px rgba(47,41,38,.10);--shadow-high:0 8px 24px rgba(47,41,38,.16);
   --lift-s:var(--shadow-low);--lift:var(--shadow-high);
-  --r-sm:8px;--r-md:12px;--r-lg:16px;
-}
+  --r-sm:8px;--r-md:12px;--r-lg:16px;}
 body{font:400 16px/24px var(--font);background:var(--bg)}
-
 /* huruf: Title (700), Body (400), Caption (12/16) */
-.title,#s2 .title,#s3 .title,.status .title{font-family:var(--head);font-size:26px;line-height:32px;font-weight:700}
-h1,h2,h3{font-family:var(--head)}
-.note,.hint,.fhint,.muted{font-size:14px;line-height:20px}
-small,.fl,.err,.otag,.chip{font-size:12px;line-height:16px}
-
+.title, #s2 .title, #s3 .title, .status .title{font-family:var(--head);font-size:26px;line-height:32px;font-weight:700}
+h1, h2, h3{font-family:var(--head)}
+.note, .fhint, .muted{font-size:14px;line-height:20px}
+small, .fl, .err, .otag, .chip{font-size:12px;line-height:16px}
 /* Button */
 .btn{min-height:48px;border-radius:var(--r-md);font-weight:600;font-size:16px;line-height:24px}
-.btn.sm,#admin .btn.sm{min-height:36px;padding:0 var(--sp-4);font-size:14px;line-height:20px;border-radius:var(--r-sm)}
+.btn.sm, #admin .btn.sm{min-height:36px;padding:0 var(--sp-4);font-size:14px;line-height:20px;border-radius:var(--r-sm)}
 .btn.line{background:transparent;border:1px solid var(--border-strong);color:var(--ink)}
-.btn.iconbtn,.iconbtn{min-width:36px}
-
+.btn.iconbtn, .iconbtn{min-width:36px}
 /* Input Field */
-input[type=text],input[type=tel],input[type=number],input[type=date],input[type=datetime-local],textarea,select{min-height:48px;padding:var(--sp-3) var(--sp-4);border:1px solid var(--border-strong);border-radius:var(--r-md);background:#fff;font-size:16px;line-height:24px}
+input[type=text], input[type=tel], input[type=number], input[type=date], input[type=datetime-local], textarea, select{min-height:48px;padding:var(--sp-3) var(--sp-4);border:1px solid var(--border-strong);border-radius:var(--r-md);background:#fff;font-size:16px;line-height:24px}
 textarea{min-height:88px}
-input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(154,59,47,.25)}
-.lb,.fl{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary);margin-bottom:var(--sp-1)}
+input:focus, textarea:focus, select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(154,59,47,.25)}
+.lb, .fl{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary);margin-bottom:var(--sp-1)}
 .err{color:var(--bad);margin-top:var(--sp-1)}
-
 /* Card: garis 1px dan bayangan rendah */
-#s2 .sum,.paybox,.lastcard,.checkcard,.faq details,.cbtn,#admin .olist,#admin .panel,#admin .card,#admin .porow,#admin .prow,#admin .tiles{border:1px solid var(--border-default);box-shadow:var(--shadow-low);background:#fff}
-#s2 .sum,.paybox,#admin .panel,#admin .card,#admin .olist,#admin .porow,#admin .prow{border-radius:var(--r-lg)}
-#admin .porow.off,#admin .prow.off{background:var(--soft);box-shadow:none}
+#s2 .sum, .paybox, .lastcard, .checkcard, .faq details, .cbtn, #admin .olist, #admin .panel, #admin .card, #admin .porow, #admin .prow, #admin .tiles{border:1px solid var(--border-default);box-shadow:var(--shadow-low);background:#fff}
+#s2 .sum, .paybox, #admin .panel, #admin .card, #admin .olist, #admin .porow, #admin .prow{border-radius:var(--r-lg)}
+#admin .porow.off, #admin .prow.off{background:var(--soft);box-shadow:none}
 .cbtn[aria-pressed=true]{border-color:var(--hero)}
-
 /* Badge dan Alert */
 .otag{border-radius:6px;padding:2px 8px}
 .chip{background:var(--soft);border-radius:var(--r-sm);padding:2px 10px}
 #admin .chip{background:var(--soft)}
-.proofok,.schemawarn,.onote{border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);font-size:14px;line-height:20px}
-
+.proofok, .schemawarn, .onote{border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);font-size:14px;line-height:20px}
 /* Toast: lapisan melayang, bayangan tinggi */
 .toast{border-radius:var(--r-md);box-shadow:var(--shadow-high);font-size:14px;line-height:20px;padding:var(--sp-3) var(--sp-4)}
 .bar{box-shadow:var(--shadow-high);background:#fff}
 .lightbox img{box-shadow:var(--shadow-high)}
-
 /* jarak sebagai pemisah: kurangi garis di daftar menu */
 .item{border-bottom:0;padding:var(--sp-3) 0}
 .item + .item{margin-top:var(--sp-1)}
 .item.on{background:none;border-radius:0;padding-left:var(--sp-4)}
 .item .vpanel{background:#fff;border:1px solid var(--border-default);border-radius:var(--r-md)}
 .thumb{background:var(--soft)}
-
 /* Button: ikon dan teks sejajar */
 .btn{display:flex;align-items:center;justify-content:center;gap:var(--sp-2)}
-.btn .ic,.btn.sm .ic{margin:0;vertical-align:baseline}
-.btn.iconbtn,.btn.sm.iconbtn{padding:0 var(--sp-2)}
+.btn .ic, .btn.sm .ic{margin:0;vertical-align:baseline}
+.btn.iconbtn, .btn.sm.iconbtn{padding:0 var(--sp-2)}
 /* admin lebih padat: isian 40px */
-#admin input[type=text],#admin input[type=tel],#admin input[type=number],#admin input[type=date],#admin input[type=datetime-local],#admin select{min-height:40px;padding:var(--sp-2) var(--sp-3);font-size:14px;line-height:20px;border-radius:var(--r-sm)}
+#admin input[type=text], #admin input[type=tel], #admin input[type=number], #admin input[type=date], #admin input[type=datetime-local], #admin select{min-height:40px;padding:var(--sp-2) var(--sp-3);font-size:14px;line-height:20px;border-radius:var(--r-sm)}
 #admin textarea{min-height:72px;font-size:14px;line-height:20px;border-radius:var(--r-sm)}
 #admin .btn{border-radius:var(--r-sm)}
-
 /* =========================================================
    Pola GoFood: kartu toko, baris menu (teks kiri, foto kanan), lembar pilihan dari bawah, kapsul keranjang
    ========================================================= */
 .storecard{margin:16px 0 8px;padding:16px;border:1px solid var(--border-default);border-radius:var(--r-lg);background:#fff;box-shadow:var(--shadow-low)}
 .sc-top{display:flex;align-items:center;gap:var(--sp-3)}
-.sc-logo{flex:none;width:56px;height:56px;border:1px solid var(--border-default);border-radius:var(--r-md);display:grid;place-items:center;background:var(--hero)}
-.sc-logo img{width:44px;height:44px}
-.sc-id{flex:1;min-width:0}
-.sc-id h2{margin:0;font-size:20px;line-height:24px;font-weight:700}
-.sc-id p{margin:0;color:var(--text-secondary);font-size:14px;line-height:20px}
 .badge-po{flex:none;background:var(--hero);color:var(--on-accent);border-radius:var(--r-sm);padding:4px 10px;font-size:12px;line-height:16px;font-weight:600}
 .sc-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:var(--sp-4);background:var(--soft);border-radius:var(--r-md)}
 .sc-stats div{padding:10px 8px;text-align:center}
 .sc-stats div+div{border-left:1px solid var(--border-default)}
 .sc-stats b{display:block;font-size:14px;line-height:20px;font-weight:700}
 .sc-stats small{display:block;color:var(--text-secondary);font-size:12px;line-height:16px}
-
 #s1 .label{font-size:20px;line-height:24px;font-weight:700;margin:20px 0 var(--sp-3)}
 #s1 .label::before{content:none}
 .chips{padding:2px 0 var(--sp-2)}
-
 /* baris menu */
 .menu{margin-top:0}
 .item{padding:var(--sp-4) 0;border-bottom:1px solid var(--border-default);margin:0}
@@ -956,13 +896,14 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 .step span{min-width:24px;text-align:center;font-weight:600}
 .item.off{opacity:.55}
 .soldout{font-size:14px;color:var(--text-secondary)}
-
 /* lembar pilihan dari bawah */
 .sheet{display:none}
 .item.open .sheet{display:flex;flex-direction:column;position:fixed;left:50%;bottom:0;width:min(560px,100%);max-height:86vh;transform:translateX(-50%);z-index:50;background:#fff;border-radius:20px 20px 0 0;box-shadow:var(--shadow-high)}
 .scrim{position:fixed;inset:0;z-index:40;background:rgba(47,41,38,.45)}
 body.sheet-open{overflow:hidden}
-@media (prefers-reduced-motion:no-preference){.item.open .sheet{animation:sheetup .22s ease-out}}
+@media (prefers-reduced-motion:no-preference){
+  .item.open .sheet{animation:sheetup .22s ease-out}
+}
 @keyframes sheetup{from{transform:translate(-50%,24px);opacity:.6}}
 .sheet-grab{display:block;width:40px;height:4px;border-radius:2px;background:var(--border-default);margin:8px auto 0}
 .sheet-h{display:flex;gap:var(--sp-3);padding:var(--sp-4) var(--sp-4) var(--sp-3)}
@@ -975,7 +916,7 @@ body.sheet-open{overflow:hidden}
 .sg-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--sp-2)}
 .sg-h b{font-size:16px;line-height:24px}
 .sg-h small{color:var(--text-secondary)}
-.sheet .vpanel,.sheet .vgroup{margin:0;padding:0;border:0;background:none}
+.sheet .vpanel, .sheet .vgroup{margin:0;padding:0;border:0;background:none}
 .sheet .vrow{padding:10px 0;border-top:1px solid var(--border-default)}
 .sheet .vrow:first-child{border-top:0}
 .sheet .subs{display:block;border:0;background:none;padding:0;margin:0}
@@ -986,18 +927,16 @@ body.sheet-open{overflow:hidden}
 .sheet .noterow[hidden]{display:block!important}
 .sheet-f{padding:var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom,0px));border-top:1px solid var(--border-default);background:#fff}
 .sheet-f .btn{width:100%;border-radius:999px}
-
 /* kapsul keranjang melayang */
 .bar{left:0;right:0;bottom:0;width:auto;transform:none;padding:0 var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom,0px));border:0;background:none;box-shadow:none;border-radius:0;pointer-events:none}
 .bar .cartpill{pointer-events:auto;display:flex;justify-content:space-between;align-items:center;width:min(560px,100%);margin:0 auto;min-height:56px;padding:var(--sp-2) var(--sp-5);border:0;border-radius:999px;background:var(--hero);color:var(--on-accent);box-shadow:var(--shadow-high);cursor:pointer;text-align:left;font:inherit}
 .bar .cartpill:disabled{opacity:.5}
-.cp-l b,.cp-r b{display:block;font-size:16px;line-height:20px;font-weight:700}
+.cp-l b, .cp-r b{display:block;font-size:16px;line-height:20px;font-weight:700}
 .cp-l small{display:block;font-size:12px;line-height:16px;opacity:.9}
 .cp-r{display:flex;align-items:center;gap:var(--sp-3)}
 .cp-r .ic{width:24px;height:24px}
 .bar .cartpill:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 #shop.has-bar{padding-bottom:96px}
-
 /* checkout: kartu bagian berikon, pilihan radio, ringkasan, tombol tetap di bawah */
 .steps{margin-top:16px}
 .pagehead{display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-3) 0 var(--sp-4)}
@@ -1049,25 +988,21 @@ body.sheet-open{overflow:hidden}
 .checkout-bar .btn{width:auto;min-width:168px;border-radius:999px}
 #s2{padding-bottom:128px}
 #s2 .actions{display:none}
-
 /* kartu toko tanpa mengulang logo dan nama (sudah ada di header) */
 .storecard{padding:14px 16px}
 .sc-top{justify-content:space-between}
 .sc-tag{margin:0;font-size:16px;line-height:24px;font-weight:700}
 .sc-stats{margin-top:var(--sp-3)}
-
-
 /* =========================================================
    Admin memakai sistem toko: kapsul, kartu berikon, pilihan radio, bilah bawah yang menempel
    ========================================================= */
-#admin .btn,#admin .btn.sm,#admin .btn.line,#admin .pillbtn{border-radius:999px}
-#admin .btn.iconbtn,#admin .btn.sm.iconbtn{border-radius:50%;width:36px;min-width:36px;padding:0}
+#admin .btn, #admin .btn.sm, #admin .btn.line, #admin .pillbtn{border-radius:999px}
+#admin .btn.iconbtn, #admin .btn.sm.iconbtn{border-radius:50%;width:36px;min-width:36px;padding:0}
 #admin .btn.sm{min-height:36px;padding:0 var(--sp-4)}
 #admin .btn.line{border-color:var(--accent);color:var(--accent);background:#fff}
 #admin .btn.line:hover{background:var(--amber-soft)}
 #admin .btn.danger{background:#fff;color:var(--bad);border:1px solid var(--bad)}
 #admin .odetail .btn.line.cancel{border-color:var(--border-strong);color:var(--text-primary)}
-
 /* filter: pil, aktif terisi */
 #admin .stabs{background:none;padding:0;gap:var(--sp-2);border-radius:0;overflow-x:auto}
 #admin .stabs button{min-height:36px;padding:0 var(--sp-4);border:1px solid var(--border-strong);border-radius:999px;background:#fff;color:var(--text-primary);font-weight:600;box-shadow:none;white-space:nowrap}
@@ -1075,7 +1010,6 @@ body.sheet-open{overflow:hidden}
 #admin .stabs .c{margin-left:6px;opacity:.8}
 #admin .stabs .c.hot{background:var(--amber);color:var(--ink);opacity:1;border-radius:999px;padding:0 7px}
 #admin .stabs button[aria-pressed=true] .c.hot{background:var(--amber);color:var(--ink)}
-
 /* kartu Pengaturan dan PO */
 #admin .setsec .gc-h{margin-bottom:var(--sp-4)}
 #admin .setsec .gc-h h3{margin:0;font-size:16px;line-height:24px}
@@ -1084,11 +1018,10 @@ body.sheet-open{overflow:hidden}
 #admin .group span:first-child{font-family:var(--head);font-size:20px;line-height:24px;font-weight:700}
 #admin .group{font-size:14px}
 #admin .odetail{background:none}
-#admin .tile b,#admin .herostat b{font-weight:700}
+#admin .tile b, #admin .herostat b{font-weight:700}
 #admin .herostat b{font-size:34px;line-height:40px}
 #admin .tile b{font-size:20px;line-height:24px}
-#admin .newpo input[type=date],#admin .newpo input[type=datetime-local]{border-radius:999px;padding:0 var(--sp-4)}
-
+#admin .newpo input[type=date], #admin .newpo input[type=datetime-local]{border-radius:999px;padding:0 var(--sp-4)}
 /* form pesanan baru: pilihan radio dua kolom dan bilah total menempel di bawah */
 #admin .opts-row{grid-template-columns:1fr 1fr}
 #admin .opts-row .opt{padding:var(--sp-2) var(--sp-3)}
@@ -1099,16 +1032,12 @@ body.sheet-open{overflow:hidden}
 #admin .nbar .ntot{flex:1;display:block;margin:0}
 #admin .nbar .ntot b{display:block;font-size:20px;line-height:24px}
 #admin .nbar .btn{width:auto;min-width:168px}
-
 /* bukti bayar: lembar tengah */
 .lb-x{border:1px solid var(--border-default)}
-
 /* header putih: warna hanya dari pita ulos */
-.top,.home .top{background:#fff;color:var(--ink)}
+.top, .home .top{background:#fff;color:var(--ink)}
 .top{border-bottom:1px solid var(--border-default)}
 .home .top{border-bottom:0}
 .ahead{background:#fff;color:var(--ink)}
 .ahead .menubtn{background:var(--soft)}
 #help-wa{background:var(--accent);color:var(--on-accent);border-radius:999px}
-
-
