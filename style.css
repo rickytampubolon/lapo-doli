@@ -1093,3 +1093,6 @@ body.sheet-open{overflow:hidden}
   .payamt b{font-size:30px}
   .item .desc,.item p{font-size:14px;line-height:20px}
 }
+
+/* iOS memperbesar halaman saat mengisi kolom bila font < 16px */
+input, textarea, select{font-size:16px}
