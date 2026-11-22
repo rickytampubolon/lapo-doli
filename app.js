@@ -1,9 +1,14 @@
 const $ = id => document.getElementById(id);
-const LS = { cart:"ld_cart", cust:"ld_cust", last:"ld_last" };
+const LS = { cart:"ld_cart", cust:"ld_cust", last:"ld_last", menu:"ld_menu", snap:"ld_snap" };
 const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 const jakartaToday = () => new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 10);
 const relDay = d => { const diff = Math.round((Date.parse(d + "T00:00:00Z") - Date.parse(jakartaToday() + "T00:00:00Z")) / 864e5); return diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : ""; };
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+const LOAD_MS = 8000;
+/* analitik: Vercel Analytics bila aktif; tanpa itu tidak melakukan apa pun */
+window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
+const track = (name, data) => { try { window.va("event", data ? { name, data } : { name }); } catch (e) {} };
 const SKEL = '<div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div>'.repeat(3);
 const ic = (n, c = "") => `<svg class="ic ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -90,7 +95,7 @@ let products = null, pos = null;   // null sampai data pertama dimuat
 let settings = { ...DEFAULT_SETTINGS };
 let view = "shop";
 const cart = {};                   // kunci: poId::produk, poId::produk::indeksVarian, atau poId::produk::+idAddon
-let activePo = null, menuShown = false, fulfil = "antar";
+let activePo = null, activeChosen = false, menuShown = false, fulfil = "antar";   // activeChosen: pembeli sendiri yang memilih tanggal
 let placed = [], recorded = false, trackConf = {};
 
 const shopList = () => dbState === "none" ? DEFAULT_PRODUCTS : products;
@@ -162,21 +167,21 @@ const countFor = poId => Object.keys(cart).filter(k => k.startsWith(poId + "::")
 function renderPoChips(){
   const el = $("pochips"), list = openPos();
   if (poList() === null || !list.length) { el.innerHTML = ""; return; }
-  if (!list.some(x => x.id === activePo)) activePo = list[0].id;
+  if (!activeChosen || !list.some(x => x.id === activePo)) activePo = list[0].id;
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
-  const act = list.find(x => x.id === activePo);
-  const when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" }), hr = s => s.replace(/\s*-\s*/, "-");
+  const hr = s => s.replace(/\s*-\s*/, "-");
   $("sc-hours").textContent = hours() === pickHours() ? hr(hours()) : hr(hours()) + ", " + hr(pickHours());
-  $("sc-cut").textContent = when + " " + cutoffLabel();
+  renderCountdown();
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
-  activePo = b.dataset.po; renderMenu();
+  activePo = b.dataset.po; activeChosen = true; renderMenu();
 });
 
 function renderMenu(){
   const el = $("menu"), list = shopList(), pl = openPos();
+  $("shop").classList.toggle("is-error", dbState === "error");
   renderPoChips();
   if (dbState === "error") { el.innerHTML = `<div class="empty">Menu belum bisa dimuat.<br><button class="btn sm" data-retry type="button" style="display:inline-flex;margin-top:12px">${ic("undo")}Coba lagi</button></div>`; $("closed").hidden = true; $("po-wrap").hidden = false; updateBar(); return; }
   if (!list || poList() === null) { el.innerHTML = SKEL; $("closed").hidden = true; updateBar(); return; }
@@ -187,16 +192,16 @@ function renderMenu(){
   const act = pl.find(x => x.id === activePo) || pl[0];
   el.innerHTML = list.map((p, i) => {
     const opts = optsOf(p), adds = addonsOf(p), k = act.id + "::" + p.id, img = imgSrc(p), rem = remainOf(act.id, p.id), off = p.available === false || rem === 0, showP = opts.some(o => o.custom);
-    const thumb = img ? `<img class="thumb" src="${esc(img)}" alt="${esc(p.name)}">` : `<div class="thumb tile" aria-hidden="true">${esc(p.emoji || "🍽️")}</div>`;
+    const thumb = img ? `<img class="thumb" src="${esc(img)}" alt="${esc(p.name)}" width="96" height="96" loading="${i < 2 ? "eager" : "lazy"}" decoding="async">` : `<div class="thumb tile" aria-hidden="true">${esc(p.emoji || "🍽️")}</div>`;
     const custom = !off && (opts.length > 0 || adds.length > 0);
     const ctl = off ? '<span class="soldout">Habis</span>' : custom ? '<button type="button" class="addbtn" data-pick aria-haspopup="dialog" aria-expanded="false">Tambah</button>' : stepper(k, p.name);
     const addsHTML = !off && adds.length ? `<div class="subs adds" data-po="${esc(act.id)}" data-pid="${esc(p.id)}" hidden><div class="subs-title">Tambahan</div>${adds.map(a => { const ak = addonKey(act.id, p.id, a.id);
       return `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${stepper(ak, a.name + " untuk " + p.name, (cart[ak] || 0) >= mainQty(act.id, p.id))}</div>`; }).join("")}</div>` : "";
     const note = off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note value="${esc(itemNotes[k] || "")}" maxlength="120" placeholder="Catatan, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}"></div>`;
     const priceTxt = `${showP ? "dari " : ""}${rp(showP ? fromPrice(p) : p.price)}`;
-    const sheet = custom ? `<div class="sheet" role="dialog" aria-label="Sesuaikan ${esc(p.name)}">
+    const sheet = custom ? `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-${esc(p.id)}">
         <span class="sheet-grab" aria-hidden="true"></span>
-        <div class="sheet-h"><div><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><b class="price">${priceTxt}</b></div><button type="button" class="sheet-x" data-close aria-label="Tutup">${ic("x")}</button></div>
+        <div class="sheet-h"><div><h3 id="sh-${esc(p.id)}" tabindex="-1">${esc(p.name)}</h3><p>${esc(p.desc)}</p><b class="price">${priceTxt}</b></div><button type="button" class="sheet-x" data-close aria-label="Tutup">${ic("x")}</button></div>
         <div class="sheet-b">
           <div class="sg"><div class="sg-h"><b>${opts.length ? "Pilih varian" : "Jumlah"}</b><small>${opts.length ? "Boleh lebih dari satu" : ""}</small></div>${opts.length ? variantsHTML(p, k, stepper) : `<div class="vrow"><span>Porsi</span>${stepper(k, p.name)}</div>`}</div>
           ${addsHTML ? `<div class="sg">${addsHTML}</div>` : ""}
@@ -233,22 +238,42 @@ function syncMenuDom(){
   });
   const anyOpen = openItems.size > 0; $("scrim").hidden = !anyOpen; document.body.classList.toggle("sheet-open", anyOpen);
 }
-$("scrim").onclick = () => { openItems.clear(); syncMenuDom(); };
-document.addEventListener("keydown", e => { if (e.key === "Escape" && openItems.size) { openItems.clear(); syncMenuDom(); } });
+let sheetOpener = null;
+function closeSheets(){
+  if (!openItems.size) return;
+  openItems.clear(); syncMenuDom();
+  if (sheetOpener && document.contains(sheetOpener)) sheetOpener.focus();
+  sheetOpener = null;
+}
+$("scrim").onclick = closeSheets;
+document.addEventListener("keydown", e => {
+  if (!openItems.size) return;
+  if (e.key === "Escape") { closeSheets(); return; }
+  if (e.key !== "Tab") return;
+  const f = [...document.querySelectorAll(".item.open .sheet button:not(:disabled), .item.open .sheet input:not([type=hidden])")].filter(x => x.offsetParent);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1], inside = document.activeElement && document.activeElement.closest(".sheet");
+  if (!inside || (e.shiftKey && document.activeElement === first)) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 $("menu").addEventListener("click", e => {
   const cl = e.target.closest("[data-close]");
-  if (cl) { const it = cl.closest(".item"); openItems.delete(it.dataset.po + "::" + it.dataset.pid); syncMenuDom(); return; }
+  if (cl) { closeSheets(); return; }
   const pb = e.target.closest("[data-pick]");
-  if (pb) { const it = pb.closest(".item"), id = it.dataset.po + "::" + it.dataset.pid; if (openItems.has(id)) openItems.delete(id); else openItems.add(id); syncMenuDom(); return; }
+  if (pb) { const it = pb.closest(".item"), id = it.dataset.po + "::" + it.dataset.pid; if (openItems.has(id)) { closeSheets(); return; } openItems.add(id); sheetOpener = pb; syncMenuDom(); const hd = it.querySelector(".sheet h3"); if (hd) hd.focus(); track("buka_pilihan", { menu:it.dataset.pid }); return; }
   const b = e.target.closest("button[data-d]"); if (!b) return;
-  const key = b.closest("[data-key]").dataset.key, [poId, pid] = key.split("::");
-  const rem = isAddonKey(key) ? null : remainOf(poId, pid);
-  if (Number(b.dataset.d) > 0 && rem != null && mainQty(poId, pid) >= rem) { toast("Sisa " + rem + " porsi untuk menu ini"); return; }
-  cart[key] = Math.max(0, (cart[key] || 0) + Number(b.dataset.d));
-  if (!cart[key]) delete cart[key];
-  if (!isAddonKey(key)) clampAddons(poId, pid);
+  if (!bumpCart(b.closest("[data-key]").dataset.key, Number(b.dataset.d))) return;
   syncMenuDom(); renderPoChips(); updateBar();
 });
+function bumpCart(key, delta){
+  const [poId, pid] = key.split("::"), rem = isAddonKey(key) ? null : remainOf(poId, pid);
+  if (delta > 0 && rem != null && mainQty(poId, pid) >= rem) { toast("Sisa " + rem + " porsi untuk menu ini"); return false; }
+  cart[key] = Math.max(0, (cart[key] || 0) + delta);
+  if (!cart[key]) delete cart[key];
+  if (!isAddonKey(key)) clampAddons(poId, pid);
+  return true;
+}
+
 
 const itemNotes = {};
 $("menu").addEventListener("click", e => { if (e.target.closest("[data-retry]")) { dbState = "loading"; products = null; renderMenu(); refreshProducts(); refreshPos(); } });
@@ -285,11 +310,23 @@ function saveCart(){ if (stateReady) lsSet(LS.cart, { cart, notes:itemNotes, po:
 function saveCust(){ if (stateReady) lsSet(LS.cust, { nama:$("nama").value, hp:$("hp").value, area:$("area").value, alamat:$("alamat").value }); }
 function restoreState(){
   const c = lsGet(LS.cart);
-  if (c && c.cart) { Object.assign(cart, c.cart); Object.assign(itemNotes, c.notes || {}); if (c.po) activePo = c.po;
+  if (c && c.cart) { Object.assign(cart, c.cart); Object.assign(itemNotes, c.notes || {}); if (c.po && Object.keys(c.cart).length) { activePo = c.po; activeChosen = true; }
     if (c.fulfil === "ambil") { fulfil = "ambil"; const r = document.querySelector("[name=fulfil][value=ambil]"); if (r) r.checked = true; } }
   const u = lsGet(LS.cust);
   if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); if (u.area) $("area").value = u.area; }
   stateReady = true;
+}
+/* sisa waktu sebelum PO tutup; hanya ditampilkan di bawah 24 jam */
+function cutoffLeft(po){
+  const ms = cutoffAt(po) - Date.now(); if (ms <= 0 || ms >= 864e5) return null;
+  const m = Math.max(1, Math.floor(ms / 6e4)), h = Math.floor(m / 60);
+  return { text:(h >= 1 ? h + " jam" : m + " menit") + " lagi", urgent:ms < 3 * 36e5 };
+}
+function renderCountdown(){
+  const act = openPos().find(x => x.id === activePo) || openPos()[0]; if (!act) return;
+  const left = cutoffLeft(act), when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" });
+  $("sc-cut").textContent = left ? left.text : when + " " + cutoffLabel();
+  $("sc-cut").classList.toggle("urgent", !!(left && left.urgent));
 }
 /* layar PO kosong: kalau admin sudah menjadwalkan PO, tampilkan tanggal dan jam bukanya */
 function renderClosed(){
@@ -311,6 +348,32 @@ function renderStatic(){
   $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
   renderClosed();
 }
+/* isi ulang keranjang dari pesanan terakhir, dipetakan ke PO yang sedang dibuka */
+function renderReorder(){
+  const snap = lsGet(LS.snap), mains = snap ? Object.keys(snap.cart).filter(k => !isAddonKey(k)).reduce((t, k) => t + snap.cart[k], 0) : 0;
+  const show = screen === 1 && mains > 0 && !qtyTotal() && openPos().length > 0 && dbState === "ok";
+  $("reorder").hidden = !show; if (show) $("reorder-t").textContent = "Pesan seperti sebelumnya (" + mains + " porsi)";
+}
+function reorder(){
+  const snap = lsGet(LS.snap), po = openPos().find(x => x.id === activePo) || openPos()[0]; if (!snap || !po) return;
+  let skipped = 0; const pids = new Set();
+  Object.keys(snap.cart).forEach(k => {
+    const rest = k.split("::").slice(1), nk = [po.id, ...rest].join("::");
+    if (!resolveKey(nk, shopList())) { if (!isAddonKey(k)) skipped++; return; }
+    cart[nk] = (cart[nk] || 0) + snap.cart[k]; pids.add(rest[0]);
+  });
+  pids.forEach(pid => {   /* batasi dengan sisa kuota, lalu rapikan tambahan */
+    const rem = remainOf(po.id, pid);
+    if (rem != null) Object.keys(cart).filter(k => k.startsWith(po.id + "::" + pid + "::") && !isAddonKey(k)).forEach(k => { const over = mainQty(po.id, pid) - rem; if (over > 0) { cart[k] = Math.max(0, cart[k] - over); if (!cart[k]) delete cart[k]; skipped++; } });
+    clampAddons(po.id, pid);
+  });
+  Object.keys(snap.notes || {}).forEach(k => { const pid = k.split("::")[1]; if (pids.has(pid)) itemNotes[po.id + "::" + pid] = snap.notes[k]; });
+  if (snap.fulfil === "ambil") { fulfil = "ambil"; const r = document.querySelector("[name=fulfil][value=ambil]"); if (r) r.checked = true; }
+  const kept = qtyTotal(); track("pesan_lagi", { porsi:kept });
+  renderMenu(); updateBar();
+  toast(!kept ? "Menu sebelumnya sedang tidak tersedia." : skipped ? "Sebagian menu tidak tersedia atau kuotanya kurang. Cek keranjangmu." : "Keranjang diisi dari pesanan sebelumnya.");
+}
+$("reorder").onclick = reorder;
 function updateBar(){
   saveCart();
   const gs = groups();
@@ -318,6 +381,7 @@ function updateBar(){
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
   $("next").disabled = qtyTotal() === 0;
   const noPo = screen === 1 && poList() !== null && openPos().length === 0;
+  renderReorder();
   $("bar").hidden = screen !== 1 || noPo || qtyTotal() === 0; $("shop").classList.toggle("no-po", noPo);
 }
 function summaryHTML(gs, kode = 0){
@@ -336,7 +400,9 @@ function pruneClosed(){
   return [...gone].map(id => { const po = (poList() || []).find(x => x.id === id); return po ? dShort(po.date) : id; });
 }
 function checkClosings(){
+  if (screen === 3) renderTtl();
   if (poList() === null) return;
+  renderCountdown();
   const gone = pruneClosed(), sig = openPos().map(p => p.id).join();
   if (!gone.length && sig === openSig) return;
   openSig = sig; renderMenu();
@@ -349,29 +415,48 @@ function go(n){
   screen = n;
   document.querySelectorAll("#shop section").forEach((s, i) => s.classList.toggle("show", i + 1 === n));
   $("bar").hidden = n !== 1 || qtyTotal() === 0; $("shop").classList.toggle("has-bar", n === 1 && qtyTotal() > 0); $("shop").classList.toggle("home", n === 1);
-  updateSteps(n); openItems.clear();
+  updateSteps(n); openItems.clear(); sheetOpener = null;
   if (n === 2) renderCheckout();
+  renderReorder();
   window.scrollTo({ top:0 });
 }
-$("next").onclick = () => go(2);
+$("next").onclick = () => { track("mulai_checkout", { porsi:qtyTotal() }); go(2); };
 $("back1").onclick = $("addmore").onclick = () => go(1);
 
+const lineKey = (poId, l) => l.addon ? addonKey(poId, l.pid, l.addonId) : l.optIdx != null ? `${poId}::${l.pid}::${l.optIdx}` : `${poId}::${l.pid}`;
 function itemsHTML(gs){
-  return gs.map(g => `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + g.items.map(l => `<div class="li"><span class="q">${l.qty}x</span><span class="n">${esc(l.name)}${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}</span><span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`).join("")).join("");
+  return gs.map(g => `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + g.items.map(l => {
+    const k = lineKey(g.poId, l), plusOff = l.addon && (cart[k] || 0) >= mainQty(g.poId, l.pid);
+    return `<div class="li"><div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}</div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
+  }).join("")).join("");
 }
+$("sum-items").addEventListener("click", e => {
+  const b = e.target.closest("button[data-d]"); if (!b) return;
+  if (!bumpCart(b.closest("[data-key]").dataset.key, Number(b.dataset.d))) return;
+  syncMenuDom(); renderPoChips(); updateBar();
+  if (!qtyTotal()) { toast("Keranjang kosong. Pilih menu dulu."); go(1); } else renderCheckout();
+});
 function payRowsHTML(gs){
   const food = gs.reduce((t, g) => t + g.food, 0), fee = gs.reduce((t, g) => t + (g.ongkir || 0), 0);
   return `<div><span>Harga</span><span>${rp(food)}</span></div>` + (fee ? `<div><span>Ongkir</span><span>${rp(fee)}</span></div>` : `<div><span>Ongkir</span><span>Gratis</span></div>`) + `<div class="total"><span>Total pembayaran</span><span>${rp(grand(gs))}</span></div>`;
 }
 function renderCheckout(){
   const gsx = groups();
-  $("sum-items").innerHTML = itemsHTML(gsx); $("sum2").innerHTML = payRowsHTML(gsx); $("cb-total").textContent = rp(grand(gsx));
+  $("sum-items").innerHTML = itemsHTML(gsx); $("sum2").innerHTML = payRowsHTML(gsx); $("cb-total").textContent = rp(grand(gsx)); $("cb-count").textContent = gsx.reduce((t, g) => t + g.items.filter(l => !l.addon).reduce((x, l) => x + l.qty, 0), 0) + " porsi";
   $("pick-line").textContent = pickLoc();
   $("addr-fields").hidden = isPick(); $("pick-box").hidden = true;
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
 }
-let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false, placedRejected = false;
+let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false, placedRejected = false, placedAt = 0;
+const PAY_WINDOW_MS = 3 * 36e5;   // sama dengan aturan server: belum bayar dan belum ada bukti > 3 jam tidak menahan kuota
+function renderTtl(){
+  const el = $("d-ttl"), on = payVisible && !placedProof && placedAt > 0;
+  el.hidden = !on; if (!on) return;
+  const ms = placedAt + PAY_WINDOW_MS - Date.now(), m = Math.max(0, Math.floor(ms / 6e4)), h = Math.floor(m / 60);
+  el.classList.toggle("late", ms <= 0);
+  el.textContent = ms <= 0 ? "Batas 3 jam sudah lewat, porsimu bisa sudah terpakai orang lain. Unggah bukti, admin akan memeriksa." : "Bayar dalam " + (h >= 1 ? h + " jam " + (m % 60) + " menit" : m + " menit") + " supaya porsimu aman.";
+}
 document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; saveCart(); renderCheckout(); });
 function renderPayInfo(){
   const hasQ = !!settings.qrisUrl;
@@ -384,6 +469,7 @@ function renderPay(){
   const need = payVisible && (!placedProof || placedRejected);
   $("d-proofwrap").hidden = !need; $("d-proofok").hidden = !(payVisible && placedProof && !placedRejected);
   $("d-up-t").textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar";
+  renderTtl();
   const box = $("d-pay"); box.hidden = !payVisible; if (!payVisible) return;
   $("d-amt").textContent = rp(placedPay.total + placedPay.kode);
   const k = $("d-kode"); k.hidden = !placedPay.kode; k.textContent = placedPay.kode ? "Termasuk kode unik " + rp(placedPay.kode) + " agar pembayaranmu mudah dicek." : "";
@@ -396,7 +482,7 @@ function renderPay(){
 const shareUrl = () => location.origin + "/";
 const shareText = "Pre-order Lapo Doli: masakan Batak rumahan, PO tiap minggu, antar khusus Jakarta.";
 async function shareToFriend(){
-  const url = shareUrl();
+  const url = shareUrl(); track("bagikan");
   if (navigator.share) { try { await navigator.share({ title:"Lapo Doli", text:shareText, url }); } catch (e) { /* ditutup pembeli */ } return; }
   window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + url)}`, "_blank", "noopener");
 }
@@ -416,10 +502,11 @@ $("d-file").onchange = async e => {
     if (!(await api.attachProof(gid, trackHp, path))) throw new Error("attach");
     placedProof = true; placed.forEach(o => { const c = trackConf[o.id] || (trackConf[o.id] = { payStatus:"cek", status:"baru" }); if (c.payStatus === "ditolak") c.payStatus = "cek"; c.proof = true; });
     if (lastData) { lastData.proof = true; lsSet(LS.last, lastData); }
-    toast("Bukti terkirim"); renderTracker();
+    toast("Bukti terkirim"); renderTracker(); track("bukti_terkirim");
   } catch (err) { toast("Bukti belum terkirim. Periksa koneksi lalu coba lagi."); }
   finally { lab.classList.remove("busy"); t.textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar"; }
 };
+$("copy-status").onclick = () => copyText(location.origin + "/?cek=" + placed.map(o => o.id).join(","), $("copy-status"), "Link status disalin");
 $("copy-no").onclick = () => copyText(String(settings.bankNumber), $("d-bank-no"), "Nomor rekening disalin");
 $("copy-amt").onclick = () => copyText(String(placedPay.total + placedPay.kode), $("d-amt"), "Jumlah disalin");
 
@@ -463,7 +550,7 @@ async function submitOrder(){
   if (isPick()) { chk("area", ""); chk("alamat", ""); } else { chk("area", val.area($("area").value)); chk("alamat", val.alamat($("alamat").value)); }
   if (!ok) { const f = [...document.querySelectorAll("#s2 .err")].find(x => x.textContent && !x.closest("[hidden]")); if (f) f.scrollIntoView({ behavior:"smooth", block:"center" }); return; }
   if (!sb) { toast("Toko belum tersambung ke database."); return; }
-  const btn = $("paid"); btn.disabled = true; btn.textContent = "Memproses...";
+  const btn = $("paid"); btn.disabled = true; $("paid-t").textContent = "Memproses...";
   const method = document.querySelector("[name=pay]:checked").value, gs = groups();
   const customer = { nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : $("area").value, alamat:isPick() ? "" : $("alamat").value.trim(), notes:$("notes").value.trim(), method };
   const payload = { ...customer, groups:gs.map(g => ({ po_id:g.poId, lines:g.items.map(linePayload) })) }, sig = JSON.stringify(payload);
@@ -471,16 +558,18 @@ async function submitOrder(){
   if (!pendingRef || sig !== pendingSig) { pendingRef = newRef(); pendingSig = sig; }
   let res;
   try { res = await api.createOrders({ ...payload, ref:pendingRef }); }
-  catch (e) { btn.disabled = false; btn.textContent = "Pesan sekarang"; orderFailed(e); return; }
-  btn.disabled = false; btn.textContent = "Pesan sekarang"; pendingRef = null;
+  catch (e) { btn.disabled = false; $("paid-t").textContent = "Pesan sekarang"; orderFailed(e); return; }
+  btn.disabled = false; $("paid-t").textContent = "Pesan sekarang"; pendingRef = null;
   placed = res.map(r => ({ id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, fulfil:r.fulfil, hours:r.hours, pickupLoc:r.pickup_loc, total:r.total, items:r.items, ...customer }));
   recorded = true; trackHp = customer.hp;
   const outGs = res.map(r => ({ poId:r.po_id, date:r.po_date, fulfil:r.fulfil, items:r.items, ongkir:r.total - r.items.reduce((a, i) => a + i.price * i.qty, 0), total:r.total }));
   const kodeSum = res.reduce((a, r) => a + (Number(r.kode) || 0), 0), nums = placed.map(o => o.id).join(", ");
-  placedPay = { total:grand(outGs), kode:kodeSum, method }; placedProof = false;
+  placedPay = { total:grand(outGs), kode:kodeSum, method }; placedProof = false; placedAt = Date.now();
   if (grand(gs) !== grand(outGs)) toast("Harga menu berubah. Cek jumlah transfer di bawah.");
   $("sum3").innerHTML = summaryHTML(outGs, kodeSum);
-  /* pesanan sudah tercatat: kosongkan keranjang, ingat data pembeli dan pesanan ini */
+  /* pesanan sudah tercatat: simpan isi keranjang untuk "pesan seperti sebelumnya", lalu kosongkan */
+  lsSet(LS.snap, { cart:{ ...cart }, notes:{ ...itemNotes }, fulfil });
+  track("pesan", { total:placedPay.total + kodeSum, tanggal:gs.length });
   for (const k in cart) delete cart[k]; for (const k in itemNotes) delete itemNotes[k]; $("notes").value = "";
   saveCart(); saveCust();
   lastData = { at:Date.now(), placed, outGs, pay:placedPay, proof:false }; lastRows = {}; lsSet(LS.last, lastData); renderLast();
@@ -550,7 +639,7 @@ async function pollLast(){
 }
 $("lastorder").onclick = () => {
   if (!lastData) return;
-  placed = lastData.placed; placedPay = lastData.pay || placedPay; placedProof = !!lastData.proof; recorded = true; trackHp = placed[0].hp;
+  placed = lastData.placed; placedPay = lastData.pay || placedPay; placedProof = !!lastData.proof; placedAt = lastData.at || 0; recorded = true; trackHp = placed[0].hp;
   $("sum3").innerHTML = summaryHTML(lastData.outGs, placedPay.kode);
   unsubTrack(); renderTracker(); startTrack(); go(3);
 };
@@ -1307,27 +1396,35 @@ async function refreshRemaining(){
   renderMenu();
 }
 async function refreshProducts(){
-  try { products = await api.loadProducts(); dbState = "ok"; }
+  try { products = await withTimeout(api.loadProducts(), LOAD_MS); dbState = "ok"; saveMenuCache(); }
   catch (e) { if (products === null) dbState = "error"; renderMenu(); return; }
   await refreshRemaining(); if (view === "admin" && tab === "menu") renderMenuSafe();
+}
+let settingsRaw = null;
+function saveMenuCache(){ if (products && pos && dbState === "ok") lsSet(LS.menu, { at:Date.now(), products, pos, settings:settingsRaw }); }
+function loadMenuCache(){
+  const m = lsGet(LS.menu);
+  if (!m || !Array.isArray(m.products) || !Array.isArray(m.pos) || Date.now() - m.at > 7 * 864e5) return;
+  products = m.products; pos = m.pos; dbState = "ok";
+  if (m.settings) { settingsRaw = m.settings; settings = { ...DEFAULT_SETTINGS, ...m.settings }; settings.qrisUrl = assetUrl(settings.qrisPath); }
 }
 let posOk = false;   // true setelah jadwal PO berhasil dimuat sekali; sebelum itu keranjang tidak boleh dipangkas
 const canPrune = () => dbState === "ok" && posOk;
 async function refreshPos(){
-  try { pos = await api.loadPos(); posOk = true; } catch (e) { if (pos === null) pos = []; }
+  try { pos = await withTimeout(api.loadPos(), LOAD_MS); posOk = true; saveMenuCache(); } catch (e) { if (pos === null) pos = []; }
   renderStatic(); renderMenu(); renderAdmin();
 }
 function applySettings(d){
-  settings = { ...DEFAULT_SETTINGS, ...d }; settings.qrisUrl = assetUrl(settings.qrisPath);
+  settingsRaw = d; settings = { ...DEFAULT_SETTINGS, ...d }; settings.qrisUrl = assetUrl(settings.qrisPath); saveMenuCache();
   renderStatic(); renderMenu(); renderPayInfo(); if (view === "admin" && tab === "set") renderSetSafe();
 }
-async function refreshSettings(){ try { applySettings(await api.loadSettings()); } catch (e) {} }
+async function refreshSettings(){ try { applySettings(await withTimeout(api.loadSettings(), LOAD_MS)); } catch (e) {} }
 async function refreshOrders(){
   if (!isAdmin) return;
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 11;
+const SCHEMA_VERSION = 12;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
@@ -1344,13 +1441,20 @@ function subscribeRealtime(){
   ch.subscribe();
 }
 async function init(){
-  restoreState(); initLast(); renderStatic();
+  restoreState(); initLast(); loadMenuCache(); renderStatic();
   ["nama", "hp", "alamat"].forEach(k => $(k).addEventListener("input", saveCust)); $("area").addEventListener("change", saveCust);
   renderMenu(); updateBar(); go(1);
   setInterval(checkClosings, 15000); document.addEventListener("visibilitychange", checkClosings);
   const q = new URLSearchParams(location.search), hasTokens = /access_token|refresh_token|error_description/.test(location.hash);
   const wantAdmin = location.hash === "#admin" || !!q.get("admin");
   if (wantAdmin && !hasTokens) setView("admin");
+  /* tautan status: /?cek=2511-09 membuka Bantuan dengan nomor pesanan terisi (dan langsung memeriksa bila nomor HP sudah tersimpan) */
+  const cek = q.get("cek");
+  if (cek && !wantAdmin) {
+    setView("help"); $("ck-id").value = cek; const u = lsGet(LS.cust); if (u && u.hp) $("ck-hp").value = u.hp;
+    history.replaceState(null, "", location.pathname); track("buka_tautan_status");
+    if (u && u.hp && !val.hp(u.hp)) setTimeout(() => $("ck-go").click(), 1200);
+  }
   if (!sb) { dbState = "none"; renderMenu(); renderPayInfo(); authReady = true; if (view === "admin") setView("admin"); return; }
   await Promise.all([refreshProducts(), refreshPos(), refreshSettings()]);
   subscribeRealtime();

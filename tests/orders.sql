@@ -98,6 +98,10 @@ begin
   update public.orders set created_at = now() - interval '4 hours' where hp = '081200000015';
   select remaining into n from public.po_remaining() where po_id = 'po-a' and pid = 'teri';
   perform t.ck('6 belum bayar >3 jam tidak menahan kuota (sisa 3)', n = 3, n::text);
+  update public.orders set proof_path = 'AAAAAAAA/x1234567.jpg' where hp = '081200000015';
+  select remaining into n from public.po_remaining() where po_id = 'po-a' and pid = 'teri';
+  perform t.ck('6 sudah ada bukti: tetap menahan kuota walau lewat 3 jam (sisa 0)', n = 0, n::text);
+  update public.orders set proof_path = '' where hp = '081200000015';
   update public.orders set pay_status = 'lunas' where hp = '081200000015';
   select remaining into n from public.po_remaining() where po_id = 'po-a' and pid = 'teri';
   perform t.ck('6 yang sudah lunas tetap menahan kuota (sisa 0)', n = 0, n::text);

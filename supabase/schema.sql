@@ -338,7 +338,7 @@ begin
           select coalesce(sum((i.value ->> 'qty')::integer), 0) into v_sold
           from public.orders o, jsonb_array_elements(o.items) i
           where o.po_id = po.id and o.status <> 'batal' and o.pay_status <> 'ditolak'
-            and not (o.pay_status = 'cek' and o.created_at < now() - interval '3 hours')
+            and not (o.pay_status = 'cek' and o.proof_path = '' and o.created_at < now() - interval '3 hours')
             and i.value ->> 'pid' = k and not coalesce((i.value ->> 'addon')::boolean, false);
           if v_sold + (mainq ->> k)::integer > v_quota then
             raise exception 'sold_out:%:%', k, greatest(0, v_quota - v_sold);
@@ -469,7 +469,7 @@ as $$
     select o.po_id, i.value ->> 'pid' as pid, sum((i.value ->> 'qty')::integer) as sold
     from public.orders o, jsonb_array_elements(o.items) i
     where o.status <> 'batal' and o.pay_status <> 'ditolak'
-      and not (o.pay_status = 'cek' and o.created_at < now() - interval '3 hours')
+      and not (o.pay_status = 'cek' and o.proof_path = '' and o.created_at < now() - interval '3 hours')
       and not coalesce((i.value ->> 'addon')::boolean, false)
     group by 1, 2
   ) s on s.po_id = p.id and s.pid = pr.id
@@ -480,7 +480,7 @@ grant execute on function public.po_remaining() to anon, authenticated;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 11 $$;
+returns integer language sql immutable as $$ select 12 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

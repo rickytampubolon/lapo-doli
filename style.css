@@ -944,7 +944,7 @@ body.sheet-open{overflow:hidden}
 .req{color:var(--bad);font-style:normal}
 #form{margin-top:var(--sp-4)}
 #form .lb{margin-top:var(--sp-4)}
-#form .lb:first-child{margin-top:0}
+#form > .lb:first-child{margin-top:0}
 #pick-box{display:none!important}
 .gh2{font-size:14px;line-height:20px;font-weight:700;color:var(--text-secondary);margin:var(--sp-3) 0 var(--sp-1)}
 .gh2:first-child{margin-top:0}
@@ -956,13 +956,14 @@ body.sheet-open{overflow:hidden}
 #s2 .sum{border:0;box-shadow:none;border-radius:0;padding:0;margin:0;background:none}
 #s2 .sum div{display:flex;justify-content:space-between;padding:6px 0;border:0;font-size:16px;line-height:24px;color:var(--text-secondary)}
 #s2 .sum .total{margin-top:var(--sp-2);padding-top:var(--sp-3);border-top:1px solid var(--border-default);color:var(--text-primary);font-weight:700;font-size:20px;line-height:24px}
-.checkout-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) max(16px,env(safe-area-inset-right,0px)) calc(var(--sp-3) + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:#fff;border-top:1px solid var(--border-default);box-shadow:var(--shadow-high)}
-.checkout-bar > *{max-width:560px}
+.checkout-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) max(16px,calc((100% - 560px)/2 + 16px)) calc(var(--sp-3) + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--border-default);box-shadow:var(--shadow-high)}
 .cb-t{flex:1}
 .cb-t small{display:block;color:var(--text-secondary);font-size:12px;line-height:16px}
 .cb-t b{display:block;font-size:20px;line-height:24px;font-weight:700}
 .checkout-bar .btn{width:auto;min-width:168px;border-radius:999px}
 #s2{padding-bottom:128px}
+#addr-fields .lb{margin-top:var(--sp-4)}
+.checkout-bar .btn{flex:0 0 auto}
 #s2 .actions{display:none}
 /* kartu toko tanpa mengulang logo dan nama (sudah ada di header) */
 .storecard{padding:14px 16px}
@@ -1039,3 +1040,56 @@ body.sheet-open{overflow:hidden}
 .sharecard{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin:var(--sp-6) 0 0;padding:var(--sp-3) var(--sp-4);border:1px solid var(--border-default);border-radius:var(--r-lg);background:#fff;font-weight:600}
 .sharecard .pillbtn .ic{margin:0}
 #s3 .sharecard{margin:var(--sp-5) 0 var(--sp-4)}
+
+/* layar galat bersih: hanya pesan dan tombol coba lagi */
+#shop.is-error .storecard, #shop.is-error #s1 .label, #shop.is-error #pochips, #shop.is-error .sharecard{display:none}
+.sc-stats b.urgent{color:var(--accent)}
+
+/* butir review pembeli: batas bayar, pesan lagi, ubah jumlah, area ketuk 44px */
+.ttl{margin:0;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-md);background:var(--amber-soft);color:var(--text-primary);font-size:14px;line-height:20px;font-weight:600}
+.ttl.late{background:#f6e3df;color:var(--bad)}
+.reorder{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);width:100%;min-height:44px;margin:var(--sp-3) 0 0;padding:0 var(--sp-4);border:1px dashed var(--accent);border-radius:999px;background:#fff;color:var(--accent);font-weight:700;font-size:14px;cursor:pointer}
+.reorder .ic{width:18px;height:18px;margin:0}
+.li{grid-template-columns:minmax(0,1fr) auto;gap:2px var(--sp-3);align-items:center;padding:var(--sp-2) 0}
+.li .ln{min-width:0}
+.li .n{display:block;font-weight:600}
+.li .step{gap:var(--sp-2)}
+.li .p{grid-column:2;text-align:right}
+#copy-status{display:block;margin:var(--sp-2) auto 0;color:var(--text-secondary);text-decoration:underline;font-size:14px;min-height:44px}
+.addbtn,.pillbtn,.sharecard .pillbtn,.reorder{min-height:44px}
+.step button{width:44px;height:44px}
+.copybtn{min-width:44px;min-height:44px}
+.sheet-x{width:44px;height:44px}
+
+.reorder[hidden]{display:none}
+
+/* bawah halaman pesanan: rapikan */
+.li .p{grid-column:1;grid-row:2;text-align:left;color:var(--text-secondary);font-size:14px;line-height:20px}
+.li .step{grid-column:2;grid-row:1 / span 2;align-self:center}
+#s2 .gc-h h2{white-space:nowrap}
+#s2 .gc-h .pillbtn{margin-left:auto;padding:0 var(--sp-3);flex:0 0 auto}
+#s2 #sum2 div.total{display:none}
+
+
+/* bar pesan: kapsul yang sama dengan keranjang */
+.checkout-bar{left:0;right:0;bottom:0;display:block;padding:0 var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom,0px));background:none;border:0;box-shadow:none;pointer-events:none}
+.checkout-bar .cartpill{pointer-events:auto;display:flex;justify-content:space-between;align-items:center;width:min(560px,100%);margin:0 auto;min-height:56px;padding:var(--sp-2) var(--sp-5);border:0;border-radius:999px;background:var(--hero);color:var(--on-accent);box-shadow:var(--shadow-high);cursor:pointer;text-align:left;font:inherit}
+.checkout-bar .cartpill:disabled{opacity:.6}
+.checkout-bar .cartpill:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.checkout-bar .cp-l b,.checkout-bar .cp-r b{display:block;font-size:16px;line-height:20px;font-weight:700;color:inherit}
+.checkout-bar .cp-l small{display:block;font-size:12px;line-height:16px;opacity:.9;color:inherit}
+#s2{padding-bottom:104px}
+
+/* ponsel: skala lebih kecil supaya tidak terasa membesar */
+@media (max-width:480px){
+  body{font-size:15px}
+  #s1 .label{font-size:18px;line-height:22px;margin-top:var(--sp-4)}
+  .item h3{font-size:17px}
+  .cbtn .dnum{font-size:22px}
+  .storecard h2,.sc-h h2{font-size:17px}
+  .title,#s2 .title,#s3 .title,.status .title{font-size:22px;line-height:28px}
+  .sheet-h h3{font-size:18px}
+  .pagehead h1{font-size:18px}
+  .payamt b{font-size:30px}
+  .item .desc,.item p{font-size:14px;line-height:20px}
+}

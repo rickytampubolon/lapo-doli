@@ -9,6 +9,7 @@
 <meta name="color-scheme" content="light">
 <link rel="icon" href="/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/apple-touch.png">
+<link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/style.css">
@@ -61,6 +62,7 @@
         <a class="btn" id="closed-wa" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg><span id="closed-wa-t">Chat admin</span></a>
       </div>
       <button class="lastcard" id="lastorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span class="lc-t"><b id="lc-id"></b></span><span class="chip" id="lc-chip"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+      <button class="reorder" id="reorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg><span id="reorder-t">Pesan seperti sebelumnya</span></button>
       <div id="po-wrap">
         <div class="label">Pilih tanggal <small>dimasak khusus di tanggal itu</small></div>
         <div class="chips" id="pochips"></div>
@@ -101,7 +103,7 @@
       </div>
 
       <div class="gcard">
-        <div class="gc-h"><span class="gc-ic red"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg></span><div><h2>Pesanan kamu</h2></div><button class="pillbtn" id="addmore" type="button"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Tambah menu</button></div>
+        <div class="gc-h"><span class="gc-ic red"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg></span><div><h2>Pesanan</h2></div><button class="pillbtn" id="addmore" type="button"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Tambah</button></div>
         <div id="sum-items"></div>
       </div>
 
@@ -118,7 +120,7 @@
         </div></div>
       </div>
 
-      <div class="checkout-bar"><div class="cb-t"><small>Total pembayaran</small><b id="cb-total">Rp 0</b></div><button class="btn" id="paid" type="button">Pesan sekarang</button></div>
+      <div class="checkout-bar"><button class="cartpill" id="paid" type="button"><span class="cp-l"><b id="paid-t">Pesan sekarang</b><small id="cb-count">0 porsi</small></span><span class="cp-r"><b id="cb-total">Rp 0</b><svg class="ic" aria-hidden="true"><use href="#i-bag"/></svg></span></button></div>
       <p class="note" style="text-align:center;margin:8px 0 0">Nomor rekening muncul di langkah berikutnya.</p>
     </section>
 
@@ -129,6 +131,7 @@
       <div class="paybox" id="d-pay" hidden>
         <div class="payamt"><div><span class="muted">Transfer tepat</span><b id="d-amt">Rp 0</b></div><button class="copybtn" id="copy-amt" type="button" aria-label="Salin jumlah" title="Salin jumlah"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
         <p class="note" id="d-kode" hidden></p>
+        <p class="ttl" id="d-ttl" hidden></p>
         <div id="d-bank"><div class="bankname"><b id="d-bank-name"></b> <span class="muted" id="d-bank-holder"></span></div>
           <div class="bankrow"><div class="copy" id="d-bank-no"></div><button class="copybtn" id="copy-no" type="button" aria-label="Salin nomor rekening" title="Salin nomor rekening"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div></div>
         <div id="d-qris" hidden><p class="note" style="text-align:center;margin:0 0 10px">Scan QRIS, lalu isi nominal sesuai jumlah di atas.</p><div class="qris" id="qris-box"></div></div>
@@ -139,6 +142,7 @@
       </div>
       <p class="proofok" id="d-proofok" hidden><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>Bukti terkirim. Kami cek secepatnya.</span></p>
       <ul class="dlv" id="track" style="margin-top:18px"></ul>
+      <button class="textbtn" id="copy-status" type="button">Salin link status pesanan</button>
       <div class="sum" id="sum3" style="margin-top:18px"></div>
       <div class="sharecard"><span>Ajak teman pesan</span><button class="pillbtn" type="button" data-share><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg>Bagikan</button></div>
       <div class="actions"><button class="btn line" id="again" type="button">Pesan lagi</button></div>
