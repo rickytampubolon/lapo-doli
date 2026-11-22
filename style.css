@@ -555,3 +555,12 @@ textarea{min-height:84px;resize:vertical}
 .rk-i .q{color:var(--muted);font-variant-numeric:tabular-nums}
 .rk-i em{color:var(--muted);font-style:normal;font-size:.84rem}
 .rk-note{border-left:3px solid var(--amber);padding:3px 10px;background:var(--amber-soft);border-radius:0 8px 8px 0;font-size:.88rem}
+
+/* beranda: ringkas */
+.cover .title{font-size:clamp(2rem,9vw,2.6rem);max-width:9em}
+.cover .lede{margin-top:8px;font-size:1.05rem}
+.cover .col{padding-bottom:26px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 0;color:var(--muted);font-size:.92rem}
+.meta span{display:inline-flex;align-items:center;gap:6px}
+.meta .ic{width:17px;height:17px}
+.item p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}

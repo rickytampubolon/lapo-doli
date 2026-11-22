@@ -155,13 +155,13 @@ const countFor = poId => Object.keys(cart).filter(k => k.startsWith(poId + "::")
 
 function renderPoChips(){
   const el = $("pochips"), list = openPos();
-  if (poList() === null) { el.innerHTML = ""; $("poinfo").textContent = "Memuat jadwal PO..."; return; }
+  if (poList() === null) { el.innerHTML = ""; $("poinfo").textContent = ""; return; }
   if (!list.length) { el.innerHTML = ""; $("poinfo").textContent = ""; return; }
   if (!list.some(x => x.id === activePo)) activePo = list[0].id;
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const act = list.find(x => x.id === activePo);
-  $("poinfo").textContent = (hours() === pickHours() ? `Antar di Jakarta atau ambil sendiri, jam ${hours()}.` : `Antar di Jakarta jam ${hours()}, ambil sendiri jam ${pickHours()}.`) + ` Pesan paling lambat pukul ${cutoffLabel()} hari itu.` + (list.length > 1 ? " Boleh pilih lebih dari satu tanggal." : "");
+  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}${esc(hours())}</span>` : `<span>${ic("truck")}${esc(hours())}</span><span>${ic("pin")}${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(cutoffLabel())}</span>`;
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
