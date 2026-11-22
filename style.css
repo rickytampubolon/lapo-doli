@@ -1102,3 +1102,11 @@ body.sheet-open{overflow:hidden}
 
 /* bukti bayar: lembar tengah */
 .lb-x{border:1px solid var(--border-default)}
+
+/* header putih: warna hanya dari pita ulos */
+.top,.home .top{background:#fff;color:var(--ink)}
+.top{border-bottom:1px solid var(--border-default)}
+.home .top{border-bottom:0}
+.ahead{background:#fff;color:var(--ink)}
+.ahead .menubtn{background:var(--soft)}
+#help-wa{background:var(--accent);color:var(--on-accent);border-radius:999px}
