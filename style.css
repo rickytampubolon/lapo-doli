@@ -574,7 +574,7 @@ textarea{min-height:84px;resize:vertical}
 /* aksen ulos tipis */
 :root{--ulos-h:linear-gradient(to bottom,#9a3b2f 0 2px,#f1e0c8 2px 3px,#6a2b24 3px 4px,#9a3b2f 4px 6px)}
 .ahead{padding-bottom:6px}
-.ahead::after{height:6px;background:var(--ulos-h)}
+.ahead::after{height:6px;background:var(--ulos-h);-webkit-mask:none;mask:none}
 #s1 .label{margin:16px 0 8px;font-size:14px}
 #s1 .chips{margin-top:0}
 .bar .btn:disabled{white-space:nowrap}
@@ -624,8 +624,6 @@ textarea{min-height:84px;resize:vertical}
 #d-up.busy{opacity:.7;pointer-events:none}
 .proofok{display:flex;align-items:center;gap:10px;margin:0 0 4px;padding:12px 14px;border-radius:12px;background:#e4efe6;color:#27533b;font-weight:600}
 .proofok .ic{width:20px;height:20px;flex:none}
-.otag.proof{display:inline-flex;align-items:center;gap:4px;color:var(--ok);border-color:currentColor}
-.otag.proof .ic{width:13px;height:13px}
 .lightbox{position:fixed;inset:0;z-index:60;background:rgba(59,44,39,.82);display:grid;place-items:center;padding:16px}
 .lightbox img{max-width:100%;max-height:88vh;border-radius:12px;background:var(--card)}
 .lb-x{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
@@ -1023,3 +1021,16 @@ body.sheet-open{overflow:hidden}
 .hlink{color:var(--ink)}
 .hlink:hover{color:var(--accent)}
 .pattern{display:block;height:6px;background:var(--ulos-h)}
+
+/* admin: setiap pesanan satu kartu sendiri, konten selebar layar */
+#admin .olist{display:grid;gap:var(--sp-3);background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
+#admin .orow{background:#fff;border:1px solid var(--border-default);border-radius:var(--r-lg);box-shadow:var(--shadow-low);padding:var(--sp-3) var(--sp-4)}
+#admin .orow:last-child{border:1px solid var(--border-default)}
+#admin .orow.attn{box-shadow:inset 4px 0 0 var(--amber),var(--shadow-low)}
+#admin .group{margin:var(--sp-6) 2px var(--sp-3)}
+@media (min-width:860px){
+  #admin .content{max-width:none}
+}
+@media (min-width:1100px){
+  #admin .orow-h{grid-template-columns:84px minmax(0,2fr) minmax(0,1.2fr) 124px 190px auto}
+}

@@ -602,7 +602,7 @@ function orderRow(o){
   return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
       <span class="num">${esc(o.id)}</span>
-      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}${o.proofPath ? `<span class="otag proof">${ic("image")}Ada bukti</span>` : ""}</div><div class="o3">${esc(summary)}</div></div>
+      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}</div><div class="o3">${esc(summary)}</div></div>
       <span class="how">${pk ? "Ambil sendiri" : "Antar" + (o.area ? ", " + esc(o.area) : "")}${grp ? ", gabungan " + o.groupCount + " tanggal" : ""}</span>
       <span class="amt">${rp(o.total)}</span>
       <span class="chip st ${sc}">${sl}</span>
