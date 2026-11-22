@@ -161,7 +161,7 @@ function renderPoChips(){
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const act = list.find(x => x.id === activePo);
-  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}${esc(hours())}</span>` : `<span>${ic("truck")}${esc(hours())}</span><span>${ic("pin")}${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(cutoffLabel())}</span>`;
+  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}Antar atau ambil, ${esc(hours())}</span>` : `<span>${ic("truck")}Antar ${esc(hours())}</span><span>${ic("pin")}Ambil ${esc(pickHours())}</span>`) + `<span>${ic("lock")}Pesan sebelum ${esc(cutoffLabel())}</span>`;
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
@@ -256,7 +256,7 @@ function updateBar(){
   const gs = groups();
   $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? " · " + gs.length + " tanggal" : "");
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
-  $("next").disabled = qtyTotal() === 0;
+  $("next").disabled = qtyTotal() === 0; $("next").textContent = qtyTotal() === 0 ? "Pilih menu dulu" : "Lanjut";
   document.querySelectorAll("[data-hours]").forEach(x => { x.textContent = hours(); });
   document.querySelectorAll("[data-ongkir]").forEach(x => { x.textContent = flat() ? rp(flat()) : "gratis"; });
   document.querySelectorAll("[data-pickloc]").forEach(x => { x.textContent = pickLoc(); });

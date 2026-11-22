@@ -607,3 +607,7 @@ textarea{min-height:84px;resize:vertical}
 .pattern{height:6px;background:var(--ulos-h)}
 .ahead{padding-bottom:6px}
 .ahead::after{height:6px;background:var(--ulos-h)}
+
+#s1 .label{margin:16px 0 8px;font-size:.95rem}
+#s1 .chips{margin-top:0}
+.bar .btn:disabled{white-space:nowrap}
