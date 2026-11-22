@@ -84,6 +84,8 @@ const api = {
   saveSettings: async data => must(await sb.from("settings").upsert({ id:"shop", data })),
   editItems: async (id, qty) => must(await sb.rpc("admin_edit_items", { p_id:id, p_qty:qty })),
   logAct: async (action, target, detail) => { try { await sb.from("activity_log").insert({ actor:(session && session.user && session.user.email) || "", action, target, detail }); } catch (e) {} },
+  loadNotes: async () => must(await sb.from("customer_notes").select("*")),
+  saveNote: async (hp, note) => must(await sb.from("customer_notes").upsert({ hp, note, updated_at:new Date().toISOString() })),
   loadLog: async () => must(await sb.from("activity_log").select("*").order("at", { ascending:false }).limit(60)),
   updateOrders: async (ids, patch) => must(await sb.from("orders").update(patch).in("id", ids)),
   createOrders: async (payload, asAdmin) => must(await sb.rpc("create_orders", { payload, as_admin:!!asAdmin })),
@@ -1358,7 +1360,7 @@ setEl.addEventListener("change", async e => {
 setEl.addEventListener("click", e => { if (e.target.closest("[data-qris-del]")) saveSetting({ qrisPath:"" }); });
 
 /* --- penjualan --- */
-let salesPo = "semua", salesBasis = "lunas";
+let salesPo = "semua", salesBasis = "lunas", salesRange = 0, custFilter = "semua";
 const fmtShort = n => n >= 1e6 ? (n / 1e6).toLocaleString("id-ID", { maximumFractionDigits:1 }) + " jt" : n >= 1e3 ? Math.round(n / 1e3) + " rb" : String(Math.round(n));
 const niceMax = v => { if (v <= 0) return 100000; const p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; };
 const foodOf = o => Math.max(0, o.total - o.ongkir);
@@ -1377,6 +1379,12 @@ function hbars(rows){
   const mx = Math.max(1, ...rows.map(r => r.value));
   return `<div class="hbars">${rows.map(r => `<div class="hrow" tabindex="0" data-tip data-a="${esc(r.a)}" data-b="${esc(r.label)}" data-c="${esc(r.c || "")}"><span class="hl">${esc(r.label)}</span><span class="ht"><span class="hb" style="--w:${(r.value / mx).toFixed(3)}"></span><span class="hv">${esc(String(r.value))}</span></span></div>`).join("")}</div>`;
 }
+function exportSales(){
+  const live = orders.filter(o => o.status !== "batal" && o.payStatus !== "ditolak"), rows = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date))).map(p => {
+    const os = live.filter(o => o.poId === p.id), paid = os.filter(o => o.payStatus === "lunas");
+    return [p.date, os.length, os.reduce((t, o) => t + portionsOf(o), 0), paid.reduce((t, o) => t + foodOf(o), 0), paid.reduce((t, o) => t + o.ongkir, 0), os.filter(o => o.payStatus === "cek").reduce((t, o) => t + o.total, 0)]; });
+  downloadCsv("penjualan-lapo-doli-" + dayStart() + ".csv", ["Tanggal PO", "Pesanan", "Porsi", "Penjualan lunas", "Ongkir lunas", "Belum dicek bayar"], rows); toast("File CSV diunduh");
+}
 function renderSales(){
   const el = $("a-sales");
   if (ordersState === "loading") { el.innerHTML = '<p class="note">Memuat data penjualan...</p>'; return; }
@@ -1385,14 +1393,18 @@ function renderSales(){
   if (salesPo !== "semua" && !poSorted.some(p => p.id === salesPo)) salesPo = "semua";
   const live = orders.filter(o => o.status !== "batal" && o.payStatus !== "ditolak");
   const inBasis = o => salesBasis === "semua" || o.payStatus === "lunas";
-  const scope = live.filter(o => salesPo === "semua" || o.poId === salesPo);
+  const withOrders = poSorted.filter(p => live.some(o => o.poId === p.id)), rangeIds = new Set((salesRange && salesPo === "semua" ? withOrders.slice(-salesRange) : poSorted).map(p => p.id));
+  const scope = live.filter(o => salesPo === "semua" ? rangeIds.has(o.poId) : o.poId === salesPo);
   const base = scope.filter(inBasis), wait = scope.filter(o => o.payStatus === "cek");
   const food = base.reduce((a, o) => a + foodOf(o), 0), fee = base.reduce((a, o) => a + o.ongkir, 0), qty = base.reduce((a, o) => a + portionsOf(o), 0);
   const phones = {}; base.forEach(o => { const k = normPhone(o.hp); phones[k] = (phones[k] || 0) + 1; });
   const cust = Object.keys(phones).length, repeat = Object.values(phones).filter(n => n > 1).length;
   const waitSum = wait.reduce((a, o) => a + o.total, 0);
 
-  const items = poSorted.map(po => { const os = live.filter(o => o.poId === po.id && inBasis(o));
+  const poVal = po => live.filter(o => o.poId === po.id && inBasis(o)).reduce((t, o) => t + foodOf(o), 0);
+  const refPo = salesPo !== "semua" ? poSorted.find(p => p.id === salesPo) : withOrders[withOrders.length - 1], refIdx = refPo ? withOrders.findIndex(p => p.id === refPo.id) : -1, prevPo = refIdx > 0 ? withOrders[refIdx - 1] : null;
+  const cmpTile = prevPo && poVal(prevPo) > 0 ? (() => { const d = Math.round((poVal(refPo) - poVal(prevPo)) / poVal(prevPo) * 100); return `<div class="tile"><span>Dibanding PO sebelumnya</span><b class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : ""}${d}%</b><small>${esc(dShort(refPo.date))} vs ${esc(dShort(prevPo.date))}</small></div>`; })() : `<div class="tile"><span>Dibanding PO sebelumnya</span><b>-</b><small>Belum ada pembanding</small></div>`;
+  const items = poSorted.filter(po => rangeIds.has(po.id)).map(po => { const os = live.filter(o => o.poId === po.id && inBasis(o));
     return { id:po.id, label:dShort(po.date).replace(/^\S+,?\s*/, ""), full:dLong(po.date), value:os.reduce((a, o) => a + foodOf(o), 0), count:os.length, dim:salesPo !== "semua" && salesPo !== po.id }; });
 
   const menu = {}, add = {};
@@ -1407,13 +1419,16 @@ function renderSales(){
   el.innerHTML = `<div class="sales">
     <div class="toolbar">
       <select id="s-po" class="sel" aria-label="Filter tanggal PO"><option value="semua">Semua tanggal</option>${poSorted.map(p => `<option value="${esc(p.id)}" ${p.id === salesPo ? "selected" : ""}>${esc(dShort(p.date))}</option>`).join("")}</select>
+      ${salesPo === "semua" ? `<div class="stabs" role="group" aria-label="Rentang PO">${[[0, "Semua"], [4, "4 PO terakhir"], [8, "8 PO terakhir"]].map(([n, l]) => `<button type="button" data-srange="${n}" aria-pressed="${salesRange === n}">${l}</button>`).join("")}</div>` : ""}
       <div class="stabs" role="group" aria-label="Dasar hitung"><button type="button" data-sbasis="lunas" aria-pressed="${salesBasis === "lunas"}">Lunas</button><button type="button" data-sbasis="semua" aria-pressed="${salesBasis === "semua"}">Semua</button></div>
+      <button class="btn line sm iconbtn" data-sexport type="button" aria-label="Ekspor penjualan per PO ke CSV" title="Ekspor penjualan per PO ke CSV">${ic("download")}</button>
     </div>
     <div class="herostat"><span class="k">Penjualan${salesBasis === "lunas" ? " lunas" : ""}</span><b>${rp(food)}</b><span class="s">${base.length} pesanan, masuk ${rp(food + fee)} dengan ongkir</span></div>
     <div class="tiles">
       <div class="tile"><span>Porsi terjual</span><b>${qty}</b></div>
       <div class="tile"><span>Rata-rata pesanan</span><b>${base.length ? rp(Math.round(food / base.length)) : "-"}</b></div>
-      <div class="tile"><span>Pelanggan</span><b>${cust}</b><small>${repeat} berulang</small></div>
+      <div class="tile"><span>Pelanggan</span><b>${cust}</b><small>${repeat ? `<button class="linkbtn" data-goto-cust type="button">${repeat} berulang</button>` : "0 berulang"}</small></div>
+      ${cmpTile}
       <div class="tile"><span>Belum dicek bayar</span><b>${rp(waitSum)}</b><small>${wait.length} pesanan</small></div>
     </div>
     <div class="panels">
@@ -1445,6 +1460,9 @@ salesEl.addEventListener("pointerleave", () => { tipEl.hidden = true; });
 salesEl.addEventListener("focusin", e => { const t = e.target.closest("[data-tip]"); if (t) { const r = t.getBoundingClientRect(); showTip(t, r.left + r.width / 2, r.top); } });
 salesEl.addEventListener("focusout", () => { tipEl.hidden = true; });
 salesEl.addEventListener("click", e => {
+  const rg = e.target.closest("[data-srange]"); if (rg) { salesRange = Number(rg.dataset.srange); renderSales(); return; }
+  if (e.target.closest("[data-goto-cust]")) { custFilter = "repeat"; setTab("cust"); return; }
+  if (e.target.closest("[data-sexport]")) { exportSales(); return; }
   const f = e.target.closest("[data-spofilter]"), s = e.target.closest("[data-spo]"), b = e.target.closest("[data-sbasis]");
   if (f) salesPo = f.dataset.spofilter;
   else if (s) salesPo = salesPo === s.dataset.spo ? "semua" : s.dataset.spo;
@@ -1478,6 +1496,12 @@ function rekapText(r){
   return L.join("\n");
 }
 const csvCell = v => { let s = String(v ?? ""); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+function downloadCsv(name, head, rows){
+  const csv = "﻿" + [head, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })), link = document.createElement("a");
+  link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const mapHref = o => o.mapsUrl || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(((o.alamat || "") + " " + (o.area || "")).trim());
 function exportCsv(){
   const head = ["No. pesanan", "Tanggal PO", "Dibuat", "Nama", "No. HP", "Antar/Ambil", "Wilayah", "Alamat", "Pesanan", "Catatan", "Ongkir", "Total", "Metode", "Status bayar", "Status", "Sumber"];
   const rows = orders.map(o => [o.id, o.poDate, o.createdAt, o.nama, o.hp, o.fulfil, o.area, o.alamat, itemLine(o), o.notes, o.ongkir, o.total, o.method, o.payStatus, o.status, o.source]);
@@ -1489,13 +1513,13 @@ function renderRekap(){
   const el = $("a-rekap");
   if (ordersState === "loading" || pos === null) { el.innerHTML = '<p class="note">Memuat rekap...</p>'; return; }
   const r = rekapData();
-  const orderCard = o => `<div class="rk-o"><div class="rk-top"><b>${esc(o.nama)}</b><span class="muted">${esc(o.id)}</span><a class="rk-wa" href="https://wa.me/${normPhone(o.hp)}" target="_blank" rel="noopener" aria-label="Chat ${esc(o.nama)}" title="Chat ${esc(o.hp)}">${ic("chat")}</a></div>${o.fulfil !== "ambil" ? `<div class="rk-r">${ic("pin")}<span>${esc(o.alamat)}</span></div>` : ""}<ul class="rk-i">${o.items.map(i => `<li><span class="q">${Number(i.qty) || 0}×</span><span>${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}${i.note ? ` <em>${esc(i.note)}</em>` : ""}</span></li>`).join("")}</ul>${o.notes ? `<div class="rk-note">${esc(o.notes)}</div>` : ""}</div>`;
+  const orderCard = o => `<div class="rk-o"><div class="rk-top"><b>${esc(o.nama)}</b><span class="muted">${esc(o.id)}</span><a class="rk-wa" href="https://wa.me/${normPhone(o.hp)}" target="_blank" rel="noopener" aria-label="Chat ${esc(o.nama)}" title="Chat ${esc(o.hp)}">${ic("chat")}</a></div>${o.fulfil !== "ambil" ? `<div class="rk-r">${ic("pin")}<span>${esc(o.alamat)}</span><a class="maplink" href="${esc(mapHref(o))}" target="_blank" rel="noopener">${o.mapsUrl ? "Buka peta" : "Cari di peta"}</a></div>` : ""}<ul class="rk-i">${o.items.map(i => `<li><span class="q">${Number(i.qty) || 0}×</span><span>${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}${i.note ? ` <em>${esc(i.note)}</em>` : ""}</span></li>`).join("")}</ul>${o.notes ? `<div class="rk-note">${esc(o.notes)}</div>` : ""}</div>`;
   const areas = {}; r.antar.forEach(o => { (areas[o.area || "Tanpa wilayah"] = areas[o.area || "Tanpa wilayah"] || []).push(o); });
   el.innerHTML = `<div class="kitchen">
     <div class="toolbar rk-tools">
       <select id="rk-po" class="sel" aria-label="Tanggal PO">${r.poSorted.map(p => `<option value="${esc(p.id)}" ${p.id === rekapPo ? "selected" : ""}>${esc(dLong(p.date))}</option>`).join("")}</select>
       <div class="stabs" role="group" aria-label="Pesanan yang dihitung"><button type="button" data-rkb="semua" aria-pressed="${rekapBasis === "semua"}">Semua</button><button type="button" data-rkb="lunas" aria-pressed="${rekapBasis === "lunas"}">Lunas</button></div>
-      <div class="acts tools"><button class="btn line sm iconbtn" data-rk="copy" type="button" aria-label="Salin rekap" title="Salin rekap">${ic("copy")}</button><button class="btn line sm iconbtn" data-rk="print" type="button" aria-label="Cetak rekap" title="Cetak rekap">${ic("print")}</button><button class="btn line sm iconbtn" data-rk="csv" type="button" aria-label="Ekspor semua pesanan ke CSV" title="Ekspor semua pesanan ke CSV">${ic("download")}</button></div>
+      <div class="acts tools"><button class="btn line sm iconbtn" data-rk="copy" type="button" aria-label="Salin rekap" title="Salin rekap">${ic("copy")}</button><button class="btn line sm iconbtn" data-rk="courier" type="button" aria-label="Salin daftar antar untuk kurir" title="Salin daftar antar untuk kurir">${ic("truck")}</button><button class="btn line sm iconbtn" data-rk="print" type="button" aria-label="Cetak rekap" title="Cetak rekap">${ic("print")}</button><button class="btn line sm iconbtn" data-rk="csv" type="button" aria-label="Ekspor semua pesanan ke CSV" title="Ekspor semua pesanan ke CSV">${ic("download")}</button></div>
     </div>
     ${r.list.length ? `
     <div class="panels">
@@ -1513,7 +1537,55 @@ $("a-rekap").addEventListener("click", async e => {
   const k = e.target.closest("[data-rk]"); if (!k) return;
   if (k.dataset.rk === "print") window.print();
   else if (k.dataset.rk === "csv") { exportCsv(); toast("File CSV diunduh"); }
+  else if (k.dataset.rk === "courier") {
+    const r = rekapData(), rpo = r.poSorted.find(p => p.id === rekapPo); if (!rpo || !r.antar.length) { toast("Belum ada pesanan antar."); return; }
+    const txt = "Antar " + dLong(rpo.date) + ", jam " + (r.antar[0].hours || hours()) + "\n\n" + r.antar.map((o, i) => `${i + 1}. ${o.nama} (${o.hp})\n${o.area ? o.area + ", " : ""}${o.alamat}\n${mapHref(o)}\n${itemLine(o)}${o.notes ? "\nCatatan: " + o.notes : ""}`).join("\n\n");
+    try { await navigator.clipboard.writeText(txt); toast("Daftar antar disalin"); logAct("salin_kurir", rpo.id, r.antar.length + " alamat"); } catch (err) { toast("Tidak bisa menyalin."); }
+  }
   else if (k.dataset.rk === "copy") { try { await navigator.clipboard.writeText(rekapText(rekapData())); toast("Rekap disalin"); } catch (err) { toast("Tidak bisa menyalin. Coba cetak atau ekspor."); } }
+});
+
+/* --- pelanggan --- */
+let custNotes = {}, custOpen = new Set(), custQ = "", custSort = "terbaru";
+async function refreshNotes(){ try { const rows = await api.loadNotes(); custNotes = {}; rows.forEach(r => { custNotes[r.hp] = r.note; }); } catch (e) {} if (tab === "cust") renderCust(); }
+function customers(){
+  const m = {};
+  orders.forEach(o => { const k = normPhone(o.hp); const c = m[k] || (m[k] = { key:k, hp:o.hp, nama:o.nama, last:"", first:o.createdAt, os:[], spent:0, n:0 });
+    c.os.push(o); if (String(o.createdAt) >= String(c.last)) { c.last = o.createdAt; c.nama = o.nama || c.nama; c.hp = o.hp; } if (String(o.createdAt) < String(c.first)) c.first = o.createdAt;
+    if (o.status !== "batal" && o.payStatus !== "ditolak") { c.n++; if (o.payStatus === "lunas") c.spent += o.total; } });
+  return Object.values(m);
+}
+function renderCust(){
+  const el = $("a-cust");
+  if (ordersState === "loading") { el.innerHTML = '<p class="note">Memuat pelanggan...</p>'; return; }
+  const all = customers(), q = custQ.trim().toLowerCase(), d = dg(q);
+  let list = all.filter(c => !q || String(c.nama || "").toLowerCase().includes(q) || (d.length >= 3 && dg(c.hp).includes(d)));
+  const nRep = all.filter(c => c.n > 1).length;
+  if (custFilter === "repeat") list = list.filter(c => c.n > 1);
+  list.sort((x, y) => custSort === "terbesar" ? y.spent - x.spent : String(y.last).localeCompare(String(x.last)));
+  const rows = list.map(c => { const open = custOpen.has(c.key), note = custNotes[c.key] || "";
+    return `<article class="crow ${open ? "open" : ""}" data-ck="${esc(c.key)}">
+      <div class="crow-h"><div class="cwho"><b>${esc(c.nama || "Tanpa nama")}</b>${c.n > 1 ? '<span class="otag">Langganan</span>' : ""}${note ? '<span class="otag">Ada catatan</span>' : ""}<small>${esc(c.hp)}</small></div>
+        <div class="cstat"><b>${rp(c.spent)}</b><small>${c.n} pesanan, terakhir ${esc(fmtTime(c.last))}</small></div>
+        <button class="btn line sm iconbtn" data-ctoggle type="button" aria-expanded="${open}" aria-label="${open ? "Tutup" : "Buka"} detail ${esc(c.nama || "")}">${ic("chevron", open ? "flip" : "")}</button></div>
+      ${open ? `<div class="cdetail"><label class="ef full">Catatan pelanggan<textarea data-cnote placeholder="Mis. tidak makan babi, alamat kantor di lantai 9" maxlength="500">${esc(note)}</textarea></label>
+        <ul class="chist">${c.os.slice().reverse().slice(0, 12).map(o => { const [sl, sc] = statusChip(o); return `<li><button class="linkbtn mono" data-cgo="${esc(o.id)}" type="button">${esc(o.id)}</button><span>${o.poDate ? esc(dShort(o.poDate)) : ""}</span><span>${rp(o.total)}</span><span class="chip st ${sc}">${sl}</span></li>`; }).join("")}</ul>
+        <div class="acts"><a class="btn line sm" href="https://wa.me/${normPhone(c.hp)}" target="_blank" rel="noopener">${ic("chat")}Chat</a><button class="btn line sm" data-cgo="${esc(c.hp)}" type="button">${ic("orders")}Lihat pesanan</button></div></div>` : ""}</article>`; }).join("");
+  el.innerHTML = `<div class="toolbar"><label class="osearch">${ic("search")}<input id="c-q" type="search" placeholder="Cari nama atau HP" value="${esc(custQ)}" aria-label="Cari pelanggan" autocomplete="off"></label>
+    <div class="stabs" role="group" aria-label="Filter pelanggan"><button type="button" data-cf="semua" aria-pressed="${custFilter === "semua"}">Semua <span class="c">${all.length}</span></button><button type="button" data-cf="repeat" aria-pressed="${custFilter === "repeat"}">Langganan <span class="c">${nRep}</span></button></div>
+    <select id="c-sort" class="sel" aria-label="Urutan"><option value="terbaru" ${custSort === "terbaru" ? "selected" : ""}>Terbaru</option><option value="terbesar" ${custSort === "terbesar" ? "selected" : ""}>Belanja terbesar</option></select></div>
+    ${rows ? `<div class="clist">${rows}</div>` : '<div class="empty" style="margin-top:16px">Belum ada pelanggan yang cocok.</div>'}`;
+}
+$("a-cust").addEventListener("input", e => { if (e.target.id !== "c-q") return; custQ = e.target.value; const p = e.target.selectionStart; renderCust(); const i = $("c-q"); if (i) { i.focus(); try { i.setSelectionRange(p, p); } catch (er) {} } });
+$("a-cust").addEventListener("change", async e => {
+  if (e.target.id === "c-sort") { custSort = e.target.value; renderCust(); return; }
+  if (e.target.matches("[data-cnote]")) { const k = e.target.closest("[data-ck]").dataset.ck, v = e.target.value.trim().slice(0, 500); custNotes[k] = v;
+    try { await api.saveNote(k, v); logAct("catatan_pelanggan", k, v); toast("Catatan tersimpan"); } catch (er) { toast("Catatan belum tersimpan. Jalankan ulang schema.sql terbaru."); } }
+});
+$("a-cust").addEventListener("click", e => {
+  const cf = e.target.closest("[data-cf]"); if (cf) { custFilter = cf.dataset.cf; renderCust(); return; }
+  const t = e.target.closest("[data-ctoggle]"); if (t) { const k = t.closest("[data-ck]").dataset.ck; if (custOpen.has(k)) custOpen.delete(k); else custOpen.add(k); renderCust(); return; }
+  const g = e.target.closest("[data-cgo]"); if (g) { oq = g.dataset.cgo; filter = "semua"; setTab("orders"); renderAdminOrders(); }
 });
 
 /* --- tab dan navigasi --- */
@@ -1522,6 +1594,7 @@ function renderAdmin(){
   renderAdminOrders();
   if (tab === "sales") renderSales();
   if (tab === "rekap") renderRekap();
+  if (tab === "cust") renderCust();
   if (tab === "po") renderPoSafe();
   if (tab === "menu") renderMenuSafe();
   if (tab === "set") renderSetSafe();
@@ -1529,10 +1602,11 @@ function renderAdmin(){
 function setTab(t){
   tab = t;
   document.querySelectorAll("#tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
-  $("a-orders").hidden = t !== "orders" || newOpen; $("a-new").hidden = !(t === "orders" && newOpen); $("a-sales").hidden = t !== "sales"; $("a-po").hidden = t !== "po"; $("a-menu").hidden = t !== "menu"; $("a-set").hidden = t !== "set";
+  $("a-orders").hidden = t !== "orders" || newOpen; $("a-new").hidden = !(t === "orders" && newOpen); $("a-sales").hidden = t !== "sales"; $("a-cust").hidden = t !== "cust"; $("a-po").hidden = t !== "po"; $("a-menu").hidden = t !== "menu"; $("a-set").hidden = t !== "set";
   $("a-rekap").hidden = t !== "rekap";
   if (t === "sales") renderSales();
   if (t === "rekap") renderRekap();
+  if (t === "cust") renderCust();
   if (t === "po") renderAdminPo();
   if (t === "menu") renderAdminMenu();
   if (t === "set") renderAdminSet();
@@ -1663,7 +1737,7 @@ async function checkSchema(){
   $("schema-warn").hidden = v >= SCHEMA_VERSION;
 }
 function startAdmin(){
-  checkSchema(); refreshOrders();
+  checkSchema(); refreshOrders(); refreshNotes();
   if (!ordersChannel) ordersChannel = sb.channel("lapo-orders").on("postgres_changes", { event:"*", schema:"public", table:"orders" }, () => debounced("orders", refreshOrders)).subscribe();
 }
 function stopAdmin(){ if (ordersChannel) { sb.removeChannel(ordersChannel); ordersChannel = null; } orders = []; ordersState = "loading"; }

@@ -1215,3 +1215,20 @@ img.thumb{background:var(--soft)}
   .nota h2{margin:0;font-size:18px}.nota p{margin:6px 0}.nota .nid{font-weight:700;font-size:16px}
   .nota table{width:100%;border-collapse:collapse;margin:8px 0}.nota td{padding:2px 0;vertical-align:top}.nota td:last-child{text-align:right;white-space:nowrap}.nota tr.tot td{border-top:1px solid #3b2c27;font-weight:700;padding-top:4px}
 }
+
+/* admin: pelanggan, penjualan, peta */
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.linkbtn.mono{font-family:var(--mono);font-size:13px}
+.clist{display:grid;gap:var(--sp-2);margin-top:var(--sp-3)}
+.crow{border:1px solid var(--border-default);border-radius:var(--r-lg);background:#fff;box-shadow:var(--shadow-low);padding:var(--sp-3) var(--sp-4)}
+.crow-h{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:var(--sp-3);align-items:center}
+.cwho{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);min-width:0}
+.cwho small{flex-basis:100%;color:var(--text-secondary);font-size:13px}
+.cstat{text-align:right;display:grid}.cstat small{color:var(--text-secondary);font-size:12px}
+.cdetail{display:grid;gap:var(--sp-3);margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px dashed var(--border-default)}
+.cdetail .ef textarea{min-height:64px}
+.chist{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-1);font-size:13px}
+.chist li{display:grid;grid-template-columns:90px 1fr auto auto;gap:var(--sp-3);align-items:center;padding:4px 0;border-bottom:1px solid var(--border-default)}
+.tile b.up{color:var(--ok)}.tile b.down{color:var(--bad)}
+.rk-r .maplink{margin-left:auto;flex:none;color:var(--accent);font-weight:600;font-size:13px;text-decoration:none;white-space:nowrap}
+@media (max-width:640px){.crow-h{grid-template-columns:minmax(0,1fr) auto}.cstat{grid-column:1;text-align:left;grid-row:2}.crow-h .iconbtn{grid-row:1/span 2;grid-column:2}.chist li{grid-template-columns:80px 1fr auto}.chist .chip{grid-column:1/-1;justify-self:start}}
