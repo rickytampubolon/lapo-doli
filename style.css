@@ -58,11 +58,11 @@ button,input,textarea,select{font:inherit;color:inherit}
 #shop.has-bar{padding-bottom:150px}
 #shop section{display:none}
 #shop section.show{display:block}
-.closed{margin:44px 0 20px;color:var(--muted);max-width:26em}
-.closed .rebung{display:block;width:56px;height:14px;margin-bottom:16px;background:var(--accent);-webkit-mask:var(--tri) left bottom/14px 7px repeat-x;mask:var(--tri) left bottom/14px 7px repeat-x}
-.closed h2{margin:0 0 6px;font-family:var(--head);font-size:1.4rem;font-weight:600;color:var(--ink)}
-.closed p{margin:0 0 18px;line-height:1.55}
-.closed .btn{display:inline-block;width:auto;padding:12px 22px;text-decoration:none}
+.closed{display:flex;flex-direction:column;align-items:center;text-align:center;margin:0 auto;padding:8px 0 24px}
+.closed .emptylogo{width:148px;height:148px;margin-bottom:8px}
+.closed h2{margin:0 0 6px;font-family:var(--head);font-size:1.5rem;font-weight:600;color:var(--ink)}
+.closed p{margin:0 0 22px;color:var(--muted);max-width:20em;text-wrap:balance}
+.closed .btn{display:inline-flex;align-items:center;justify-content:center;width:auto;padding:12px 26px;text-decoration:none}
 .chips{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 6px;margin:0 -2px;scrollbar-width:none;scroll-snap-type:x proximity}
 .chips::-webkit-scrollbar{display:none}
 .cbtn{flex:none;scroll-snap-align:start;position:relative;display:grid;justify-items:center;gap:0;min-width:74px;padding:10px 14px 9px;border:1px solid var(--line);background:#fff;border-radius:14px;font-weight:500;cursor:pointer;color:var(--ink);line-height:1.15}
@@ -393,7 +393,7 @@ textarea{min-height:84px;resize:vertical}
 .side-foot .textbtn:hover{color:#fff;background:rgba(255,255,255,.07)}
 @media (min-width:860px){
   #admin.authed .ahead{display:none}
-  #admin.authed .shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+  #admin.authed .shell{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
   .side{position:sticky;top:0;height:100vh;width:auto;transform:none;transition:none;z-index:1;overflow:visible;padding-bottom:18px}
   .content{padding:36px clamp(24px,4vw,56px) 80px;width:100%;margin:0}
 }
@@ -477,3 +477,24 @@ textarea{min-height:84px;resize:vertical}
   #admin .toolbar .sel{flex:1 1 0;min-width:0}
   #admin .rk-tools .sel{flex:1 1 100%}
 }
+
+/* PO kosong: satu layar tenang, tanpa sampul */
+.no-po .cover{display:none}
+.no-po main{min-height:calc(100svh - 80px);display:flex;align-items:center;justify-content:center}
+.no-po main > section{width:100%}
+.no-po #foot{display:none}
+
+/* aksen ulos: pita merah, garis anggur tua, garis krem. Menggantikan deret segitiga */
+:root{
+  --ulos-h:linear-gradient(to bottom,#6f1a12 0 2px,#f6e4cf 2px 3px,#a3281c 3px 7px,#3b0d09 7px 9px,#a3281c 9px 13px,#f6e4cf 13px 14px,#6f1a12 14px 16px);
+  --ulos-v:linear-gradient(to right,#6f1a12 0 2px,#f6e4cf 2px 3px,#a3281c 3px 7px,#3b0d09 7px 9px,#a3281c 9px 13px,#f6e4cf 13px 14px,#6f1a12 14px 16px);
+}
+.pattern{height:16px;background:var(--ulos-h)}
+.pattern::before{content:none}
+.ahead{padding-bottom:16px}
+.ahead::after{height:16px;background:var(--ulos-h);-webkit-mask:none;mask:none}
+.side{padding-right:28px}
+.side::after{content:"";position:absolute;top:0;bottom:0;right:0;width:16px;background:var(--ulos-v)}
+.side-brand{flex-wrap:nowrap}
+.side-brand .brand{white-space:nowrap}
+.side-brand .logo.sm{width:36px;height:36px}
