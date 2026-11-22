@@ -392,6 +392,19 @@ function renderPay(){
   $("d-bank-name").textContent = settings.bankName; $("d-bank-holder").textContent = settings.bankHolder; $("d-bank-no").textContent = settings.bankNumber;
   $("qris-box").innerHTML = q ? `<img src="${esc(settings.qrisUrl)}" alt="QRIS Lapo Doli">` : "";
 }
+/* bagikan ke teman: lembar bagikan bawaan HP, atau WhatsApp kalau tidak ada */
+const shareUrl = () => location.origin + "/";
+const shareText = "Pre-order Lapo Doli: masakan Batak rumahan, PO tiap minggu, antar khusus Jakarta.";
+async function shareToFriend(){
+  const url = shareUrl();
+  if (navigator.share) { try { await navigator.share({ title:"Lapo Doli", text:shareText, url }); } catch (e) { /* ditutup pembeli */ } return; }
+  window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + url)}`, "_blank", "noopener");
+}
+document.querySelectorAll("[data-linktxt]").forEach(x => { x.textContent = shareUrl().replace(/^https?:\/\//, "").replace(/\/$/, ""); });
+document.addEventListener("click", e => {
+  const s = e.target.closest("[data-share]"); if (s) { shareToFriend(); return; }
+  const c = e.target.closest("[data-copylink]"); if (c) copyText(shareUrl(), c.parentElement.querySelector("[data-linktxt]"), "Link disalin");
+});
 async function copyText(text, el, okMsg){
   try { await navigator.clipboard.writeText(text); toast(okMsg); return; } catch (e) {}
   try { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); if (document.execCommand && document.execCommand("copy")) { toast(okMsg); return; } } catch (e) {}
@@ -602,7 +615,7 @@ function orderRow(o){
   return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
       <span class="num">${esc(o.id)}</span>
-      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}${o.proofPath ? `<span class="otag proof">${ic("image")}Ada bukti</span>` : ""}</div><div class="o3">${esc(summary)}</div></div>
+      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}</div><div class="o3">${esc(summary)}</div></div>
       <span class="how">${pk ? "Ambil sendiri" : "Antar" + (o.area ? ", " + esc(o.area) : "")}${grp ? ", gabungan " + o.groupCount + " tanggal" : ""}</span>
       <span class="amt">${rp(o.total)}</span>
       <span class="chip st ${sc}">${sl}</span>

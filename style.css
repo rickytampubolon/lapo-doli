@@ -31,24 +31,16 @@ button, input, textarea, select{font:inherit;color:inherit}
 .logo.sm{width:32px;height:32px}
 .hlink{background:none;border:0;color:var(--muted);font:inherit;font-weight:600;padding:10px 4px;margin:-6px -4px;cursor:pointer;min-height:44px}
 .hlink:hover{color:var(--ink)}
-.home .top .hlink{color:#f3dfcb}
-.home .top .hlink:hover{color:#fff8ee}
 .hlink:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:6px}
 #shop:not(.home){padding-bottom:84px}
 .textbtn{background:none;border:0;padding:6px 0;color:var(--muted);cursor:pointer;font-size:14px}
 .textbtn:hover{color:var(--ink)}
 .title{font-family:var(--head);font-size:clamp(1.6rem,6vw,2.1rem);line-height:1.15;font-weight:600;margin:18px 0 6px;text-wrap:balance}
 .intro{margin:0;color:var(--muted)}
-.pattern{display:none;height:8px;position:relative;background:var(--hero)}
-.home .pattern{display:block}
-.pattern::before{content:"";position:absolute;inset:0;background:var(--amber);-webkit-mask:var(--tri) left bottom/16px 8px repeat-x;mask:var(--tri) left bottom/16px 8px repeat-x}
-.home .top{background:var(--hero);color:#fbefdf}
 .cover{display:none;background:var(--hero);color:#fbefdf;position:relative;overflow:hidden}
 .home .cover{display:block}
 .cover .col{position:relative;padding-top:18px;padding-bottom:34px}
 .cover .title{font-size:clamp(2rem,8.4vw,2.7rem);line-height:1.08;margin:0;max-width:11em;color:#fff8ee}
-.home .top .textbtn{color:#f3dfcb}
-.home .top .brand{color:#fbefdf}
 .intro{margin:0;color:var(--muted)}
 .label{font-size:14px;font-weight:600;color:var(--ink);margin:30px 0 10px}
 /* ---------- toko ---------- */
@@ -400,7 +392,6 @@ textarea{min-height:84px;resize:vertical}
 .hlink .ic{width:24px;height:24px;margin:0}
 .hlink{display:inline-flex;align-items:center;justify-content:center;min-width:44px}
 .back{display:inline-flex;align-items:center}
-.iconlink{display:inline-flex;align-items:center}
 .copybtn{display:inline-grid;place-items:center;min-width:40px;min-height:40px}
 .copybtn .ic{margin:0}
 .ahead .menubtn{gap:6px;padding:8px 12px}
@@ -478,11 +469,6 @@ textarea{min-height:84px;resize:vertical}
 .no-po main > section{width:100%}
 .no-po #foot{display:none}
 /* aksen ulos: pita merah, garis anggur tua, garis krem. Menggantikan deret segitiga */
-:root{--ulos-h:linear-gradient(to bottom,#6a2b24 0 2px,#f1e0c8 2px 3px,#9a3b2f 3px 7px,#52211b 7px 9px,#9a3b2f 9px 13px,#f1e0c8 13px 14px,#6a2b24 14px 16px);}
-.pattern{height:16px;background:var(--ulos-h)}
-.pattern::before{content:none}
-.ahead{padding-bottom:16px}
-.ahead::after{height:16px;background:var(--ulos-h);-webkit-mask:none;mask:none}
 .side-brand{flex-wrap:nowrap}
 .side-brand .brand{white-space:nowrap}
 .side-brand .logo.sm{width:36px;height:36px}
@@ -559,8 +545,6 @@ textarea{min-height:84px;resize:vertical}
 /* beranda: padat */
 .cover .col{padding-top:6px;padding-bottom:14px}
 .cover .title{font-size:clamp(1.6rem,7.4vw,2.2rem);line-height:1.1;max-width:none;white-space:nowrap}
-.pattern{height:12px}
-.pattern{background:linear-gradient(to bottom,#6a2b24 0 2px,#f1e0c8 2px 3px,#9a3b2f 3px 5px,#52211b 5px 7px,#9a3b2f 7px 9px,#f1e0c8 9px 10px,#6a2b24 10px 12px)}
 .chips{margin-top:14px}
 .cbtn{min-width:62px;padding:7px 12px 6px;border-radius:12px}
 .cbtn .dnum{font-size:20px;margin:1px 0}
@@ -579,11 +563,6 @@ textarea{min-height:84px;resize:vertical}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .chips{margin-top:16px}
 /* header lembut: krem amber, teks cokelat tua */
-.top{background:var(--amber-soft);color:var(--ink);border-bottom:1px solid var(--line)}
-.home .top{background:var(--amber-soft);color:var(--ink);border-bottom:0}
-.top .brand, .home .top .brand{color:var(--ink)}
-.hlink, .home .top .hlink{color:var(--ink)}
-.hlink:hover, .home .top .hlink:hover{color:var(--accent)}
 .hlink:focus-visible{outline-color:var(--accent)}
 .ahead{background:var(--amber-soft);color:var(--ink)}
 .ahead .brand{color:var(--ink)}
@@ -594,9 +573,8 @@ textarea{min-height:84px;resize:vertical}
 .ahead .menubtn:focus-visible{outline-color:var(--accent)}
 /* aksen ulos tipis */
 :root{--ulos-h:linear-gradient(to bottom,#9a3b2f 0 2px,#f1e0c8 2px 3px,#6a2b24 3px 4px,#9a3b2f 4px 6px)}
-.pattern{height:6px;background:var(--ulos-h)}
 .ahead{padding-bottom:6px}
-.ahead::after{height:6px;background:var(--ulos-h)}
+.ahead::after{height:6px;background:var(--ulos-h);-webkit-mask:none;mask:none}
 #s1 .label{margin:16px 0 8px;font-size:14px}
 #s1 .chips{margin-top:0}
 .bar .btn:disabled{white-space:nowrap}
@@ -646,8 +624,6 @@ textarea{min-height:84px;resize:vertical}
 #d-up.busy{opacity:.7;pointer-events:none}
 .proofok{display:flex;align-items:center;gap:10px;margin:0 0 4px;padding:12px 14px;border-radius:12px;background:#e4efe6;color:#27533b;font-weight:600}
 .proofok .ic{width:20px;height:20px;flex:none}
-.otag.proof{display:inline-flex;align-items:center;gap:4px;color:var(--ok);border-color:currentColor}
-.otag.proof .ic{width:13px;height:13px}
 .lightbox{position:fixed;inset:0;z-index:60;background:rgba(59,44,39,.82);display:grid;place-items:center;padding:16px}
 .lightbox img{max-width:100%;max-height:88vh;border-radius:12px;background:var(--card)}
 .lb-x{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
@@ -1035,9 +1011,34 @@ body.sheet-open{overflow:hidden}
 /* bukti bayar: lembar tengah */
 .lb-x{border:1px solid var(--border-default)}
 /* header putih: warna hanya dari pita ulos */
-.top, .home .top{background:#fff;color:var(--ink)}
-.top{border-bottom:1px solid var(--border-default)}
-.home .top{border-bottom:0}
 .ahead{background:#fff;color:var(--ink)}
 .ahead .menubtn{background:var(--soft)}
 #help-wa{background:var(--accent);color:var(--on-accent);border-radius:999px}
+
+/* header toko: sama di semua layar (beranda, pesanan, bayar, Bantuan, PO kosong) */
+.top{background:#fff;color:var(--ink)}
+.top .brand{color:var(--ink)}
+.hlink{color:var(--ink)}
+.hlink:hover{color:var(--accent)}
+.pattern{display:block;height:6px;background:var(--ulos-h)}
+
+/* admin: setiap pesanan satu kartu sendiri, konten selebar layar */
+#admin .olist{display:grid;gap:var(--sp-3);background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
+#admin .orow{background:#fff;border:1px solid var(--border-default);border-radius:var(--r-lg);box-shadow:var(--shadow-low);padding:var(--sp-3) var(--sp-4)}
+#admin .orow:last-child{border:1px solid var(--border-default)}
+#admin .orow.attn{box-shadow:inset 4px 0 0 var(--amber),var(--shadow-low)}
+#admin .group{margin:var(--sp-6) 2px var(--sp-3)}
+@media (min-width:860px){
+  #admin .content{max-width:none}
+}
+@media (min-width:1100px){
+  #admin .orow-h{grid-template-columns:84px minmax(0,2fr) minmax(0,1.2fr) 124px 190px auto}
+}
+
+/* bagikan ke teman */
+.sharecard{margin:var(--sp-6) 0 0}
+.sharecard .linkrow{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);padding:var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);border:1px solid var(--border-default);border-radius:var(--r-md);background:var(--soft)}
+.sharecard .linktxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:20px;user-select:all;-webkit-user-select:all}
+.sharecard .btn{width:100%;border-radius:999px}
+.sharecard .btn .ic{margin:0}
+#s3 .sharecard{margin:var(--sp-5) 0 var(--sp-4)}
