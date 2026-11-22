@@ -181,6 +181,7 @@ function renderPoChips(){
   $("sc-hours").textContent = hours() === pickHours() ? hr(hours()) : hr(hours()) + ", " + hr(pickHours());
   $("sc-cut").textContent = when + " " + cutoffLabel();
   $("sc-fee").textContent = flat() ? rp(flat()) : "Gratis";
+  $("sc-pick").textContent = pickLoc();
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
