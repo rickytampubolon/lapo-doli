@@ -140,3 +140,14 @@ Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`,
 
 - Captcha untuk pembuatan pesanan. Saat ini pesanan dibatasi 5 kali per 10 menit per nomor HP. Captcha yang benar butuh pengecekan token di server (Supabase Edge Function), jadi perlu akun Cloudflare Turnstile.
 - Kalau nanti pakai domain sendiri, ganti `https://lapo-doli.vercel.app` di `index.html` (canonical dan og tags) dengan domain itu.
+
+## Perbaikan sisi pembeli
+
+- Batas bayar 3 jam tampil di layar pembayaran, dengan hitung mundur dan peringatan bila lewat.
+- Menu disimpan di browser: dibuka tanpa jaringan tetap tampil, dan layar galat muncul maksimal 8 detik.
+- Sisa waktu PO tampil di kartu toko (jadi merah di bawah 2 jam).
+- Jumlah item bisa diubah langsung di halaman pesanan.
+- Tombol "Pesan seperti sebelumnya" mengisi ulang keranjang terakhir.
+- Lembar pilihan menjaga fokus keyboard, semua tombol minimal 44px.
+- Link status pesanan: `/?cek=NOMOR` membuka Bantuan dan langsung mencari.
+- Tombol bawah di checkout memakai kapsul yang sama dengan keranjang.
