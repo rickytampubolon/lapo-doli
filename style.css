@@ -1112,8 +1112,3 @@ body.sheet-open{overflow:hidden}
 #help-wa{background:var(--accent);color:var(--on-accent);border-radius:999px}
 
 
-/* strip info: dua kolom, empat kotak */
-.sc-stats{grid-template-columns:1fr 1fr}
-.sc-stats div:nth-child(2n){border-left:1px solid var(--border-default)}
-.sc-stats div:nth-child(n+3){border-top:1px solid var(--border-default)}
-.sc-stats div:nth-child(3){border-left:0}
