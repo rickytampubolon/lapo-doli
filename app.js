@@ -177,7 +177,8 @@ function renderPoChips(){
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const act = list.find(x => x.id === activePo);
-  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}Antar atau ambil, ${esc(hours())}</span>` : `<span>${ic("truck")}Antar ${esc(hours())}</span><span>${ic("pin")}Ambil ${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(relDay(act.date) ? relDay(act.date).toLowerCase() : dShort(act.date))} pukul ${esc(cutoffLabel())}</span>`;
+  const when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" });
+  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}Antar/ambil ${esc(hours().replace(/\s*-\s*/, "-"))}</span>` : `<span>${ic("truck")}Antar ${esc(hours())}</span><span>${ic("pin")}Ambil ${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(when)} ${esc(cutoffLabel())}</span>`;
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
@@ -291,8 +292,11 @@ function renderClosed(){
   $("np").hidden = !n; if (n) $("np").innerHTML = `<span>${ic("po")}PO ${esc(dShort(n.date))}</span><span>${ic("clock")}Buka ${esc(fmtWhen(n.opens_at))}</span>`;
   $("closed-wa-t").textContent = n ? "Ingatkan saya" : "Chat admin";
 }
+let lastQty = 0;
 function updateBar(){
   saveCart();
+  const q = qtyTotal(); $("cart-n").textContent = q; $("cart-n").hidden = !q;
+  if (q > lastQty) { const c = $("cartic"); c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump"); } lastQty = q;
   const gs = groups();
   $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? " · " + gs.length + " tanggal" : "");
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
@@ -329,10 +333,14 @@ function checkClosings(){
   openSig = sig; renderMenu();
   if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesananmu"); if (screen === 2) { if (qtyTotal()) renderCheckout(); else go(1); } }
 }
+function updateSteps(n){
+  document.querySelectorAll("#steps li").forEach((li, i) => { const k = i + 1; li.className = k < n ? "done" : k === n ? "now" : ""; li.querySelector("i").innerHTML = k < n ? ic("check") : String(k); li.setAttribute("aria-current", k === n ? "step" : "false"); });
+}
 function go(n){
   screen = n;
   document.querySelectorAll("#shop section").forEach((s, i) => s.classList.toggle("show", i + 1 === n));
   $("bar").hidden = n !== 1; $("shop").classList.toggle("has-bar", n === 1); $("shop").classList.toggle("home", n === 1);
+  updateSteps(n);
   if (n === 2) renderCheckout();
   window.scrollTo({ top:0 });
 }
