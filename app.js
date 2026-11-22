@@ -380,7 +380,7 @@ function renderCheckout(){
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
 }
-let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false;
+let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false, placedRejected = false;
 document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; saveCart(); renderCheckout(); });
 function renderPayInfo(){
   const hasQ = !!settings.qrisUrl;
@@ -390,7 +390,9 @@ function renderPayInfo(){
 }
 /* Kotak bayar di layar setelah pesan: jumlah tepat (dengan kode unik) dan tujuan transfer */
 function renderPay(){
-  $("d-proofwrap").hidden = !payVisible || placedProof; $("d-proofok").hidden = !(payVisible && placedProof);
+  const need = payVisible && (!placedProof || placedRejected);
+  $("d-proofwrap").hidden = !need; $("d-proofok").hidden = !(payVisible && placedProof && !placedRejected);
+  $("d-up-t").textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar";
   const box = $("d-pay"); box.hidden = !payVisible; if (!payVisible) return;
   $("d-amt").textContent = rp(placedPay.total + placedPay.kode);
   const k = $("d-kode"); k.hidden = !placedPay.kode; k.textContent = placedPay.kode ? "Termasuk kode unik " + rp(placedPay.kode) + " agar pembayaranmu mudah dicek." : "";
@@ -406,16 +408,17 @@ async function copyText(text, el, okMsg){
 }
 $("d-file").onchange = async e => {
   const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
-  const gid = placed[0] && placed[0].gid; if (!gid || !sb) { toast("Kirim lewat WhatsApp saja."); return; }
+  const gid = placed[0] && placed[0].gid; if (!gid || !sb) { toast("Bukti belum bisa diunggah. Muat ulang halaman lalu coba lagi."); return; }
   if (!/^image\//.test(f.type)) { toast("Pilih foto atau tangkapan layar."); return; }
   const lab = $("d-up"), t = $("d-up-t"); lab.classList.add("busy"); t.textContent = "Mengirim...";
   try {
     const path = await api.uploadProof(gid, await shrink(f, 1400));
     if (!(await api.attachProof(gid, trackHp, path))) throw new Error("attach");
-    placedProof = true; if (lastData) { lastData.proof = true; lsSet(LS.last, lastData); }
+    placedProof = true; placed.forEach(o => { const c = trackConf[o.id] || (trackConf[o.id] = { payStatus:"cek", status:"baru" }); if (c.payStatus === "ditolak") c.payStatus = "cek"; c.proof = true; });
+    if (lastData) { lastData.proof = true; lsSet(LS.last, lastData); }
     toast("Bukti terkirim"); renderTracker();
-  } catch (err) { toast("Bukti belum terkirim. Coba lagi atau kirim lewat WhatsApp."); }
-  finally { lab.classList.remove("busy"); t.textContent = "Unggah bukti bayar"; }
+  } catch (err) { toast("Bukti belum terkirim. Periksa koneksi lalu coba lagi."); }
+  finally { lab.classList.remove("busy"); t.textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar"; }
 };
 $("copy-no").onclick = () => copyText(String(settings.bankNumber), $("d-bank-no"), "Nomor rekening disalin");
 $("copy-amt").onclick = () => copyText(String(placedPay.total + placedPay.kode), $("d-amt"), "Jumlah disalin");
@@ -468,13 +471,11 @@ async function submitOrder(){
   const outGs = res.map(r => ({ poId:r.po_id, date:r.po_date, fulfil:r.fulfil, items:r.items, ongkir:r.total - r.items.reduce((a, i) => a + i.price * i.qty, 0), total:r.total }));
   const kodeSum = res.reduce((a, r) => a + (Number(r.kode) || 0), 0), nums = placed.map(o => o.id).join(", ");
   placedPay = { total:grand(outGs), kode:kodeSum, method }; placedProof = false;
-  const msg = `Halo Lapo Doli, ini bukti bayar pesanan ${nums}.\nNama: ${customer.nama}\nTotal: ${rp(placedPay.total + kodeSum)}${kodeSum ? " (termasuk kode unik " + rp(kodeSum) + ")" : ""}\nBayar via: ${method === "qris" ? "QRIS" : "Transfer " + settings.bankName}\n\n(Bukti bayar terlampir)`;
-  $("wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent(msg)}`;
   $("sum3").innerHTML = summaryHTML(outGs, kodeSum);
   /* pesanan sudah tercatat: kosongkan keranjang, ingat data pembeli dan pesanan ini */
   for (const k in cart) delete cart[k]; for (const k in itemNotes) delete itemNotes[k]; $("notes").value = "";
   saveCart(); saveCust();
-  lastData = { at:Date.now(), placed, outGs, pay:placedPay, wa:$("wa").href, proof:false }; lastRows = {}; lsSet(LS.last, lastData); renderLast();
+  lastData = { at:Date.now(), placed, outGs, pay:placedPay, proof:false }; lastRows = {}; lsSet(LS.last, lastData); renderLast();
   unsubTrack(); renderTracker(); startTrack();
   go(3);
 }
@@ -504,14 +505,14 @@ function renderTracker(){
   const allPaid = cs.every(c => c.payStatus === "lunas"), allDone = cs.every(c => c.status === "selesai" || c.status === "batal");
   const pk = placed[0] && placed[0].fulfil === "ambil", anyProof = placedProof || cs.some(c => c.proof);
   let title, sub, tone = "warn";
-  if (!recorded) { title = "Pesanan dibuat"; sub = "Belum tercatat otomatis. Kirim lewat WhatsApp supaya kami proses."; }
+  if (!recorded) { title = "Pesanan dibuat"; sub = "Pesanan belum tercatat. Coba lagi."; }
   else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
-  else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Kirim bukti bayar lewat WhatsApp."; tone = "bad"; }
+  else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Unggah bukti yang jelas di bawah."; tone = "bad"; }
   else if (!allPaid && anyProof) { title = "Bukti diterima"; sub = "Admin sedang mengecek pembayaranmu. Statusnya berubah di sini."; }
   else if (!allPaid) { title = "Pesanan dicatat"; sub = "Transfer sesuai jumlah di bawah, lalu kirim bukti bayar."; }
   else if (allDone) { title = "Pesanan selesai"; sub = "Terima kasih, selamat makan!"; tone = "ok"; }
   else { title = "Pesanan terkonfirmasi"; sub = pk ? `Pembayaran diterima. Ambil di ${placed[0].pickupLoc || pickLoc()}, jam ${placed[0].hours || pickHours()}.` : `Pembayaran diterima. Diantar sesuai tanggal PO, jam ${hours()}.`; tone = "ok"; }
-  placedProof = placedProof || cs.some(c => c.proof); payVisible = !!recorded && !allPaid && !allCancel; renderPay();
+  placedRejected = anyNo; placedProof = placedProof || cs.some(c => c.proof); payVisible = !!recorded && !allPaid && !allCancel; renderPay();
   $("d-title").textContent = title; $("d-sub").textContent = sub; $("d-dot").className = "dot " + (tone === "warn" ? "" : tone);
   tr.innerHTML = placed.map((o, i) => {
     const c = cs[i], [lb, cl] = statusLabel({ fulfil:o.fulfil, payStatus:c.payStatus, status:c.status, proof:c.proof || placedProof });
@@ -542,7 +543,7 @@ async function pollLast(){
 $("lastorder").onclick = () => {
   if (!lastData) return;
   placed = lastData.placed; placedPay = lastData.pay || placedPay; placedProof = !!lastData.proof; recorded = true; trackHp = placed[0].hp;
-  $("wa").href = lastData.wa || "#"; $("sum3").innerHTML = summaryHTML(lastData.outGs, placedPay.kode);
+  $("sum3").innerHTML = summaryHTML(lastData.outGs, placedPay.kode);
   unsubTrack(); renderTracker(); startTrack(); go(3);
 };
 function initLast(){
@@ -1315,7 +1316,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
