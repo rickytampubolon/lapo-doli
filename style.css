@@ -1,5 +1,5 @@
-@font-face{font-family:"Fredoka";font-style:normal;font-weight:500;font-display:swap;src:url("/assets/fonts/fredoka-latin-500-normal.woff2") format("woff2")}
-@font-face{font-family:"Fredoka";font-style:normal;font-weight:600;font-display:swap;src:url("/assets/fonts/fredoka-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-style:normal;font-weight:600;font-display:swap;src:url("/assets/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-style:normal;font-weight:700;font-display:swap;src:url("/assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2")}
 @font-face{font-family:"Geist";font-style:normal;font-weight:400;font-display:swap;src:url("/assets/fonts/geist-latin-400-normal.woff2") format("woff2")}
 @font-face{font-family:"Geist";font-style:normal;font-weight:500;font-display:swap;src:url("/assets/fonts/geist-latin-500-normal.woff2") format("woff2")}
 @font-face{font-family:"Geist";font-style:normal;font-weight:600;font-display:swap;src:url("/assets/fonts/geist-latin-600-normal.woff2") format("woff2")}
@@ -10,16 +10,16 @@ img{max-width:100%}
 /* Konsep: kertas hangat, huruf cokelat tua. Merah dan amber diambil dari logo.
    Sampul hitam menyatu dengan latar logo, satu deret segitiga (pucuk rebung) sebagai pembatas, sisanya polos. */
 :root{
-  --bg:#f6f0e6; --card:#fbf8f2; --soft:#eee5d6; --line:#e0d4c2; --ink:#3b2c27; --muted:#6c5d53;
-  --accent:#9a3b2f; --on-accent:#fffaf3; --amber:#e3a95f; --amber-soft:#f6e8d0; --hero:#7d3a31;
-  --ok:#3a7452; --warn:#845712; --bad:#a8392f;
-  --head:Fredoka,Nunito,system-ui,sans-serif;
+  --bg:#f4f1ec; --card:#faf8f5; --soft:#eae6de; --line:#d9d3c8; --ink:#2f2926; --muted:#665e57;
+  --accent:#8f2d36; --on-accent:#fffaf5; --amber:#d9a24f; --amber-soft:#efe3cc; --hero:#73292f;
+  --ok:#37704f; --warn:#7a5410; --bad:#a3322d;
+  --head:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --font:Geist,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --tri:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10'%3E%3Cpolygon points='0,10 10,0 20,10'/%3E%3C/svg%3E");
   --logo:url("/assets/logo-mark.png");
 }
-:root{--chart-a:var(--accent);--chart-b:#7a6c61}
+:root{--chart-a:var(--accent);--chart-b:#7b726a}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;margin:0;-webkit-font-smoothing:antialiased}
 button,input,textarea,select{font:inherit;color:inherit}
@@ -36,7 +36,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .logo.sm{width:32px;height:32px}
 .hlink{background:none;border:0;color:var(--muted);font:inherit;font-weight:500;padding:10px 4px;margin:-6px -4px;cursor:pointer;min-height:44px}
 .hlink:hover{color:var(--ink)}
-.home .top .hlink{color:#f3dfcb}
+.home .top .hlink{color:#f3e6d6}
 .home .top .hlink:hover{color:#fff8ee}
 .hlink:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:6px}
 #shop:not(.home){padding-bottom:84px}
@@ -47,16 +47,16 @@ button,input,textarea,select{font:inherit;color:inherit}
 .pattern{display:none;height:8px;position:relative;background:var(--hero)}
 .home .pattern{display:block}
 .pattern::before{content:"";position:absolute;inset:0;background:var(--amber);-webkit-mask:var(--tri) left bottom/16px 8px repeat-x;mask:var(--tri) left bottom/16px 8px repeat-x}
-.home .top{background:var(--hero);color:#fbefdf}
-.cover{display:none;background:var(--hero);color:#fbefdf;position:relative;overflow:hidden}
+.home .top{background:var(--hero);color:#faf0e2}
+.cover{display:none;background:var(--hero);color:#faf0e2;position:relative;overflow:hidden}
 .home .cover{display:block}
 .cover .col{position:relative;padding-top:18px;padding-bottom:34px}
 .cover .title{font-size:clamp(2rem,8.4vw,2.7rem);line-height:1.08;margin:0;max-width:11em;color:#fff8ee}
-.cover .lede{margin:14px 0 0;max-width:30em;color:#f3dfcb;font-size:.98rem;line-height:1.5}
+.cover .lede{margin:14px 0 0;max-width:30em;color:#f3e6d6;font-size:.98rem;line-height:1.5}
 .logo.big{display:none;background-color:transparent;pointer-events:none}
 @media (min-width:600px){.logo.big{display:block;position:absolute;right:0;top:14px;width:132px;height:132px}}
-.home .top .textbtn{color:#f3dfcb}
-.home .top .brand{color:#fbefdf}.intro{margin:0;color:var(--muted)}
+.home .top .textbtn{color:#f3e6d6}
+.home .top .brand{color:#faf0e2}.intro{margin:0;color:var(--muted)}
 .label{font-size:.95rem;font-weight:600;color:var(--ink);margin:30px 0 10px}
 
 /* ---------- toko ---------- */
@@ -77,7 +77,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .cbtn .mon{font-size:.8rem;color:var(--muted)}
 .cbtn:hover{border-color:var(--ink)}
 .cbtn[aria-pressed=true]{background:var(--hero);color:#fff8ee;border-color:var(--hero)}
-.cbtn[aria-pressed=true] .dow,.cbtn[aria-pressed=true] .mon{color:#f3dfcb}
+.cbtn[aria-pressed=true] .dow,.cbtn[aria-pressed=true] .mon{color:#f3e6d6}
 .cbtn .cnt{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--amber);color:var(--ink);font-size:.74rem;font-weight:600;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .hint{margin:10px 0 0;font-size:.88rem;color:var(--muted)}
 .menu{display:grid;gap:0;margin-top:2px}
@@ -180,13 +180,13 @@ textarea{min-height:84px;resize:vertical}
 .chip.ok::before{background:var(--ok)}.chip.warn::before{background:var(--warn)}.chip.bad::before{background:var(--bad)}.chip.info::before{background:var(--ink)}
 
 /* ---------- admin ---------- */
-.ahead{background:var(--hero);color:#fbefdf;position:relative;padding-bottom:8px}
+.ahead{background:var(--hero);color:#faf0e2;position:relative;padding-bottom:8px}
 .ahead::after{content:"";position:absolute;left:0;right:0;bottom:0;height:8px;background:var(--amber);-webkit-mask:var(--tri) left bottom/16px 8px repeat-x;mask:var(--tri) left bottom/16px 8px repeat-x}
-.ahead .brand{color:#fbefdf}
-.ahead .textbtn{color:#f3dfcb}
+.ahead .brand{color:#faf0e2}
+.ahead .textbtn{color:#f3e6d6}
 .ahead .textbtn:hover{color:#fff8ee}
 .ahead .col{display:flex;align-items:center;gap:12px;padding-top:16px;padding-bottom:14px}
-.ahead .tag{font-size:.74rem;color:#f3dfcb;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:1px 7px}
+.ahead .tag{font-size:.74rem;color:#f3e6d6;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:1px 7px}
 .ahead .sp{flex:1}
 .stabs::-webkit-scrollbar{display:none}
 .btn.danger{background:transparent;color:var(--bad);border:1px solid var(--bad)}
@@ -311,7 +311,7 @@ textarea{min-height:84px;resize:vertical}
 .prow.off{background:var(--soft)}
 .pimg{flex:0 0 96px;height:96px;border-radius:12px;overflow:hidden;position:relative;cursor:pointer;background:var(--soft);display:grid;place-items:center;font-size:2.2rem}
 .pimg img{width:100%;height:100%;object-fit:cover}
-.pimg small{position:absolute;left:0;right:0;bottom:0;background:rgba(59,44,39,.72);color:var(--on-accent);font-size:.68rem;text-align:center;padding:3px}
+.pimg small{position:absolute;left:0;right:0;bottom:0;background:rgba(47,41,38,.72);color:var(--on-accent);font-size:.68rem;text-align:center;padding:3px}
 .pimg input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .pmain{flex:1;min-width:0;display:grid;gap:12px}
 .pmain input[type=text],.pmain input[type=number]{padding:9px 12px}
@@ -373,7 +373,7 @@ textarea{min-height:84px;resize:vertical}
 .rk-t tr.rk-sub td:first-child{padding-left:14px;width:auto;text-align:left}
 
 /* ---------- admin: sidebar ---------- */
-.ahead .menubtn{display:none;align-items:center;gap:8px;min-height:40px;padding:8px 14px;border:0;border-radius:10px;background:rgba(255,255,255,.12);color:#fbefdf;font-weight:500;cursor:pointer}
+.ahead .menubtn{display:none;align-items:center;gap:8px;min-height:40px;padding:8px 14px;border:0;border-radius:10px;background:rgba(255,255,255,.12);color:#faf0e2;font-weight:500;cursor:pointer}
 .ahead .menubtn .n,.side .tabs .n{min-width:20px;padding:0 6px;border-radius:10px;background:var(--amber);color:var(--ink);font-size:.75rem;font-weight:600;text-align:center;line-height:20px}
 .ahead .menubtn:focus-visible,.side :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .side{display:none}
@@ -382,20 +382,20 @@ textarea{min-height:84px;resize:vertical}
 #admin.authed .ahead #to-shop-top{display:none}
 #admin.authed .side{display:flex}
 .content{padding:24px max(16px,env(safe-area-inset-right,0px)) 72px max(16px,env(safe-area-inset-left,0px));max-width:1000px;margin:0 auto}
-.side{flex-direction:column;position:fixed;top:0;bottom:0;left:0;width:min(288px,84vw);padding:18px 12px 14px;background:var(--hero);color:#fbefdf;z-index:30;transform:translateX(-104%);transition:transform .22s ease;overflow-y:auto}
+.side{flex-direction:column;position:fixed;top:0;bottom:0;left:0;width:min(288px,84vw);padding:18px 12px 14px;background:var(--hero);color:#faf0e2;z-index:30;transform:translateX(-104%);transition:transform .22s ease;overflow-y:auto}
 #admin.side-open .side{transform:none}
-#admin.side-open .side-scrim{display:block;position:fixed;inset:0;z-index:20;background:rgba(59,44,39,.45)}
+#admin.side-open .side-scrim{display:block;position:fixed;inset:0;z-index:20;background:rgba(47,41,38,.45)}
 .side-brand{display:flex;align-items:center;gap:10px;padding:2px 10px 0}
 .side-brand .logo.sm{width:40px;height:40px}
-.side-brand .brand{color:#fbefdf;font-size:1.1rem}
-.side-brand .tag{font-size:.74rem;color:#f3dfcb;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:1px 7px;margin-left:2px}
+.side-brand .brand{color:#faf0e2;font-size:1.1rem}
+.side-brand .tag{font-size:.74rem;color:#f3e6d6;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:1px 7px;margin-left:2px}
 .side .tabs{display:flex;flex-direction:column;gap:2px;margin:22px 0;padding:0;border:0;background:none;overflow:visible}
-.side .tabs button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:11px 14px;border:0;border-radius:10px;background:none;color:#f3dfcb;font-weight:500;text-align:left;cursor:pointer;white-space:normal}
+.side .tabs button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:11px 14px;border:0;border-radius:10px;background:none;color:#f3e6d6;font-weight:500;text-align:left;cursor:pointer;white-space:normal}
 .side .tabs button:hover{background:rgba(255,255,255,.07);color:#fff8ee}
 .side .tabs button[aria-selected=true]{background:rgba(255,255,255,.12);color:#fff8ee;font-weight:600;box-shadow:inset 3px 0 0 var(--amber)}
 .side .tabs .n{margin-left:auto}
 .side-foot{margin-top:auto;display:grid;gap:2px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14)}
-.side-foot .textbtn{padding:9px 14px;text-align:left;color:#f3dfcb;font-size:.92rem;border-radius:8px}
+.side-foot .textbtn{padding:9px 14px;text-align:left;color:#f3e6d6;font-size:.92rem;border-radius:8px}
 .side-foot .textbtn:hover{color:#fff8ee;background:rgba(255,255,255,.07)}
 @media (min-width:860px){
   #admin.authed .ahead{display:none}
@@ -492,7 +492,7 @@ textarea{min-height:84px;resize:vertical}
 
 /* aksen ulos: pita merah, garis anggur tua, garis krem. Menggantikan deret segitiga */
 :root{
-  --ulos-h:linear-gradient(to bottom,#6a2b24 0 2px,#f1e0c8 2px 3px,#9a3b2f 3px 7px,#52211b 7px 9px,#9a3b2f 9px 13px,#f1e0c8 13px 14px,#6a2b24 14px 16px);
+  --ulos-h:linear-gradient(to bottom,#5c1f26 0 2px,#f0e4cf 2px 3px,#8f2d36 3px 7px,#4a181e 7px 9px,#8f2d36 9px 13px,#f0e4cf 13px 14px,#5c1f26 14px 16px);
 }
 .pattern{height:16px;background:var(--ulos-h)}
 .pattern::before{content:none}
@@ -576,7 +576,7 @@ textarea{min-height:84px;resize:vertical}
 .cover .title{font-size:clamp(1.6rem,7.4vw,2.2rem);line-height:1.1;max-width:none;white-space:nowrap}
 .cover .lede{margin-top:2px;font-size:.98rem}
 .pattern{height:12px}
-.pattern{background:linear-gradient(to bottom,#6a2b24 0 2px,#f1e0c8 2px 3px,#9a3b2f 3px 5px,#52211b 5px 7px,#9a3b2f 7px 9px,#f1e0c8 9px 10px,#6a2b24 10px 12px)}
+.pattern{background:linear-gradient(to bottom,#5c1f26 0 2px,#f0e4cf 2px 3px,#8f2d36 3px 5px,#4a181e 5px 7px,#8f2d36 7px 9px,#f0e4cf 9px 10px,#5c1f26 10px 12px)}
 .chips{margin-top:14px}
 .cbtn{min-width:62px;padding:7px 12px 6px;border-radius:12px}
 .cbtn .dnum{font-size:1.35rem;margin:1px 0}
@@ -605,11 +605,11 @@ textarea{min-height:84px;resize:vertical}
 .ahead .textbtn{color:var(--muted)}
 .ahead .textbtn:hover{color:var(--ink)}
 .ahead .tag{color:var(--muted);border:1px solid var(--line)}
-.ahead .menubtn{background:rgba(154,59,47,.1);color:var(--ink)}
+.ahead .menubtn{background:rgba(143,45,54,.1);color:var(--ink)}
 .ahead .menubtn:focus-visible{outline-color:var(--accent)}
 
 /* aksen ulos tipis */
-:root{--ulos-h:linear-gradient(to bottom,#9a3b2f 0 2px,#f1e0c8 2px 3px,#6a2b24 3px 4px,#9a3b2f 4px 6px)}
+:root{--ulos-h:linear-gradient(to bottom,#8f2d36 0 2px,#f0e4cf 2px 3px,#5c1f26 3px 4px,#8f2d36 4px 6px)}
 .pattern{height:6px;background:var(--ulos-h)}
 .ahead{padding-bottom:6px}
 .ahead::after{height:6px;background:var(--ulos-h)}
@@ -666,7 +666,7 @@ textarea{min-height:84px;resize:vertical}
 .proofok .ic{width:20px;height:20px;flex:none}
 .otag.proof{display:inline-flex;align-items:center;gap:4px;color:var(--ok);border-color:currentColor}
 .otag.proof .ic{width:13px;height:13px}
-.lightbox{position:fixed;inset:0;z-index:60;background:rgba(59,44,39,.82);display:grid;place-items:center;padding:16px}
+.lightbox{position:fixed;inset:0;z-index:60;background:rgba(47,41,38,.82);display:grid;place-items:center;padding:16px}
 .lightbox img{max-width:100%;max-height:88vh;border-radius:12px;background:var(--card)}
 .lb-x{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
 
@@ -680,15 +680,15 @@ textarea{min-height:84px;resize:vertical}
 
 .schemawarn{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:var(--amber-soft);border:1px solid var(--amber);color:var(--warn);font-size:.9rem;line-height:1.45}
 .schemawarn .ic{width:20px;height:20px;margin-top:1px}
-.schemawarn code{background:rgba(59,44,39,.08);padding:1px 6px;border-radius:6px;font-size:.88em}
+.schemawarn code{background:rgba(47,41,38,.08);padding:1px 6px;border-radius:6px;font-size:.88em}
 
 /* =========================================================
    Tampilan pembeli: penyegaran
    Kebraniannya di dua tempat: keranjang melayang dan penanda langkah. Aksen ulos hanya di header.
    ========================================================= */
 :root{
-  --lift:0 10px 28px rgba(59,44,39,.15);
-  --lift-s:0 2px 10px rgba(59,44,39,.07);
+  --lift:0 10px 28px rgba(47,41,38,.15);
+  --lift-s:0 2px 10px rgba(47,41,38,.07);
 }
 
 /* penanda langkah: hanya di layar data dan bayar */
@@ -715,11 +715,11 @@ textarea{min-height:84px;resize:vertical}
 
 /* kartu tanggal */
 .cbtn{border-radius:14px;box-shadow:var(--lift-s)}
-.cbtn[aria-pressed=true]{padding-top:13px;box-shadow:0 6px 16px rgba(125,58,49,.28)}
+.cbtn[aria-pressed=true]{padding-top:13px;box-shadow:0 6px 16px rgba(115,41,47,.28)}
 .cbtn .dnum{font-size:1.45rem}
 
 /* daftar menu */
-.thumb{width:86px;height:86px;border-radius:18px;box-shadow:var(--lift-s),inset 0 0 0 1px rgba(59,44,39,.06)}
+.thumb{width:86px;height:86px;border-radius:18px;box-shadow:var(--lift-s),inset 0 0 0 1px rgba(47,41,38,.06)}
 .item{padding:14px 0}
 .item h3{font-family:var(--head);font-size:1.12rem;letter-spacing:.005em}
 .price{font-family:var(--head);font-weight:600;font-size:1.02rem}
@@ -753,7 +753,7 @@ textarea{min-height:84px;resize:vertical}
 .seg .sl .ic{width:18px;height:18px}
 .lb .ic{width:15px;height:15px;margin-right:7px;vertical-align:-3px;color:var(--accent)}
 input[type=text],input[type=tel],input[type=number],input[type=date],textarea,select{background:var(--card);border-radius:12px}
-input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(154,59,47,.14)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(143,45,54,.14)}
 #paid{border-radius:14px;padding:14px;font-size:1.02rem}
 
 /* layar bayar */
@@ -772,7 +772,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 
 /* penyesuaian setelah review */
 .meta span{font-size:.82rem;padding:5px 10px 5px 8px}
-.cbtn[aria-pressed=true]{box-shadow:0 4px 10px rgba(125,58,49,.22)}
+.cbtn[aria-pressed=true]{box-shadow:0 4px 10px rgba(115,41,47,.22)}
 #form .lb{margin-top:14px}
 #form .err{min-height:0;margin-top:3px}
 .meta{gap:6px}
@@ -782,7 +782,109 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 .dlv:empty{display:none}
 
 /* aksen ulos hanya di header: kembalikan jarak dan tanda terpilih yang polos */
-.cbtn[aria-pressed=true]{padding-top:7px;box-shadow:0 4px 10px rgba(125,58,49,.22)}
+.cbtn[aria-pressed=true]{padding-top:7px;box-shadow:0 4px 10px rgba(115,41,47,.22)}
 .item.on{padding-left:14px;box-shadow:inset 3px 0 0 var(--amber)}
 .bar{padding:10px 10px 10px 12px}
 .paybox{padding-top:14px}
+
+/* =========================================================
+   Papan harga. Gaya cetak: datar, bergaris, tanpa kartu, bayangan, atau kapsul.
+   Judul dan harga memakai huruf sempit seperti papan menu warung.
+   ========================================================= */
+:root{--lift:none;--lift-s:none}
+.cbtn,.cbtn[aria-pressed=true],.thumb,.pickbtn,.bar,#s2 .sum,.seg,.paybox,.lastcard,.checkcard{box-shadow:none}
+.title,.status .title,#s2 .title,#s3 .title{font-family:var(--head);font-weight:700;letter-spacing:.005em;line-height:1.05}
+.title,#s2 .title{font-size:2rem}
+.status .title{font-size:2rem}
+
+/* langkah: satu baris teks */
+.stepline{margin:16px 0 0;color:var(--muted);font-size:.88rem}
+.home .stepline,.no-po .stepline{display:none}
+
+/* beranda: judul bagian biasa, tanpa lencana nomor */
+#s1 .label{display:block;font-family:var(--head);font-size:1.45rem;font-weight:700;margin:22px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--ink)}
+#s1 .label::before{content:none}
+.meta{display:block;margin:10px 0 0;color:var(--muted);font-size:.92rem;line-height:1.5}
+.meta span{background:none;padding:0;border-radius:0;font-size:inherit;color:inherit}
+
+/* tanggal: kotak datar */
+.chips{gap:8px}
+.cbtn{min-width:64px;padding:8px 12px 7px;border-radius:4px;border:1px solid var(--ink);background:transparent}
+.cbtn .dnum{font-family:var(--head);font-weight:700;font-size:1.9rem;line-height:1}
+.cbtn .dow,.cbtn .mon{font-size:.8rem;color:var(--ink)}
+.cbtn[aria-pressed=true]{padding-top:8px;background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.cbtn[aria-pressed=true] .dow,.cbtn[aria-pressed=true] .mon{color:var(--on-accent)}
+.cbtn .cnt{border-radius:3px;top:-7px;right:-7px;background:var(--amber)}
+
+/* daftar menu: baris papan harga dengan garis titik menuju harga */
+.menu{margin-top:2px}
+.item{padding:14px 0;border-bottom:1px solid var(--line)}
+.item.on,.item.on:last-child{padding-left:0;background:none;box-shadow:none;border-radius:0}
+.item.on .irow h3{color:var(--accent)}
+.thumb{width:64px;height:64px;border-radius:3px;box-shadow:none}
+.irow{display:flex;align-items:baseline;gap:8px}
+.irow h3{margin:0;font-family:var(--head);font-weight:700;font-size:1.4rem;line-height:1.1;letter-spacing:.005em}
+.lead{flex:1;min-width:12px;border-bottom:2px dotted var(--line);transform:translateY(-4px)}
+.price{font-family:var(--head);font-weight:700;font-size:1.3rem;color:var(--accent);white-space:nowrap}
+.ibody p{margin:4px 0 0;font-size:.9rem}
+.ifoot{margin-top:8px;padding-top:0;min-height:40px;justify-content:space-between;align-items:center}
+.left{color:var(--accent);font-weight:600;font-size:.88rem;background:none;padding:0;border-radius:0}
+.pickbtn{border-radius:4px;border:1px solid var(--ink);background:transparent;padding:8px 16px}
+.item .vpanel{border:0;border-radius:0;padding:0;background:none;margin-top:6px}
+.vrow{border-top:1px dotted var(--line);padding:6px 0}
+.vrow:first-child{border-top:0}
+.step button{border-radius:4px;border:1px solid var(--ink);background:transparent}
+.item.inl .vpanel{margin-top:4px}
+
+/* keranjang: bilah datar di bawah layar */
+.bar{left:0;right:0;bottom:0;width:auto;transform:none;border-radius:0;border:0;border-top:1px solid var(--ink);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--bg)}
+.bar .in{max-width:560px;margin:auto;gap:16px}
+.bar .t b{font-family:var(--head);font-size:1.5rem;font-weight:700}
+.bar .btn{border-radius:4px;padding:12px 26px}
+#shop.has-bar{padding-bottom:110px}
+
+/* tombol dan isian: sudut kecil */
+.btn,.btn.line,.btn.sm{border-radius:4px}
+input[type=text],input[type=tel],input[type=number],input[type=date],textarea,select{border-radius:4px;background:var(--card);border-color:var(--ink)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(143,45,54,.2)}
+.seg{border-radius:4px;background:transparent;border:1px solid var(--ink);padding:0;gap:0}
+.seg label{border-radius:0}
+.seg label:has(input:checked){background:var(--accent);color:var(--on-accent);box-shadow:none}
+.seg label:has(input:checked) small{opacity:.9}
+
+/* pesananmu: seperti nota */
+#s2 .label{font-family:var(--head);font-size:1.45rem;font-weight:700;margin:24px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--ink)}
+#s2 .sum{background:none;border:0;border-radius:0;padding:0;margin-top:12px}
+.sum div{padding:4px 0;border-bottom:1px dotted var(--line)}
+.sum .gh{border-bottom:0;font-size:.9rem}
+.sum .total{font-family:var(--head);font-size:1.7rem;font-weight:700;border-top:2px solid var(--ink);border-bottom:0;margin-top:10px;padding-top:8px}
+#paid{border-radius:4px;padding:14px}
+
+/* bayar: angka besar, tanpa kartu */
+.paybox{background:none;border:0;border-radius:0;border-top:2px solid var(--ink);border-bottom:1px solid var(--line);padding:14px 0;margin-bottom:18px;box-shadow:none}
+.payamt b{font-family:var(--head);font-weight:700;font-size:3rem;line-height:1;color:var(--accent)}
+.copybtn{border-radius:4px;border:1px solid var(--ink);background:transparent}
+.proofok{border-radius:4px;background:none;border:1px solid var(--ok);color:var(--ok)}
+#d-up{border-radius:4px}
+
+/* kartu lain jadi baris polos */
+.lastcard{background:none;border:0;border-bottom:1px solid var(--ink);border-radius:0;padding:10px 0}
+.faq details{background:none;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:0}
+.faq{border-top:1px solid var(--ink)}
+.checkcard{background:none;border:0;border-top:2px solid var(--ink);border-radius:0;padding:12px 0 0}
+.chip{border-radius:3px}
+.dlv li{padding:12px 0}
+
+/* garis kontrol lebih lembut; garis tegas hanya untuk judul bagian dan total */
+:root{--rule:#968d82}
+.cbtn,.pickbtn,.step button,.copybtn,.seg{border-color:var(--rule)}
+.cbtn .dow,.cbtn .mon{color:var(--muted)}
+.cbtn .dnum{color:var(--ink)}
+.cbtn[aria-pressed=true]{border-color:var(--accent)}
+.cbtn[aria-pressed=true] .dow,.cbtn[aria-pressed=true] .mon,.cbtn[aria-pressed=true] .dnum{color:var(--on-accent)}
+input[type=text],input[type=tel],input[type=number],input[type=date],textarea,select{border-color:var(--rule)}
+.bar{border-top:1px solid var(--rule)}
+.lastcard{border-bottom-color:var(--rule)}
+#help-view .label{font-family:var(--head);font-size:1.45rem;font-weight:700;margin:24px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--ink)}
+#help-view .faq{border-top:0}
+.checkcard .ct{font-family:var(--head);font-size:1.45rem;font-weight:700;margin:0 0 10px}
