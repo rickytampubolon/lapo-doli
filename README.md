@@ -73,6 +73,20 @@ Setiap kali `supabase/schema.sql` berubah, jalankan ulang seluruh isinya di SQL 
 
 Ikuti petunjuk di bagian atas `supabase/notify-telegram.sql`. Token bot disimpan di Supabase Vault, tidak pernah di repository.
 
+## Alur pembeli
+
+1. Pilih tanggal PO, pilih menu, lalu **Pesan sekarang**. Pesanan langsung tercatat (status menunggu bayar).
+2. Layar berikutnya menampilkan jumlah transfer yang tepat (dengan kode unik yang dibuat server) dan nomor rekening atau QRIS. Pembeli lalu mengirim bukti bayar lewat WhatsApp.
+3. Keranjang, data pembeli, dan pesanan terakhir disimpan di browser. Pembeli bisa kembali ke info bayar dan status dari kartu di beranda.
+
+Pesanan yang belum dibayar lebih dari 3 jam tidak lagi menahan kuota porsi. Pesanannya tetap ada di admin sampai dibatalkan.
+
+Setiap kali `supabase/schema.sql` berubah, jalankan ulang isinya di SQL Editor (aman diulang).
+
+## Analitik (opsional)
+
+`index.html` memuat `/_vercel/insights/script.js`. Aktifkan **Web Analytics** di dashboard Vercel (tab Analytics) supaya data pengunjung terkumpul. Tanpa itu, skripnya diabaikan.
+
 ## Belum ada
 
 - Captcha untuk pembuatan pesanan. Saat ini pesanan dibatasi 5 kali per 10 menit per nomor HP. Captcha yang benar butuh pengecekan token di server (Supabase Edge Function), jadi perlu akun Cloudflare Turnstile.

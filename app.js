@@ -1,4 +1,10 @@
 const $ = id => document.getElementById(id);
+const LS = { cart:"ld_cart", cust:"ld_cust", last:"ld_last" };
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const jakartaToday = () => new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 10);
+const relDay = d => { const diff = Math.round((Date.parse(d + "T00:00:00Z") - Date.parse(jakartaToday() + "T00:00:00Z")) / 864e5); return diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : ""; };
+const SKEL = '<div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div>'.repeat(3);
 const ic = (n, c = "") => `<svg class="ic ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const rp = n => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
@@ -159,9 +165,9 @@ function renderPoChips(){
   if (!list.length) { el.innerHTML = ""; $("poinfo").textContent = ""; return; }
   if (!list.some(x => x.id === activePo)) activePo = list[0].id;
   el.innerHTML = list.map(po => { const n = countFor(po.id);
-    return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
+    return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const act = list.find(x => x.id === activePo);
-  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}${esc(hours())}</span>` : `<span>${ic("truck")}${esc(hours())}</span><span>${ic("pin")}${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(cutoffLabel())}</span>`;
+  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}Antar atau ambil, ${esc(hours())}</span>` : `<span>${ic("truck")}Antar ${esc(hours())}</span><span>${ic("pin")}Ambil ${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(relDay(act.date) ? relDay(act.date).toLowerCase() : dShort(act.date))} pukul ${esc(cutoffLabel())}</span>`;
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
@@ -171,8 +177,8 @@ $("pochips").addEventListener("click", e => {
 function renderMenu(){
   const el = $("menu"), list = shopList(), pl = openPos();
   renderPoChips();
-  if (dbState === "error") { el.innerHTML = '<div class="empty">Menu belum bisa dimuat. Periksa koneksi lalu muat ulang halaman.</div>'; $("closed").hidden = true; $("po-wrap").hidden = false; updateBar(); return; }
-  if (!list || poList() === null) { el.innerHTML = '<p class="note">Memuat menu...</p>'; $("closed").hidden = true; updateBar(); return; }
+  if (dbState === "error") { el.innerHTML = `<div class="empty">Menu belum bisa dimuat.<br><button class="btn sm" data-retry type="button" style="display:inline-flex;margin-top:12px">${ic("undo")}Coba lagi</button></div>`; $("closed").hidden = true; $("po-wrap").hidden = false; updateBar(); return; }
+  if (!list || poList() === null) { el.innerHTML = SKEL; $("closed").hidden = true; updateBar(); return; }
   for (const k of Object.keys(cart)) if (!resolveKey(k, list)) delete cart[k];
   $("closed").hidden = pl.length > 0; $("po-wrap").hidden = pl.length === 0;
   if (!pl.length) { updateBar(); return; }
@@ -181,13 +187,14 @@ function renderMenu(){
   el.innerHTML = list.map((p, i) => {
     const opts = optsOf(p), adds = addonsOf(p), k = act.id + "::" + p.id, img = imgSrc(p), rem = remainOf(act.id, p.id), off = p.available === false || rem === 0, showP = opts.some(o => o.custom);
     const thumb = img ? `<img class="thumb" src="${esc(img)}" alt="${esc(p.name)}">` : `<div class="thumb tile" aria-hidden="true">${esc(p.emoji || "🍽️")}</div>`;
-    const ctl = off ? '<span class="soldout">Habis</span>' : opts.length ? '<button type="button" class="pickbtn" data-pick aria-expanded="false">Pilih</button>' : stepper(k, p.name);
+    const inl = !off && opts.length > 0 && opts.length <= 2;
+    const ctl = off ? '<span class="soldout">Habis</span>' : inl ? "" : opts.length ? '<button type="button" class="pickbtn" data-pick aria-expanded="false">Pilih</button>' : stepper(k, p.name);
     const addsHTML = !off && adds.length ? `<div class="subs adds" data-po="${esc(act.id)}" data-pid="${esc(p.id)}" hidden><div class="subs-title">Tambahan</div>${adds.map(a => { const ak = addonKey(act.id, p.id, a.id);
       return `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${stepper(ak, a.name + " untuk " + p.name, (cart[ak] || 0) >= mainQty(act.id, p.id))}</div>`; }).join("")}</div>` : "";
     const panel = !off && opts.length ? `<div class="vpanel">${variantsHTML(p, k, stepper)}${addsHTML}</div>` : addsHTML;
-    return `<div class="item ${off ? "off" : ""}" data-pid="${esc(p.id)}" data-po="${esc(act.id)}" style="--i:${i}">
+    return `<div class="item ${off ? "off" : ""} ${inl ? "open inl" : ""}" data-pid="${esc(p.id)}" data-po="${esc(act.id)}" style="--i:${i}">
       <div class="ihead">${thumb}<div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="ifoot"><span class="pricebox"><span class="price">${showP ? "Mulai " + rp(fromPrice(p)) : rp(p.price)}</span>${rem != null && rem > 0 && rem <= 10 ? `<span class="left">Sisa ${rem}</span>` : ""}</span>${ctl}</div></div></div>
-      ${opts.length && !off ? '<div class="picked" hidden></div>' : ""}${panel}${off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note maxlength="120" placeholder="Catatan untuk ${esc(p.name)}, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}" value="${esc(itemNotes[act.id + "::" + p.id] || "")}"></div>`}</div>`;
+      ${opts.length && !off ? '<div class="picked" hidden></div>' : ""}${panel}${off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note value="${esc(itemNotes[k] || "")}" maxlength="120" placeholder="Catatan untuk ${esc(p.name)}, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}" value="${esc(itemNotes[act.id + "::" + p.id] || "")}"></div>`}</div>`;
   }).join("");
   syncMenuDom();
   if (!menuShown) { menuShown = true; el.classList.add("enter"); setTimeout(() => el.classList.remove("enter"), 1000); }
@@ -224,9 +231,10 @@ $("menu").addEventListener("click", e => {
 });
 
 const itemNotes = {};
+$("menu").addEventListener("click", e => { if (e.target.closest("[data-retry]")) { dbState = "loading"; products = null; renderMenu(); refreshProducts(); refreshPos(); } });
 $("menu").addEventListener("input", e => {
   if (!e.target.matches("[data-note]")) return;
-  const it = e.target.closest(".item"); itemNotes[it.dataset.po + "::" + it.dataset.pid] = e.target.value;
+  const it = e.target.closest(".item"); itemNotes[it.dataset.po + "::" + it.dataset.pid] = e.target.value; saveCart();
 });
 const lines = () => {
   const list = shopList() || [];
@@ -252,11 +260,23 @@ function groups(){
   return Object.values(m).sort((a, b) => a.date.localeCompare(b.date)).map(g => ({ ...g, fulfil, ongkir:ongkir(), total:g.food + ongkir() }));
 }
 const grand = gs => gs.reduce((a, g) => a + g.total, 0);
+let stateReady = false;
+function saveCart(){ if (stateReady) lsSet(LS.cart, { cart, notes:itemNotes, po:activePo, fulfil }); }
+function saveCust(){ if (stateReady) lsSet(LS.cust, { nama:$("nama").value, hp:$("hp").value, area:$("area").value, alamat:$("alamat").value }); }
+function restoreState(){
+  const c = lsGet(LS.cart);
+  if (c && c.cart) { Object.assign(cart, c.cart); Object.assign(itemNotes, c.notes || {}); if (c.po) activePo = c.po;
+    if (c.fulfil === "ambil") { fulfil = "ambil"; const r = document.querySelector("[name=fulfil][value=ambil]"); if (r) r.checked = true; } }
+  const u = lsGet(LS.cust);
+  if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); if (u.area) $("area").value = u.area; }
+  stateReady = true;
+}
 function updateBar(){
+  saveCart();
   const gs = groups();
   $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? " · " + gs.length + " tanggal" : "");
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
-  $("next").disabled = qtyTotal() === 0;
+  $("next").disabled = qtyTotal() === 0; $("next").textContent = qtyTotal() === 0 ? "Pilih menu dulu" : "Lanjut";
   document.querySelectorAll("[data-hours]").forEach(x => { x.textContent = hours(); });
   document.querySelectorAll("[data-ongkir]").forEach(x => { x.textContent = flat() ? rp(flat()) : "gratis"; });
   document.querySelectorAll("[data-pickloc]").forEach(x => { x.textContent = pickLoc(); });
@@ -269,7 +289,7 @@ function updateBar(){
   $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
 }
 function summaryHTML(gs, kode = 0){
-  const h = gs.map(g => `<div class="gh">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dLong(g.date))}, jam ${esc(hoursFor(g.fulfil))}</div>` +
+  const h = gs.map(g => `<div class="gh">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}, ${esc(hoursFor(g.fulfil))}</div>` +
     g.items.map(l => `<div><span>${l.qty} × ${esc(l.name)}${l.option ? " (" + esc(l.option) + ")" : ""}</span><span>${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>${l.note ? `<div class="lnote">Catatan: ${esc(l.note)}</div>` : ""}`).join("") +
     (g.ongkir ? `<div><span>Ongkir Lalamove</span><span>${rp(g.ongkir)}</span></div>` : g.fulfil === "ambil" ? "<div><span>Ambil sendiri</span><span>Tanpa ongkir</span></div>" : "")).join("");
   return h + (kode ? `<div><span>Kode unik</span><span>${rp(kode)}</span></div>` : "") + `<div class="total"><span>Total</span><span>${rp(grand(gs) + kode)}</span></div>`;
@@ -287,7 +307,7 @@ function checkClosings(){
   const gone = pruneClosed(), sig = openPos().map(p => p.id).join();
   if (!gone.length && sig === openSig) return;
   openSig = sig; renderMenu();
-  if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesanan Anda"); if (screen === 2) { if (qtyTotal()) renderCheckout(); else go(1); } }
+  if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesananmu"); if (screen === 2) { if (qtyTotal()) renderCheckout(); else go(1); } }
 }
 function go(n){
   screen = n;
@@ -299,43 +319,40 @@ function go(n){
 $("next").onclick = () => go(2);
 $("back1").onclick = () => go(1);
 
-/* Kode unik 1-999 ditambahkan ke jumlah bayar supaya admin mudah mencocokkan mutasi bank. Tetap sama selama pembeli di halaman ini. */
-let payCode = 0;
-const codeOn = () => settings.uniqueCode !== false;
 function renderCheckout(){
-  const gs2 = groups();
-  if (!codeOn()) payCode = 0; else if (!payCode) payCode = 1 + Math.floor(Math.random() * 999);
-  $("sum2").innerHTML = summaryHTML(gs2); $("pay-total").textContent = rp(grand(gs2) + payCode);
-  const cn = $("pay-code-note"); cn.hidden = !payCode;
-  if (payCode) cn.textContent = "Termasuk kode unik " + rp(payCode) + " agar mudah dicek. Transfer tepat sesuai angka ini.";
+  $("sum2").innerHTML = summaryHTML(groups());
   $("addr-fields").hidden = isPick(); $("pick-box").hidden = !isPick();
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
 }
-document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; renderCheckout(); });
+let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false;
+document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; saveCart(); renderCheckout(); });
 function renderPayInfo(){
-  $("bank-name").textContent = settings.bankName;
-  $("bank-no").textContent = settings.bankNumber;
-  $("bank-holder").textContent = settings.bankHolder;
   const hasQ = !!settings.qrisUrl;
-  $("qris-opt").hidden = !hasQ;
-  $("qris-box").innerHTML = hasQ ? `<img src="${esc(settings.qrisUrl)}" alt="QRIS Lapo Doli">` : "";
+  $("paymethod-wrap").hidden = !hasQ;
   if (!hasQ) document.querySelector("[name=pay][value=transfer]").checked = true;
-  syncPay();
+  renderPay();
 }
-function syncPay(){
-  const m = document.querySelector("[name=pay]:checked").value;
-  $("pi-transfer").classList.toggle("show", m === "transfer");
-  $("pi-qris").classList.toggle("show", m === "qris");
+/* Kotak bayar di layar setelah pesan: jumlah tepat (dengan kode unik) dan tujuan transfer */
+function renderPay(){
+  const box = $("d-pay"); box.hidden = !payVisible; if (!payVisible) return;
+  $("d-amt").textContent = rp(placedPay.total + placedPay.kode);
+  const k = $("d-kode"); k.hidden = !placedPay.kode; k.textContent = placedPay.kode ? "Termasuk kode unik " + rp(placedPay.kode) + " agar pembayaranmu mudah dicek." : "";
+  const q = placedPay.method === "qris" && !!settings.qrisUrl;
+  $("d-bank").hidden = q; $("d-qris").hidden = !q;
+  $("d-bank-name").textContent = settings.bankName; $("d-bank-holder").textContent = settings.bankHolder; $("d-bank-no").textContent = settings.bankNumber;
+  $("qris-box").innerHTML = q ? `<img src="${esc(settings.qrisUrl)}" alt="QRIS Lapo Doli">` : "";
 }
-document.querySelectorAll("[name=pay]").forEach(r => r.onchange = syncPay);
-$("copy-no").onclick = async () => {
-  try { await navigator.clipboard.writeText(settings.bankNumber); toast("Nomor rekening disalin"); }
-  catch (e) { toast("Salin manual dari nomor di atas"); }
-};
+async function copyText(text, el, okMsg){
+  try { await navigator.clipboard.writeText(text); toast(okMsg); return; } catch (e) {}
+  try { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); if (document.execCommand && document.execCommand("copy")) { toast(okMsg); return; } } catch (e) {}
+  toast("Tekan lama angkanya untuk menyalin");
+}
+$("copy-no").onclick = () => copyText(String(settings.bankNumber), $("d-bank-no"), "Nomor rekening disalin");
+$("copy-amt").onclick = () => copyText(String(placedPay.total + placedPay.kode), $("d-amt"), "Jumlah disalin");
 
 const val = {
-  nama:   v => v.trim().length >= 2 ? "" : "Isi nama Anda.",
+  nama:   v => v.trim().length >= 2 ? "" : "Isi nama kamu.",
   hp:     v => /^(\+?62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g, "")) ? "" : "Nomor HP tidak valid. Contoh: 08123456789",
   area:   v => AREAS.includes(v) ? "" : "Pilih wilayah di Jakarta.",
   alamat: v => v.trim().length >= 10 ? "" : "Alamat belum lengkap."
@@ -362,41 +379,32 @@ const linePayload = i => ({ pid:i.pid, ...(i.addon ? { addon:i.addonId } : i.opt
 
 async function submitOrder(){
   const gone = pruneClosed();
-  if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesanan Anda"); renderMenu(); if (qtyTotal()) renderCheckout(); else go(1); return; }
+  if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesananmu"); renderMenu(); if (qtyTotal()) renderCheckout(); else go(1); return; }
   let ok = true;
   const chk = (k, m) => { $("e-" + k).textContent = m; if (m) ok = false; };
   chk("nama", val.nama($("nama").value)); chk("hp", val.hp($("hp").value));
   if (isPick()) { chk("area", ""); chk("alamat", ""); } else { chk("area", val.area($("area").value)); chk("alamat", val.alamat($("alamat").value)); }
   if (!ok) { const f = [...document.querySelectorAll("#s2 .err")].find(x => x.textContent && !x.closest("[hidden]")); if (f) f.scrollIntoView({ behavior:"smooth", block:"center" }); return; }
   if (!sb) { toast("Toko belum tersambung ke database."); return; }
-  const btn = $("paid"); btn.disabled = true;
+  const btn = $("paid"); btn.disabled = true; btn.textContent = "Memproses...";
   const method = document.querySelector("[name=pay]:checked").value, gs = groups();
-  const customer = { kode:payCode, nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : $("area").value, alamat:isPick() ? "" : $("alamat").value.trim(), notes:$("notes").value.trim(), method };
+  const customer = { nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : $("area").value, alamat:isPick() ? "" : $("alamat").value.trim(), notes:$("notes").value.trim(), method };
   let res;
   try { res = await api.createOrders({ ...customer, groups:gs.map(g => ({ po_id:g.poId, lines:g.items.map(linePayload) })) }); }
-  catch (e) { btn.disabled = false; orderFailed(e); return; }
-  btn.disabled = false;
+  catch (e) { btn.disabled = false; btn.textContent = "Pesan sekarang"; orderFailed(e); return; }
+  btn.disabled = false; btn.textContent = "Pesan sekarang";
   placed = res.map(r => ({ id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, fulfil:r.fulfil, hours:r.hours, pickupLoc:r.pickup_loc, total:r.total, items:r.items, ...customer }));
   recorded = true; trackHp = customer.hp;
   const outGs = res.map(r => ({ poId:r.po_id, date:r.po_date, fulfil:r.fulfil, items:r.items, ongkir:r.total - r.items.reduce((a, i) => a + i.price * i.qty, 0), total:r.total }));
-  const kodeSum = res.reduce((a, r) => a + (Number(r.kode) || 0), 0), total = grand(outGs) + kodeSum, nums = placed.map(o => o.id).join(", ");
-  payCode = 0;
-  const msg =
-`Halo Lapo Doli, saya sudah bayar.
-
-No. Pesanan: ${nums}
-Nama: ${customer.nama}
-HP: ${customer.hp}
-${isPick() ? "Ambil sendiri di " + pickLoc() : "Wilayah: " + customer.area + "\nAlamat: " + customer.alamat}
-${customer.notes ? "Catatan: " + customer.notes + "\n" : ""}
-${outGs.map((g, i) => `${placed[i].id} · ${isPick() ? "Ambil" : "Antar"} ${dLong(g.date)}, jam ${placed[i].hours}:\n${g.items.map(x => `- ${x.qty} × ${x.name}${x.option ? " (" + x.option + ")" : ""}${x.note ? "\n  Catatan: " + x.note : ""}`).join("\n")}${isPick() ? "" : "\nOngkir: " + rp(g.ongkir)}`).join("\n\n")}
-
-Total: ${rp(total)}${kodeSum ? " (termasuk kode unik " + rp(kodeSum) + ")" : ""}
-Bayar via: ${method === "qris" ? "QRIS" : "Transfer " + settings.bankName}
-
-(Bukti bayar saya lampirkan di chat ini)`;
+  const kodeSum = res.reduce((a, r) => a + (Number(r.kode) || 0), 0), nums = placed.map(o => o.id).join(", ");
+  placedPay = { total:grand(outGs), kode:kodeSum, method };
+  const msg = `Halo Lapo Doli, ini bukti bayar pesanan ${nums}.\nNama: ${customer.nama}\nTotal: ${rp(placedPay.total + kodeSum)}${kodeSum ? " (termasuk kode unik " + rp(kodeSum) + ")" : ""}\nBayar via: ${method === "qris" ? "QRIS" : "Transfer " + settings.bankName}\n\n(Bukti bayar terlampir)`;
   $("wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent(msg)}`;
   $("sum3").innerHTML = summaryHTML(outGs, kodeSum);
+  /* pesanan sudah tercatat: kosongkan keranjang, ingat data pembeli dan pesanan ini */
+  for (const k in cart) delete cart[k]; for (const k in itemNotes) delete itemNotes[k]; $("notes").value = "";
+  saveCart(); saveCust();
+  lastData = { at:Date.now(), placed, outGs, pay:placedPay, wa:$("wa").href }; lastRows = {}; lsSet(LS.last, lastData); renderLast();
   unsubTrack(); renderTracker(); startTrack();
   go(3);
 }
@@ -407,7 +415,7 @@ let trackT = null, trackHp = "";
 const unsubTrack = () => { clearInterval(trackT); trackT = null; trackConf = {}; };
 async function pollTrack(){
   if (!placed.length || !sb) return;
-  try { const rows = await api.trackOrders(placed.map(o => o.id), trackHp); rows.forEach(r => { trackConf[r.id] = { payStatus:r.pay_status, status:r.status }; }); renderTracker(); } catch (e) {}
+  try { const rows = await api.trackOrders(placed.map(o => o.id), trackHp); rows.forEach(r => { trackConf[r.id] = { payStatus:r.pay_status, status:r.status }; }); Object.assign(lastRows, trackConf); renderLast(); renderTracker(); } catch (e) {}
 }
 function startTrack(){ pollTrack(); trackT = setInterval(() => { if (screen === 3 && !document.hidden) pollTrack(); }, 8000); }
 
@@ -416,7 +424,7 @@ const DLV_PICK = { baru:["Terkonfirmasi", "ok"], diproses:["Sedang diproses", "i
 function statusLabel(o){
   if (o.status === "batal") return ["Dibatalkan", ""];
   if (o.payStatus === "ditolak") return ["Bayar ditolak", "bad"];
-  if (o.payStatus !== "lunas") return ["Menunggu cek bayar", "warn"];
+  if (o.payStatus !== "lunas") return ["Menunggu bayar", "warn"];
   return (o.fulfil === "ambil" ? DLV_PICK : DLV)[o.status] || DLV.baru;
 }
 function renderTracker(){
@@ -429,9 +437,10 @@ function renderTracker(){
   if (!recorded) { title = "Pesanan dibuat"; sub = "Belum tercatat otomatis. Kirim lewat WhatsApp supaya kami proses."; }
   else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
   else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Kirim bukti bayar lewat WhatsApp."; tone = "bad"; }
-  else if (!allPaid) { title = "Pesanan diterima"; sub = "Kirim bukti bayar lewat WhatsApp. Kami konfirmasi setelah dicek."; }
+  else if (!allPaid) { title = "Pesanan dicatat"; sub = "Transfer sesuai jumlah di bawah, lalu kirim bukti bayar."; }
   else if (allDone) { title = "Pesanan selesai"; sub = "Terima kasih, selamat makan!"; tone = "ok"; }
   else { title = "Pesanan terkonfirmasi"; sub = pk ? `Pembayaran diterima. Ambil di ${placed[0].pickupLoc || pickLoc()}, jam ${placed[0].hours || pickHours()}.` : `Pembayaran diterima. Diantar sesuai tanggal PO, jam ${hours()}.`; tone = "ok"; }
+  payVisible = !!recorded && !allPaid && !allCancel; renderPay();
   $("d-title").textContent = title; $("d-sub").textContent = sub; $("d-dot").className = "dot " + (tone === "warn" ? "" : tone);
   tr.innerHTML = placed.map((o, i) => {
     const c = cs[i], [lb, cl] = statusLabel({ fulfil:o.fulfil, payStatus:c.payStatus, status:c.status });
@@ -441,10 +450,35 @@ function renderTracker(){
 $("again").onclick = () => {
   for (const k in cart) delete cart[k];
   for (const k in itemNotes) delete itemNotes[k];
-  unsubTrack(); placed = [];
-  ["nama", "hp", "alamat", "notes"].forEach(i => { $(i).value = ""; }); $("area").value = "";
+  unsubTrack(); placed = []; payVisible = false; $("notes").value = ""; saveCart(); renderLast();
   renderMenu(); go(1);
 };
+/* ===== pesanan terakhir: kartu di beranda supaya pembeli bisa kembali ke info bayar dan status ===== */
+let lastData = null, lastRows = {};
+function renderLast(){
+  const el = $("lastorder");
+  if (!lastData) { el.hidden = true; return; }
+  const cs = lastData.placed.map(o => lastRows[o.id] || { payStatus:"cek", status:"baru" });
+  if (cs.every(c => c.status === "selesai" || c.status === "batal")) { lsSet(LS.last, null); lastData = null; el.hidden = true; return; }
+  const i = Math.max(0, cs.findIndex(c => c.payStatus !== "lunas")), [lb, cl] = statusLabel({ fulfil:lastData.placed[i].fulfil, payStatus:cs[i].payStatus, status:cs[i].status });
+  $("lc-id").textContent = lastData.placed.map(o => o.id).join(", ");
+  $("lc-chip").className = "chip " + cl; $("lc-chip").textContent = lb; el.hidden = false;
+}
+async function pollLast(){
+  if (!lastData || !sb) return;
+  try { const rows = await api.trackOrders(lastData.placed.map(o => o.id), lastData.placed[0].hp); rows.forEach(r => { lastRows[r.id] = { payStatus:r.pay_status, status:r.status }; }); renderLast(); } catch (e) {}
+}
+$("lastorder").onclick = () => {
+  if (!lastData) return;
+  placed = lastData.placed; placedPay = lastData.pay || placedPay; recorded = true; trackHp = placed[0].hp;
+  $("wa").href = lastData.wa || "#"; $("sum3").innerHTML = summaryHTML(lastData.outGs, placedPay.kode);
+  unsubTrack(); renderTracker(); startTrack(); go(3);
+};
+function initLast(){
+  const l = lsGet(LS.last);
+  if (l && l.placed && l.placed.length && Date.now() - l.at < 14 * 864e5) { lastData = l; renderLast(); pollLast(); } else if (l) lsSet(LS.last, null);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) pollLast(); });
+}
 
 /* ================= ADMIN ================= */
 const NEXT = { baru:"diproses", diproses:"diantar", diantar:"selesai" };
@@ -634,7 +668,7 @@ function nSync(){
 }
 function manualText(o, paid){
   const pk = o.fulfil === "ambil";
-  return `Halo kak ${o.nama}, pesanan Anda di Lapo Doli sudah kami catat.
+  return `Halo kak ${o.nama}, pesananmu di Lapo Doli sudah kami catat.
 
 No. Pesanan: ${o.id}
 ${pk ? "Ambil" : "Antar"} ${dLong(o.poDate)}, jam ${o.hours}${pk ? "\nLokasi ambil: " + o.pickupLoc : ""}
@@ -1199,6 +1233,8 @@ function subscribeRealtime(){
   ch.subscribe();
 }
 async function init(){
+  restoreState(); initLast();
+  ["nama", "hp", "alamat"].forEach(k => $(k).addEventListener("input", saveCust)); $("area").addEventListener("change", saveCust);
   renderMenu(); updateBar(); go(1);
   setInterval(checkClosings, 15000); document.addEventListener("visibilitychange", checkClosings);
   const q = new URLSearchParams(location.search), hasTokens = /access_token|refresh_token|error_description/.test(location.hash);
