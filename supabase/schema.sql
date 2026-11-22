@@ -423,7 +423,8 @@ begin
   if p_gid !~ '^[A-Z0-9]{8}$' or p_path !~ ('^' || p_gid || '/[A-Za-z0-9_.-]{6,80}$') then
     return false;
   end if;
-  update public.orders set proof_path = p_path
+  -- bukti baru setelah ditolak mengembalikan status ke 'cek' supaya admin memeriksanya lagi
+  update public.orders set proof_path = p_path, pay_status = case when pay_status = 'ditolak' then 'cek' else pay_status end
    where gid = p_gid and public.norm_hp(hp) = public.norm_hp(phone)
      and status <> 'batal' and pay_status <> 'lunas';
   get diagnostics n = row_count;
@@ -460,7 +461,7 @@ grant execute on function public.po_remaining() to anon, authenticated;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 8 $$;
+returns integer language sql immutable as $$ select 9 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 
