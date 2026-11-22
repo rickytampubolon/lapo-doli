@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lapo Doli</title>
 <meta name="description" content="Lapo Doli: masakan Batak rumahan. Pre-order tiap minggu, antar di Jakarta atau ambil sendiri.">
-<meta name="theme-color" content="#efe3cc">
+<meta name="theme-color" content="#f6e8d0">
 <meta name="color-scheme" content="light">
 <link rel="icon" href="/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/apple-touch.png">
@@ -35,7 +35,7 @@
   <h1 class="sr-only">Lapo Doli, masakan Batak rumahan. Pre‑order tiap minggu.</h1>
   <div class="pattern" aria-hidden="true"></div>
   <main class="col">
-    <p class="stepline" id="steps"></p>
+    <ol class="steps" id="steps" aria-label="Langkah pesan"><li class="now"><i>1</i><span>Menu</span></li><li><i>2</i><span>Data</span></li><li><i>3</i><span>Bayar</span></li></ol>
 
     <section id="s1" class="show">
       <div class="closed" id="closed" hidden>
@@ -47,7 +47,7 @@
       </div>
       <button class="lastcard" id="lastorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span class="lc-t"><b id="lc-id"></b></span><span class="chip" id="lc-chip"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button>
       <div id="po-wrap">
-        <div class="label">Pilih tanggal</div>
+        <div class="label">Pilih tanggal <small>dimasak khusus di tanggal itu</small></div>
         <div class="chips" id="pochips"></div>
         <p class="hint meta" id="poinfo"></p>
         <div class="label">Pilih menu</div>
@@ -57,34 +57,34 @@
 
     <section id="s2">
       <button class="back" id="back1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg>Ubah pesanan</button>
-      <h1 class="title" style="font-size:1.5rem;margin-top:12px">Pesananmu</h1>
+      <h1 class="title" style="font-size:1.5rem;margin-top:12px">Detail pesanan</h1>
 
       <div class="sum" id="sum2" style="margin-top:14px"></div>
 
       <div class="label">Cara terima</div>
       <div class="seg" id="fulfil">
-        <label><input type="radio" name="fulfil" value="antar" checked><span class="sl">Antar</span><small>Jakarta, Lalamove</small></label>
-        <label><input type="radio" name="fulfil" value="ambil"><span class="sl">Ambil sendiri</span><small>Tanpa ongkir</small></label>
+        <label><input type="radio" name="fulfil" value="antar" checked><span class="sl"><svg class="ic" aria-hidden="true"><use href="#i-truck"/></svg>Antar</span><small>Jakarta, Lalamove</small></label>
+        <label><input type="radio" name="fulfil" value="ambil"><span class="sl"><svg class="ic" aria-hidden="true"><use href="#i-store"/></svg>Ambil sendiri</span><small>Tanpa ongkir</small></label>
       </div>
-      <div class="soft" id="pick-box" hidden style="margin-top:12px"><span>Ambil di <b id="pick-loc"></b>, jam <span id="pick-hours"></span></span></div>
+      <div class="soft" id="pick-box" hidden style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg><span>Ambil di <b id="pick-loc"></b>, jam <span id="pick-hours"></span></span></div>
 
       <div class="label">Data kamu</div>
       <div id="form">
-        <label class="lb" for="nama" style="margin-top:0">Nama</label>
+        <label class="lb" for="nama" style="margin-top:0"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>Nama</label>
         <input id="nama" type="text" autocomplete="name" autocapitalize="words" enterkeyhint="next" placeholder="Nama lengkap">
         <div class="err" id="e-nama"></div>
-        <label class="lb" for="hp">No. WhatsApp</label>
+        <label class="lb" for="hp"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg>No. WhatsApp</label>
         <input id="hp" type="tel" inputmode="numeric" autocomplete="tel" enterkeyhint="next" placeholder="08123456789">
         <div class="err" id="e-hp"></div>
         <div id="addr-fields">
-          <label class="lb" for="area">Wilayah</label>
+          <label class="lb" for="area"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>Wilayah</label>
           <select id="area"><option value="">Pilih wilayah</option><option>Jakarta Pusat</option><option>Jakarta Utara</option><option>Jakarta Barat</option><option>Jakarta Selatan</option><option>Jakarta Timur</option></select>
           <div class="err" id="e-area"></div>
-          <label class="lb" for="alamat">Alamat lengkap</label>
+          <label class="lb" for="alamat"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg>Alamat lengkap</label>
           <textarea id="alamat" autocomplete="street-address" enterkeyhint="next" placeholder="Jalan, nomor rumah, patokan"></textarea>
           <div class="err" id="e-alamat"></div>
         </div>
-        <label class="lb" for="notes">Catatan</label>
+        <label class="lb" for="notes"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Catatan</label>
         <textarea id="notes" placeholder="Contoh: tidak pakai cabai"></textarea>
       </div>
 
@@ -125,6 +125,7 @@
     <p class="note" style="margin-top:40px;text-align:center"><span id="foot" hidden><button class="textbtn" id="to-admin" type="button">Halaman admin</button></span></p>
   </main>
   <div class="bar" id="bar"><div class="in">
+    <span class="cartic" id="cartic" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#i-bag"/></svg><i id="cart-n">0</i></span>
     <div class="t"><span id="count">0 porsi</span><b id="subtotal">Rp 0</b></div>
     <button class="btn" id="next" disabled>Lanjut</button>
   </div></div>

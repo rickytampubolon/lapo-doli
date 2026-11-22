@@ -177,8 +177,8 @@ function renderPoChips(){
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const act = list.find(x => x.id === activePo);
-  const when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"long" });
-  $("poinfo").textContent = (hours() === pickHours() ? `Antar atau ambil, jam ${hours()}.` : `Antar jam ${hours()}, ambil jam ${pickHours()}.`) + ` Tutup ${when} pukul ${cutoffLabel()}.`;
+  const when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" });
+  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}Antar/ambil ${esc(hours().replace(/\s*-\s*/, "-"))}</span>` : `<span>${ic("truck")}Antar ${esc(hours())}</span><span>${ic("pin")}Ambil ${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(when)} ${esc(cutoffLabel())}</span>`;
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
@@ -204,8 +204,8 @@ function renderMenu(){
       return `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${stepper(ak, a.name + " untuk " + p.name, (cart[ak] || 0) >= mainQty(act.id, p.id))}</div>`; }).join("")}</div>` : "";
     const panel = !off && opts.length ? `<div class="vpanel">${variantsHTML(p, k, stepper)}${addsHTML}</div>` : addsHTML;
     return `<div class="item ${off ? "off" : ""} ${inl ? "open inl" : ""}" data-pid="${esc(p.id)}" data-po="${esc(act.id)}" style="--i:${i}">
-      <div class="ihead">${thumb}<div class="ibody"><div class="irow"><h3>${esc(p.name)}</h3><i class="lead" aria-hidden="true"></i><span class="price">${showP ? "dari " : ""}${rp(showP ? fromPrice(p) : p.price)}</span></div><p>${esc(p.desc)}</p><div class="ifoot"><span class="left">${rem != null && rem > 0 && rem <= 10 ? "sisa " + rem : ""}</span>${ctl}</div></div></div>
-      ${opts.length && !off ? '<div class="picked" hidden></div>' : ""}${panel}${off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note maxlength="120" placeholder="Catatan untuk ${esc(p.name)}, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}" value="${esc(itemNotes[act.id + "::" + p.id] || "")}"></div>`}</div>`;
+      <div class="ihead">${thumb}<div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="ifoot"><span class="pricebox"><span class="price">${showP ? "Mulai " + rp(fromPrice(p)) : rp(p.price)}</span>${rem != null && rem > 0 && rem <= 10 ? `<span class="left">Sisa ${rem}</span>` : ""}</span>${ctl}</div></div></div>
+      ${opts.length && !off ? '<div class="picked" hidden></div>' : ""}${panel}${off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note value="${esc(itemNotes[k] || "")}" maxlength="120" placeholder="Catatan untuk ${esc(p.name)}, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}" value="${esc(itemNotes[act.id + "::" + p.id] || "")}"></div>`}</div>`;
   }).join("");
   syncMenuDom();
   if (!menuShown) { menuShown = true; el.classList.add("enter"); setTimeout(() => el.classList.remove("enter"), 1000); }
@@ -289,11 +289,14 @@ function renderClosed(){
   $("closed-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent(msg)}`;
   $("closed-h").textContent = n ? "PO segera dibuka" : "PO belum dibuka";
   $("closed-p").hidden = !!n;
-  $("np").hidden = !n; if (n) $("np").innerHTML = `<span>PO ${esc(dShort(n.date))}</span><span>Buka ${esc(fmtWhen(n.opens_at))}</span>`;
+  $("np").hidden = !n; if (n) $("np").innerHTML = `<span>${ic("po")}PO ${esc(dShort(n.date))}</span><span>${ic("clock")}Buka ${esc(fmtWhen(n.opens_at))}</span>`;
   $("closed-wa-t").textContent = n ? "Ingatkan saya" : "Chat admin";
 }
+let lastQty = 0;
 function updateBar(){
   saveCart();
+  const q = qtyTotal(); $("cart-n").textContent = q; $("cart-n").hidden = !q;
+  if (q > lastQty) { const c = $("cartic"); c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump"); } lastQty = q;
   const gs = groups();
   $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? " · " + gs.length + " tanggal" : "");
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
@@ -330,7 +333,9 @@ function checkClosings(){
   openSig = sig; renderMenu();
   if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesananmu"); if (screen === 2) { if (qtyTotal()) renderCheckout(); else go(1); } }
 }
-function updateSteps(n){ $("steps").textContent = n > 1 ? "Langkah " + n + " dari 3" : ""; }
+function updateSteps(n){
+  document.querySelectorAll("#steps li").forEach((li, i) => { const k = i + 1; li.className = k < n ? "done" : k === n ? "now" : ""; li.querySelector("i").innerHTML = k < n ? ic("check") : String(k); li.setAttribute("aria-current", k === n ? "step" : "false"); });
+}
 function go(n){
   screen = n;
   document.querySelectorAll("#shop section").forEach((s, i) => s.classList.toggle("show", i + 1 === n));
