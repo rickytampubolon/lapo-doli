@@ -1336,6 +1336,7 @@ $("to-admin").onclick = () => setView("admin");
 $("to-shop").onclick = $("to-shop-top").onclick = () => setView("shop");
 document.querySelectorAll("[data-help]").forEach(b => { b.onclick = () => setView("help"); });
 $("help-back").onclick = () => setView("shop");
+document.querySelectorAll("[data-home]").forEach(l => { l.onclick = e => { e.preventDefault(); closeSheets(); setView("shop"); go(1); }; });
 
 /* ================= LOGIN ADMIN ================= */
 function renderGate(){
