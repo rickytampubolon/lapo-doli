@@ -1046,7 +1046,7 @@ body.sheet-open{overflow:hidden}
 .sc-stats b.urgent{color:var(--accent)}
 
 /* butir review pembeli: batas bayar, pesan lagi, ubah jumlah, area ketuk 44px */
-.ttl{margin:0;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-md);background:var(--amber-soft);color:var(--text-primary);font-size:14px;line-height:20px;font-weight:600}
+.ttl{font-variant-numeric:tabular-nums;margin:0;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-md);background:var(--amber-soft);color:var(--text-primary);font-size:14px;line-height:20px;font-weight:600}
 .ttl.late{background:#f6e3df;color:var(--bad)}
 .reorder{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);width:100%;min-height:44px;margin:var(--sp-3) 0 0;padding:0 var(--sp-4);border:1px dashed var(--accent);border-radius:999px;background:#fff;color:var(--accent);font-weight:700;font-size:14px;cursor:pointer}
 .reorder .ic{width:18px;height:18px;margin:0}
@@ -1138,3 +1138,30 @@ input, textarea, select{font-size:16px}
 
 a.brandrow{color:inherit;text-decoration:none;min-height:44px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 a.brandrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+
+.hlink{min-width:46px;min-height:46px}
+
+/* beranda: status pesanan dan "pesan seperti sebelumnya" dalam satu kartu */
+.quick{margin:var(--sp-3) 0 0;border:1px solid var(--border-default);border-radius:var(--r-lg);background:#fff;box-shadow:var(--shadow-low);overflow:hidden}
+.quick[hidden],.quick > [hidden]{display:none}
+.quick .lastcard,.quick .reorder{width:100%;margin:0;border:0;border-radius:0;box-shadow:none;background:none;min-height:48px;padding:var(--sp-2) var(--sp-4)}
+.quick .reorder{justify-content:flex-start;gap:var(--sp-3);font-size:14px;font-weight:600;color:var(--accent)}
+.quick .reorder .ic{width:20px;height:20px}
+.quick > :not([hidden]) ~ :not([hidden]){border-top:1px solid var(--border-default)}
+
+/* foto menu */
+.thumb{object-position:center;box-shadow:inset 0 0 0 1px rgba(59,44,39,.06)}
+img.thumb{background:var(--soft)}
+
+/* admin: pesanan lewat batas bayar */
+.latebar{display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-3) 0 0;padding:var(--sp-3) var(--sp-4);border:1px solid var(--border-default);border-radius:var(--r-md);background:var(--amber-soft);font-size:14px;line-height:20px}
+.latebar .ic{flex:none;width:20px;height:20px;color:var(--warn)}
+.latebar span{flex:1;min-width:0}
+.latebar .btn{flex:none}
+#admin .orow.late{box-shadow:inset 4px 0 0 var(--bad),var(--shadow-low)}
+@media (max-width:640px){.latebar{flex-wrap:wrap}.latebar .btn{width:100%}}
+
+/* batalkan pesanan di halaman bayar */
+.cancelbtn{display:block;margin:var(--sp-2) auto 0;min-height:44px;padding:0 var(--sp-4);color:var(--text-secondary);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.cancelbtn.arm{color:var(--bad);text-decoration:none}
+.cancelbtn[hidden]{display:none}

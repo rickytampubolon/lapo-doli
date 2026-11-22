@@ -65,7 +65,7 @@ Di Vercel buka **Settings > Domains**, tambahkan domain, lalu ikuti petunjuk DNS
 - **Penjualan**: ringkasan penjualan per tanggal PO, menu terlaris, wilayah antar.
 - **Rekap dapur**: jumlah yang harus dimasak per menu dan varian, daftar antar per wilayah, daftar ambil sendiri. Bisa disalin, dicetak, atau diekspor ke CSV.
 - **Menu dan harga**: termasuk **kuota porsi per tanggal PO** (kosong berarti tanpa batas). Pembeli melihat "Sisa N" dan server menolak pesanan yang melebihi sisa.
-- **Pengaturan**: ongkir, jam, rekening, QRIS, dan **kode unik pembayaran** (tambahan 1 sampai 499 rupiah di jumlah transfer supaya mudah dicocokkan dengan mutasi bank).
+- **Pengaturan**: ongkir, jam, rekening, QRIS, dan **kode unik pembayaran** (tambahan 1 sampai 100 rupiah di jumlah transfer supaya mudah dicocokkan dengan mutasi bank).
 
 Setiap kali `supabase/schema.sql` berubah, jalankan ulang seluruh isinya di SQL Editor. Aman diulang.
 
@@ -79,14 +79,14 @@ Ikuti petunjuk di bagian atas `supabase/notify-telegram.sql`. Token bot disimpan
 2. Layar berikutnya menampilkan jumlah transfer yang tepat (dengan kode unik yang dibuat server) dan nomor rekening atau QRIS. Pembeli mengunggah foto bukti bayar langsung di halaman (tidak lewat WhatsApp). Kalau admin menandai pembayaran tidak cocok, pembeli bisa mengunggah ulang dan statusnya kembali ke dicek.
 3. Keranjang, data pembeli, dan pesanan terakhir disimpan di browser. Pembeli bisa kembali ke info bayar dan status dari kartu di beranda.
 
-Pesanan yang belum dibayar lebih dari 3 jam tidak lagi menahan kuota porsi. Pesanannya tetap ada di admin sampai dibatalkan.
+Pesanan yang belum dibayar lebih dari 1 jam tidak lagi menahan kuota porsi. Pesanannya tetap ada di admin sampai dibatalkan.
 
 Setiap kali `supabase/schema.sql` berubah, jalankan ulang isinya di SQL Editor (aman diulang).
 
 ## Pengujian logika
 
 Kalkulasi dan aturan pesanan diuji dengan Postgres sungguhan, bukan hanya dibaca. Skenario yang dicakup:
-harga varian dan tambahan, ongkir per tanggal, antar dan ambil sendiri, kode unik (1 sampai 499, tidak kembar di antara
+harga varian dan tambahan, ongkir per tanggal, antar dan ambil sendiri, kode unik (1 sampai 100, tidak kembar di antara
 pesanan yang masih menunggu bayar), kuota per tanggal PO, PO tutup dan terjadwal, batas spam, nomor pesanan antar tahun,
 pesanan ganda saat kirim ulang (kunci idempotensi `ref`), hak admin, dan bukti bayar. Total yang dihitung browser juga
 dibandingkan dengan total database untuk ratusan keranjang acak.
@@ -143,7 +143,7 @@ Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`,
 
 ## Perbaikan sisi pembeli
 
-- Batas bayar 3 jam tampil di layar pembayaran, dengan hitung mundur dan peringatan bila lewat.
+- Batas bayar 1 jam tampil di layar pembayaran, dengan hitung mundur dan peringatan bila lewat.
 - Menu disimpan di browser: dibuka tanpa jaringan tetap tampil, dan layar galat muncul maksimal 8 detik.
 - Sisa waktu PO tampil di kartu toko (jadi merah di bawah 2 jam).
 - Jumlah item bisa diubah langsung di halaman pesanan.
@@ -151,3 +151,4 @@ Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`,
 - Lembar pilihan menjaga fokus keyboard, semua tombol minimal 44px.
 - Link status pesanan: `/?cek=NOMOR` membuka Bantuan dan langsung mencari.
 - Tombol bawah di checkout memakai kapsul yang sama dengan keranjang.
+- Pembeli bisa membatalkan pesanan sendiri di halaman bayar selama belum ada bukti bayar (`cancel_orders`, skema v13).

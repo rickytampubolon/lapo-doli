@@ -33,7 +33,7 @@ begin
   p := t.base() || '{"groups":[{"po_id":"po-a","lines":[{"pid":"kecap","opt":0,"qty":2},{"pid":"kecap","addon":"nasi","qty":1},{"pid":"saksang","opt":0,"qty":1}]}]}';
   r := public.create_orders(p);
   perform t.ck('1 total = makanan 70000+5000+40000 + ongkir 10000', (r->0->>'total')::int = 125000, r->0->>'total');
-  perform t.ck('1 kode unik 1..499', (r->0->>'kode')::int between 1 and 499, r->0->>'kode');
+  perform t.ck('1 kode unik 1..100', (r->0->>'kode')::int between 1 and 100, r->0->>'kode');
   select * into o from public.orders limit 1;
   perform t.ck('1 group_total = total', o.group_total = 125000 and o.ongkir = 10000);
   perform t.ck('1 id format DDMM-NN', o.id ~ '^\d{4}-01$', o.id);
@@ -97,10 +97,10 @@ begin
   perform t.ck('6 po_remaining = 0 saat penuh', n = 1);
   update public.orders set created_at = now() - interval '4 hours' where hp = '081200000015';
   select remaining into n from public.po_remaining() where po_id = 'po-a' and pid = 'teri';
-  perform t.ck('6 belum bayar >3 jam tidak menahan kuota (sisa 3)', n = 3, n::text);
+  perform t.ck('6 belum bayar >1 jam tidak menahan kuota (sisa 3)', n = 3, n::text);
   update public.orders set proof_path = 'AAAAAAAA/x1234567.jpg' where hp = '081200000015';
   select remaining into n from public.po_remaining() where po_id = 'po-a' and pid = 'teri';
-  perform t.ck('6 sudah ada bukti: tetap menahan kuota walau lewat 3 jam (sisa 0)', n = 0, n::text);
+  perform t.ck('6 sudah ada bukti: tetap menahan kuota walau lewat 1 jam (sisa 0)', n = 0, n::text);
   update public.orders set proof_path = '' where hp = '081200000015';
   update public.orders set pay_status = 'lunas' where hp = '081200000015';
   select remaining into n from public.po_remaining() where po_id = 'po-a' and pid = 'teri';
@@ -121,7 +121,7 @@ begin
   for n in 1..60 loop
     perform public.create_orders(t.base('08129000' || lpad(n::text, 4, '0')) || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
   end loop;
-  perform t.ck('8 60 pesanan, total sama, kode semua berbeda', (select count(distinct kode) from public.orders) = 60 and (select max(kode) from public.orders) <= 499, (select count(distinct kode)::text from public.orders));
+  perform t.ck('8 60 pesanan, total sama, kode semua berbeda', (select count(distinct kode) from public.orders) = 60 and (select max(kode) from public.orders) <= 100, (select count(distinct kode)::text from public.orders));
   perform t.ck('8 nomor urut tidak melompat: 01..60', (select count(*) from public.orders where id ~ '-\d\d$') = 60);
 
   -- 9. nomor pesanan tidak bentrok antar tahun (tanggal 5 Des 2026 dan 2027)
@@ -168,6 +168,21 @@ begin
   perform t.ck('12 sudah lunas tidak bisa diubah buktinya', public.attach_proof(r->0->>'gid', '081200000051', (r->0->>'gid') || '/ghi78901.jpg') = false);
   update public.orders set pay_status = 'cek', status = 'batal' where id = r->0->>'id';
   perform t.ck('12 pesanan batal tidak bisa menerima bukti', public.attach_proof(r->0->>'gid', '081200000051', (r->0->>'gid') || '/jkl01234.jpg') = false);
+
+  -- 13. pembeli membatalkan pesanan sendiri
+  delete from public.orders; delete from public.counters;
+  r := public.create_orders(t.base('081200000061') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('13 batal dengan nomor salah ditolak', public.cancel_orders(r->0->>'gid', '081200000099') = 0);
+  perform t.ck('13 batal dengan gid ngawur ditolak', public.cancel_orders('zzz', '081200000061') = 0);
+  perform t.ck('13 batal benar: 1 pesanan', public.cancel_orders(r->0->>'gid', '0812-0000-0061') = 1);
+  perform t.ck('13 status menjadi batal', (select status from public.orders where id = r->0->>'id') = 'batal');
+  perform t.ck('13 batal ulang tidak mengubah apa pun', public.cancel_orders(r->0->>'gid', '081200000061') = 0);
+  r := public.create_orders(t.base('081200000062') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform public.attach_proof(r->0->>'gid', '081200000062', (r->0->>'gid') || '/abc12345.jpg');
+  perform t.ck('13 sudah ada bukti: tidak bisa dibatalkan pembeli', public.cancel_orders(r->0->>'gid', '081200000062') = 0);
+  r := public.create_orders(t.base('081200000063') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  update public.orders set pay_status = 'lunas' where id = r->0->>'id';
+  perform t.ck('13 sudah lunas: tidak bisa dibatalkan pembeli', public.cancel_orders(r->0->>'gid', '081200000063') = 0);
 end $$;
 
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;
