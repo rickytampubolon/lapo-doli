@@ -217,7 +217,7 @@ begin
   if v_method not in ('transfer', 'qris') then raise exception 'invalid_method'; end if;
   if v_fulfil = 'antar' then
     v_area := coalesce(payload ->> 'area', '');
-    if v_area not in ('Jakarta Pusat', 'Jakarta Utara', 'Jakarta Barat', 'Jakarta Selatan', 'Jakarta Timur') then
+    if v_area not in ('Jakarta', 'Jakarta Pusat', 'Jakarta Utara', 'Jakarta Barat', 'Jakarta Selatan', 'Jakarta Timur') then
       raise exception 'invalid_area';
     end if;
     v_alamat := btrim(coalesce(payload ->> 'alamat', ''));
@@ -461,7 +461,7 @@ grant execute on function public.po_remaining() to anon, authenticated;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 9 $$;
+returns integer language sql immutable as $$ select 10 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 
