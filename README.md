@@ -76,4 +76,4 @@ Ikuti petunjuk di bagian atas `supabase/notify-telegram.sql`. Token bot disimpan
 ## Belum ada
 
 - Captcha untuk pembuatan pesanan. Saat ini pesanan dibatasi 5 kali per 10 menit per nomor HP. Captcha yang benar butuh pengecekan token di server (Supabase Edge Function), jadi perlu akun Cloudflare Turnstile.
-- Gambar pratinjau (`og:image`) memakai alamat relatif. Ganti dengan alamat penuh domain Vercel supaya tampil di WhatsApp dan Instagram.
+- Kalau nanti pakai domain sendiri, ganti `https://lapo-doli.vercel.app` di `index.html` (canonical dan og tags) dengan domain itu.
