@@ -98,6 +98,13 @@ Aturan penting yang tertanam:
 - Konfirmasi atau penolakan bayar berlaku untuk seluruh pesanan satu checkout, kecuali yang sudah dibatalkan.
 - Keranjang di browser tidak dipangkas sebelum jadwal PO berhasil dimuat, supaya sinyal buruk tidak menghapusnya.
 
+## Bagikan ke teman dan pratinjau link
+
+Beranda dan layar "pesanan dicatat" punya kartu **Ajak teman pesan**: tombol bagikan memakai lembar bagikan bawaan HP (atau membuka WhatsApp bila tidak ada), plus tombol salin link.
+
+Pratinjau saat link dibagikan (WhatsApp, Instagram, Threads) dibaca dari tag `og:*` dan `twitter:*` di `<head>` `index.html`, dengan gambar `assets/og.png` (1200x630, logo di atas krem). Tag ini harus berisi alamat penuh. Kalau nanti pakai domain sendiri, ganti `https://lapo-doli.vercel.app` di `index.html`.
+WhatsApp menyimpan pratinjau lama selama berhari-hari. Setelah mengganti gambar, bagikan link dengan akhiran baru (misalnya `/?v=2`) untuk melihat yang terbaru.
+
 ## Design system
 
 Strukturnya mengikuti dokumentasi publik **Asphalt Aloha** (Gojek), dengan warna dan identitas Lapo Doli. Token ada di bagian akhir `style.css`.

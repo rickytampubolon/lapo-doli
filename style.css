@@ -1034,3 +1034,11 @@ body.sheet-open{overflow:hidden}
 @media (min-width:1100px){
   #admin .orow-h{grid-template-columns:84px minmax(0,2fr) minmax(0,1.2fr) 124px 190px auto}
 }
+
+/* bagikan ke teman */
+.sharecard{margin:var(--sp-6) 0 0}
+.sharecard .linkrow{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);padding:var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);border:1px solid var(--border-default);border-radius:var(--r-md);background:var(--soft)}
+.sharecard .linktxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:20px;user-select:all;-webkit-user-select:all}
+.sharecard .btn{width:100%;border-radius:999px}
+.sharecard .btn .ic{margin:0}
+#s3 .sharecard{margin:var(--sp-5) 0 var(--sp-4)}
