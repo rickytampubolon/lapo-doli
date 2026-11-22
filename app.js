@@ -155,13 +155,13 @@ const countFor = poId => Object.keys(cart).filter(k => k.startsWith(poId + "::")
 
 function renderPoChips(){
   const el = $("pochips"), list = openPos();
-  if (poList() === null) { el.innerHTML = ""; $("poinfo").textContent = "Memuat jadwal PO..."; return; }
+  if (poList() === null) { el.innerHTML = ""; $("poinfo").textContent = ""; return; }
   if (!list.length) { el.innerHTML = ""; $("poinfo").textContent = ""; return; }
   if (!list.some(x => x.id === activePo)) activePo = list[0].id;
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const act = list.find(x => x.id === activePo);
-  $("poinfo").textContent = (hours() === pickHours() ? `Antar di Jakarta atau ambil sendiri, jam ${hours()}.` : `Antar di Jakarta jam ${hours()}, ambil sendiri jam ${pickHours()}.`) + ` Pesan paling lambat pukul ${cutoffLabel()} hari itu.` + (list.length > 1 ? " Boleh pilih lebih dari satu tanggal." : "");
+  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}${esc(hours())}</span>` : `<span>${ic("truck")}${esc(hours())}</span><span>${ic("pin")}${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(cutoffLabel())}</span>`;
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
@@ -268,11 +268,11 @@ function updateBar(){
   $("bar").hidden = screen !== 1 || noPo; $("shop").classList.toggle("no-po", noPo);
   $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
 }
-function summaryHTML(gs){
+function summaryHTML(gs, kode = 0){
   const h = gs.map(g => `<div class="gh">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dLong(g.date))}, jam ${esc(hoursFor(g.fulfil))}</div>` +
     g.items.map(l => `<div><span>${l.qty} × ${esc(l.name)}${l.option ? " (" + esc(l.option) + ")" : ""}</span><span>${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>${l.note ? `<div class="lnote">Catatan: ${esc(l.note)}</div>` : ""}`).join("") +
     (g.ongkir ? `<div><span>Ongkir Lalamove</span><span>${rp(g.ongkir)}</span></div>` : g.fulfil === "ambil" ? "<div><span>Ambil sendiri</span><span>Tanpa ongkir</span></div>" : "")).join("");
-  return h + `<div class="total"><span>Total</span><span>${rp(grand(gs))}</span></div>`;
+  return h + (kode ? `<div><span>Kode unik</span><span>${rp(kode)}</span></div>` : "") + `<div class="total"><span>Total</span><span>${rp(grand(gs) + kode)}</span></div>`;
 }
 
 /* --- layar: 1 pesan, 2 checkout, 3 selesai --- */
@@ -307,7 +307,7 @@ function renderCheckout(){
   if (!codeOn()) payCode = 0; else if (!payCode) payCode = 1 + Math.floor(Math.random() * 999);
   $("sum2").innerHTML = summaryHTML(gs2); $("pay-total").textContent = rp(grand(gs2) + payCode);
   const cn = $("pay-code-note"); cn.hidden = !payCode;
-  if (payCode) cn.textContent = "Sudah termasuk kode unik " + rp(payCode) + " supaya pembayaran Anda mudah dicek. Transfer tepat sesuai angka ini.";
+  if (payCode) cn.textContent = "Termasuk kode unik " + rp(payCode) + " agar mudah dicek. Transfer tepat sesuai angka ini.";
   $("addr-fields").hidden = isPick(); $("pick-box").hidden = !isPick();
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
@@ -396,7 +396,7 @@ Bayar via: ${method === "qris" ? "QRIS" : "Transfer " + settings.bankName}
 
 (Bukti bayar saya lampirkan di chat ini)`;
   $("wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent(msg)}`;
-  $("sum3").innerHTML = summaryHTML(outGs);
+  $("sum3").innerHTML = summaryHTML(outGs, kodeSum);
   unsubTrack(); renderTracker(); startTrack();
   go(3);
 }
@@ -426,16 +426,16 @@ function renderTracker(){
   const allPaid = cs.every(c => c.payStatus === "lunas"), allDone = cs.every(c => c.status === "selesai" || c.status === "batal");
   const pk = placed[0] && placed[0].fulfil === "ambil";
   let title, sub, tone = "warn";
-  if (!recorded) { title = "Pesanan dibuat"; sub = "Pesanan belum tercatat otomatis. Kirim lewat WhatsApp sekarang supaya kami proses."; }
+  if (!recorded) { title = "Pesanan dibuat"; sub = "Belum tercatat otomatis. Kirim lewat WhatsApp supaya kami proses."; }
   else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
-  else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Admin belum menemukan pembayaran Anda. Kirim bukti bayar lewat WhatsApp."; tone = "bad"; }
-  else if (!allPaid) { title = "Pesanan diterima"; sub = "Kirim bukti bayar ke admin lewat WhatsApp. Pesanan terkonfirmasi setelah admin mengecek pembayaran."; }
+  else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Kirim bukti bayar lewat WhatsApp."; tone = "bad"; }
+  else if (!allPaid) { title = "Pesanan diterima"; sub = "Kirim bukti bayar lewat WhatsApp. Kami konfirmasi setelah dicek."; }
   else if (allDone) { title = "Pesanan selesai"; sub = "Terima kasih, selamat makan!"; tone = "ok"; }
-  else { title = "Pesanan terkonfirmasi"; sub = pk ? `Pembayaran sudah diterima. Ambil di ${placed[0].pickupLoc || pickLoc()} sesuai tanggal PO, jam ${placed[0].hours || pickHours()}.` : `Pembayaran sudah diterima. Pesanan diantar sesuai tanggal PO, jam ${hours()}.`; tone = "ok"; }
+  else { title = "Pesanan terkonfirmasi"; sub = pk ? `Pembayaran diterima. Ambil di ${placed[0].pickupLoc || pickLoc()}, jam ${placed[0].hours || pickHours()}.` : `Pembayaran diterima. Diantar sesuai tanggal PO, jam ${hours()}.`; tone = "ok"; }
   $("d-title").textContent = title; $("d-sub").textContent = sub; $("d-dot").className = "dot " + (tone === "warn" ? "" : tone);
   tr.innerHTML = placed.map((o, i) => {
     const c = cs[i], [lb, cl] = statusLabel({ fulfil:o.fulfil, payStatus:c.payStatus, status:c.status });
-    return `<li><div><b>${esc(o.id)}</b><small>${esc(dShort(o.poDate))} · ${o.fulfil === "ambil" ? "Ambil" : "Antar"} jam ${esc(o.hours || hours())}</small></div><span class="chip ${cl}">${lb}</span></li>`;
+    return `<li><div><b>${esc(o.id)}</b><small>${ic("po")}${esc(dShort(o.poDate))}${ic("clock")}${esc(o.hours || hours())}</small></div><span class="chip ${cl}">${lb}</span></li>`;
   }).join("");
 }
 $("again").onclick = () => {
@@ -491,29 +491,31 @@ function orderRow(o){
   const gk = orders.filter(x => x.gid === o.gid).reduce((t, x) => t + (x.kode || 0), 0);
   let sec = "";
   if (o.status !== "batal") {
-    if (o.payStatus === "cek") sec += `<button class="btn line" data-act="pay_no" ${dis}>Bayar tidak cocok</button>`;
-    if (o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")) sec += `<button class="btn line" data-act="pay_undo" ${dis}>Batalkan konfirmasi bayar</button>`;
-    if (o.status !== "selesai") sec += armCancel === o.id ? `<button class="btn danger" data-act="cancel" ${dis}>Yakin batalkan pesanan?</button>` : `<button class="btn line" data-act="arm_cancel" ${dis}>Batalkan pesanan</button>`;
+    if (o.payStatus === "cek") sec += `<button class="btn line sm" data-act="pay_no" ${dis}>${ic("xcircle")}Bayar tidak cocok</button>`;
+    if (o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")) sec += `<button class="btn line sm" data-act="pay_undo" ${dis}>${ic("undo")}Batalkan konfirmasi</button>`;
+    if (o.status !== "selesai") sec += armCancel === o.id ? `<button class="btn danger sm cancel" data-act="cancel" ${dis}>Yakin batalkan?</button>` : `<button class="btn line sm cancel" data-act="arm_cancel" ${dis}>${ic("ban")}Batalkan pesanan</button>`;
   }
-  return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""}" data-oid="${esc(o.id)}">
+  return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
       <div style="min-width:0"><div class="o1"><span class="num">${esc(o.id)}</span><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}</div>
         <div class="o2">${esc(meta)}</div><div class="o3">${esc(summary)}</div></div>
       <div class="oside"><span class="chip ${sc}">${sl}</span>${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
     </div>
     ${open ? `<div class="odetail">
-      <div class="dgrid">
-        <div class="kv"><small>Pelanggan</small><span>${esc(o.nama || "-")}<br><a href="${esc(wa)}" target="_blank" rel="noopener">${esc(o.hp)}</a></span></div>
-        <div class="kv"><small>${pk ? "Ambil di" : "Alamat antar"}</small><span>${pk ? esc(o.pickupLoc || pickLoc()) : esc((o.area ? o.area + " · " : "") + (o.alamat || "-"))}</span></div>
-        <div class="kv"><small>Jadwal</small><span>${pk ? "Ambil" : "Antar"} ${o.poDate ? esc(dLong(o.poDate)) : "-"}${o.hours ? ", jam " + esc(o.hours) : ""}</span></div>
-        <div class="kv"><small>Dipesan</small><span>${fmtTime(o.createdAt)} · ${o.method === "qris" ? "QRIS" : "Transfer"}</span></div>
+      <ul class="ofacts">
+        <li>${ic("chat")}<a href="${esc(wa)}" target="_blank" rel="noopener">${esc(o.hp)}</a></li>
+        <li>${ic("pin")}<span>${pk ? esc(o.pickupLoc || pickLoc()) : esc((o.area ? o.area + ", " : "") + (o.alamat || "-"))}</span></li>
+        <li>${ic("clock")}<span>${o.poDate ? esc(dShort(o.poDate)) : "-"}${o.hours ? ", " + esc(o.hours) : ""}</span></li>
+        <li>${ic("receipt")}<span>Dipesan ${fmtTime(o.createdAt)}</span></li>
+      </ul>
+      <div class="oitems">
+        <ul class="itl">${o.items.map(i => `<li><span class="q">${Number(i.qty) || 0}×</span><span class="n">${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}</span><span class="p">${Number(i.price) ? rp((Number(i.price) || 0) * (Number(i.qty) || 0)) : "Gratis"}</span></li>${i.note ? `<li class="inl">${esc(i.note)}</li>` : ""}`).join("")}${o.ongkir ? `<li><span class="q"></span><span class="n">Ongkir</span><span class="p">${rp(o.ongkir)}</span></li>` : ""}</ul>
+        <div class="ototal"><span>Total</span><span>${rp(o.total)}</span></div>
       </div>
-      ${o.notes ? `<p class="onote">Catatan: ${esc(o.notes)}</p>` : ""}
-      <ul class="itl">${o.items.map(i => `<li><span>${Number(i.qty) || 0} × ${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}</span><span>${Number(i.price) ? rp((Number(i.price) || 0) * (Number(i.qty) || 0)) : "Gratis"}</span></li>${i.note ? `<li class="inl">Catatan: ${esc(i.note)}</li>` : ""}`).join("")}${o.ongkir ? `<li><span>Ongkir Lalamove</span><span>${rp(o.ongkir)}</span></li>` : ""}</ul>
-      <div class="ototal"><span>Total pesanan ini</span><span>${rp(o.total)}</span></div>
-      ${gk ? `<p class="onote">Pelanggan diminta transfer ${rp(Number(o.groupTotal) + gk)}, termasuk kode unik ${rp(gk)}. Cari angka ini di mutasi bank.</p>` : ""}
-      ${grp ? `<p class="onote">Bayar gabungan untuk ${o.groupCount} tanggal PO, total ${rp(o.groupTotal)}. Konfirmasi bayar berlaku untuk semuanya.</p>` : ""}
-      <div class="acts"><a class="btn line" href="${esc(wa)}" target="_blank" rel="noopener">Chat pelanggan</a>${sec}</div>
+      ${o.notes ? `<p class="onote full">${esc(o.notes)}</p>` : ""}
+      ${gk ? `<p class="onote full">Transfer tepat ${rp(Number(o.groupTotal) + gk)} (kode unik ${rp(gk)}).</p>` : ""}
+      ${grp ? `<p class="onote full">Bayar gabungan ${o.groupCount} tanggal, total ${rp(o.groupTotal)}. Konfirmasi berlaku untuk semuanya.</p>` : ""}
+      <div class="acts full"><a class="btn line sm" href="${esc(wa)}" target="_blank" rel="noopener">${ic("chat")}Chat pelanggan</a>${sec}</div>
     </div>` : ""}</article>`;
 }
 function renderAdminOrders(){
@@ -1030,7 +1032,7 @@ function renderRekap(){
   const el = $("a-rekap");
   if (ordersState === "loading" || pos === null) { el.innerHTML = '<p class="note">Memuat rekap...</p>'; return; }
   const r = rekapData();
-  const orderCard = o => `<div class="rk-o"><div><b>${esc(o.nama)}</b> <span class="muted">${esc(o.id)} · ${esc(o.hp)}</span></div>${o.fulfil !== "ambil" ? `<div class="muted">${esc(o.alamat)}</div>` : ""}<div>${esc(itemLine(o))}</div>${o.notes ? `<div class="rk-note">Catatan: ${esc(o.notes)}</div>` : ""}</div>`;
+  const orderCard = o => `<div class="rk-o"><div class="rk-top"><b>${esc(o.nama)}</b><span class="muted">${esc(o.id)}</span><a class="rk-wa" href="https://wa.me/${normPhone(o.hp)}" target="_blank" rel="noopener" aria-label="Chat ${esc(o.nama)}" title="Chat ${esc(o.hp)}">${ic("chat")}</a></div>${o.fulfil !== "ambil" ? `<div class="rk-r">${ic("pin")}<span>${esc(o.alamat)}</span></div>` : ""}<ul class="rk-i">${o.items.map(i => `<li><span class="q">${Number(i.qty) || 0}×</span><span>${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}${i.note ? ` <em>${esc(i.note)}</em>` : ""}</span></li>`).join("")}</ul>${o.notes ? `<div class="rk-note">${esc(o.notes)}</div>` : ""}</div>`;
   const areas = {}; r.antar.forEach(o => { (areas[o.area || "Tanpa wilayah"] = areas[o.area || "Tanpa wilayah"] || []).push(o); });
   el.innerHTML = `<div class="kitchen">
     <div class="toolbar rk-tools">
@@ -1115,10 +1117,10 @@ function renderGate(){
   if (!sb) { el.innerHTML = '<div class="empty">Toko belum tersambung ke database. Isi file config.js sesuai README.</div>'; return; }
   if (!authReady) { el.innerHTML = '<p class="note" style="text-align:center">Memeriksa login...</p>'; return; }
   if (session) {
-    el.innerHTML = `<div class="card"><h3>Akun ini belum terdaftar sebagai admin</h3><p class="fhint">Anda masuk sebagai ${esc(session.user.email)}. Minta pemilik toko mendaftarkan email ini sebagai admin.</p><button class="btn line sm" id="gate-out" type="button" style="margin-top:12px">Keluar</button></div>`;
+    el.innerHTML = `<div class="card"><h3>Bukan akun admin</h3><p class="fhint">${esc(session.user.email)} belum terdaftar. Minta pemilik toko mendaftarkannya.</p><button class="btn line sm" id="gate-out" type="button" style="margin-top:12px">Keluar</button></div>`;
     $("gate-out").onclick = signOut; return;
   }
-  el.innerHTML = `<div class="card"><h3>Masuk admin</h3><p class="fhint" style="margin-top:-6px">Masukkan email admin. Kami kirim link masuk ke email itu, tanpa password.</p>
+  el.innerHTML = `<div class="card"><h3>Masuk admin</h3><p class="fhint" style="margin-top:-6px">Masukkan email admin untuk dapat link masuk.</p>
     <label class="fl" for="gate-email">Email</label><input type="text" id="gate-email" inputmode="email" autocomplete="email" placeholder="nama@email.com">
     <div class="err" id="gate-err"></div><button class="btn" id="gate-send" type="button" style="margin-top:6px">Kirim link masuk</button></div>`;
   $("gate-send").onclick = sendMagic;
@@ -1130,7 +1132,7 @@ async function sendMagic(){
   $("gate-err").textContent = ""; $("gate-send").disabled = true;
   const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo:location.origin + "/?admin=1" } });
   if (error) { $("gate-send").disabled = false; $("gate-err").textContent = "Link belum terkirim. Coba lagi sebentar lagi."; return; }
-  $("admin-gate").innerHTML = `<div class="card"><h3>Cek email Anda</h3><p class="fhint" style="margin:0">Link masuk sudah dikirim ke ${esc(email)}. Buka emailnya lalu klik link itu. Kalau belum ada, cek folder spam.</p></div>`;
+  $("admin-gate").innerHTML = `<div class="card"><h3>Cek email Anda</h3><p class="fhint" style="margin:0">Link masuk dikirim ke ${esc(email)}. Cek juga folder spam.</p></div>`;
 }
 async function signOut(){ try { await sb.auth.signOut(); } catch (e) {} await applySession(null); }
 $("logout").onclick = signOut;
