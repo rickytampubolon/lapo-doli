@@ -180,7 +180,6 @@ function renderPoChips(){
   const when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" }), hr = s => s.replace(/\s*-\s*/, "-");
   $("sc-hours").textContent = hours() === pickHours() ? hr(hours()) : hr(hours()) + ", " + hr(pickHours());
   $("sc-cut").textContent = when + " " + cutoffLabel();
-  $("sc-fee").textContent = flat() ? rp(flat()) : "Gratis";
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
