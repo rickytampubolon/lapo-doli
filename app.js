@@ -79,6 +79,8 @@ const api = {
   },
   addPo: async (date, opensAt) => must(await sb.from("pos").insert({ id:"po-" + date.replace(/-/g, ""), date, open:true, opens_at:opensAt || null })),
   setPoOpensAt: async (id, v) => must(await sb.from("pos").update({ opens_at:v }).eq("id", id)),
+  setPoFields: async (id, patch) => must(await sb.from("pos").update(patch).eq("id", id)),
+  insertPo: async row => must(await sb.from("pos").insert(row)),
   setPoOpen: async (id, open) => must(await sb.from("pos").update({ open }).eq("id", id)),
   deletePo: async id => must(await sb.from("pos").delete().eq("id", id)),
   saveSettings: async data => must(await sb.from("settings").upsert({ id:"shop", data })),
@@ -113,9 +115,9 @@ let placed = [], recorded = false, trackConf = {};
 const shopList = () => dbState === "none" ? DEFAULT_PRODUCTS : products;
 const poList = () => dbState === "none" ? DEFAULT_POS : pos;
 /* PO ditutup otomatis pada hari H pukul 10.00 WIB (jam bisa diubah di Pengaturan). */
-const cutoffTime = () => /^\d{1,2}[:.]\d{2}$/.test(settings.poCutoff || "") ? settings.poCutoff.replace(".", ":").padStart(5, "0") : "10:00";
-const cutoffLabel = () => cutoffTime().replace(":", ".");
-const cutoffAt = po => Date.parse(`${po.date}T${cutoffTime()}:00+07:00`);
+const cutoffTime = po => /^\d{2}:\d{2}$/.test((po && po.cutoff) || "") ? po.cutoff : /^\d{1,2}[:.]\d{2}$/.test(settings.poCutoff || "") ? settings.poCutoff.replace(".", ":").padStart(5, "0") : "10:00";
+const cutoffLabel = po => cutoffTime(po).replace(":", ".");
+const cutoffAt = po => Date.parse(`${po.date}T${cutoffTime(po)}:00+07:00`);
 const isPast = po => Date.now() >= cutoffAt(po);
 const notYet = po => !!po.opens_at && Date.parse(po.opens_at) > Date.now();
 const poScheduled = po => po.open === true && notYet(po) && !isPast(po);
@@ -338,7 +340,7 @@ function cutoffLeft(po){
 function renderCountdown(){
   const act = openPos().find(x => x.id === activePo) || openPos()[0]; if (!act) return;
   const left = cutoffLeft(act), when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" });
-  $("sc-cut").textContent = left ? left.text : when + " " + cutoffLabel();
+  $("sc-cut").textContent = left ? left.text : when + " " + cutoffLabel(act);
   $("sc-cut").classList.toggle("urgent", !!(left && left.urgent));
 }
 /* layar PO kosong: kalau admin sudah menjadwalkan PO, tampilkan tanggal dan jam bukanya */
@@ -1151,27 +1153,53 @@ function renderAdminPo(){
     const rekap = Object.keys(rk).map(k => `<li>${esc(k)} × ${rk[k]}</li>`).join("");
     const noteLines = os.flatMap(o => o.items.filter(i => i.note).map(i => `${o.id} · ${i.name}${i.option && !i.addon ? " (" + i.option + ")" : ""}: ${i.note}`)).concat(os.filter(o => o.notes).map(o => `${o.id} · pesanan: ${o.notes}`));
     const auto = po.open === true && isPast(po), on = po.open === true && !auto, sched = poScheduled(po);
+    const adv = `<details class="po-adv" data-poadv="${esc(po.id)}" ${poAdvOpen.has(po.id) ? "open" : ""}><summary>Pengaturan PO ini</summary>
+      <div class="fgrid"><div><label class="fl" for="pc-${esc(po.id)}">Tutup pukul</label><input id="pc-${esc(po.id)}" data-pocutoff type="text" inputmode="numeric" maxlength="5" placeholder="${cutoffLabel()}" value="${esc(String(po.cutoff || "").replace(":", "."))}"><p class="fhint">Kosong ikut Pengaturan (${cutoffLabel()}).</p></div>
+      <div class="full"><div class="fl">Kuota khusus PO ini</div><div class="pq">${(products || []).map(p => `<label class="pqrow"><span>${esc(p.name)}</span><input type="number" min="0" data-poquota="${esc(p.id)}" placeholder="${p.quota == null ? "Tanpa batas" : "Ikut " + p.quota}" value="${po.quotas && po.quotas[p.id] != null ? po.quotas[p.id] : ""}" aria-label="Kuota ${esc(p.name)}"></label>`).join("")}</div></div></div>
+      <div class="acts"><button class="btn line sm" data-podup type="button">${ic("copy")}Gandakan ke minggu berikutnya</button></div></details>`;
     return `<div class="porow ${on ? "" : "off"}" data-po="${esc(po.id)}">
       <div class="po-h"><div><h3>${esc(dLong(po.date))}</h3><span class="note">${sched ? `Buka ${esc(fmtWhen(po.opens_at))}` : `${os.length} pesanan${os.length ? ` · ${lunas} lunas` : ""}`}</span></div>
         <label class="switch"><input type="checkbox" id="po-open-${esc(po.id)}" data-poopen ${on ? "checked" : ""} ${auto ? "disabled" : ""}><span class="track"></span><span>${sched ? "Terjadwal" : on ? "Buka" : auto ? "Tutup otomatis" : "Tutup"}</span></label>
         ${sched ? `<button class="textbtn opennow" data-popennow type="button">${ic("check")}Buka sekarang</button>` : ""}
-        <button class="textbtn iconbtn-t ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button" aria-label="Hapus PO" title="Hapus PO">${armPoDel === po.id ? "Yakin hapus?" : ic("trash")}</button></div></div>`;
+        <button class="textbtn iconbtn-t ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button" aria-label="Hapus PO" title="Hapus PO">${armPoDel === po.id ? "Yakin hapus?" : ic("trash")}</button></div>${adv}</div>`;
   }).join("");
   el.innerHTML = `<div class="newpo"><input type="date" id="po-new" aria-label="Tanggal PO"><input type="datetime-local" id="po-opens" aria-label="Buka otomatis (opsional)" title="Buka otomatis pada. Kosongkan untuk buka sekarang."><button class="btn sm add" data-poadd type="button">${ic("plus")}<span id="po-add-t">Buka PO</span></button></div>
     <p class="fhint" style="margin:-4px 0 10px">Waktu buka otomatis (opsional): PO baru bisa dipesan setelah waktu itu.</p>
     ${rows || '<div class="empty">Belum ada PO.</div>'}`;
 }
-const poEl = $("a-po");
+const poEl = $("a-po"), poAdvOpen = new Set();
+poEl.addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.poadv) { if (d.open) poAdvOpen.add(d.dataset.poadv); else poAdvOpen.delete(d.dataset.poadv); } }, true);
+async function dupPo(po){
+  const taken = new Set((pos || []).map(p => String(p.date))), d = new Date(po.date + "T00:00:00Z");
+  do { d.setUTCDate(d.getUTCDate() + 7); } while (taken.has(d.toISOString().slice(0, 10)));
+  const date = d.toISOString().slice(0, 10);
+  try { await api.insertPo({ id:"po-" + date.replace(/-/g, ""), date, open:true, opens_at:null, cutoff:po.cutoff || "", quotas:po.quotas || {} }); await refreshPos(); logAct("gandakan_po", po.id, date); toast("PO " + dShort(date) + " dibuat dari salinan"); }
+  catch (e) { toast("Belum berhasil menggandakan. Jalankan ulang schema.sql terbaru."); }
+}
+poEl.addEventListener("click", e => { const b = e.target.closest("[data-podup]"); if (!b) return; const po = (pos || []).find(p => p.id === b.closest("[data-po]").dataset.po); if (po) dupPo(po); });
 let poDirty = false;
 function renderPoSafe(){
   const a = document.activeElement;
-  if (a && poEl.contains(a) && a.matches("input[type=date]")) { poDirty = true; return; }
+  if (a && poEl.contains(a) && a.matches("input[type=date], [data-pocutoff], [data-poquota]")) { poDirty = true; return; }
   poDirty = false; renderAdminPo();
 }
 poEl.addEventListener("focusout", () => setTimeout(() => { if (poDirty) renderPoSafe(); }, 50));
 poEl.addEventListener("input", e => { if (e.target.id === "po-opens") $("po-add-t").textContent = e.target.value ? "Jadwalkan" : "Buka PO"; });
 poEl.addEventListener("change", async e => {
-  const t = e.target; if (!t.matches("[data-poopen]")) return;
+  const t = e.target;
+  if (t.matches("[data-pocutoff]")) {
+    const id = t.closest("[data-po]").dataset.po, raw = t.value.trim(); let v = "";
+    if (raw) { if (!/^\d{1,2}[:.]\d{2}$/.test(raw)) { toast("Format jam salah. Contoh: 10.00"); renderAdminPo(); return; } v = raw.replace(".", ":").padStart(5, "0"); if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) { toast("Jam tidak valid."); renderAdminPo(); return; } }
+    try { await api.setPoFields(id, { cutoff:v }); await refreshPos(); logAct("batas_tutup_po", id, v || "ikut pengaturan"); toast(v ? "Tutup pukul " + v.replace(":", ".") : "Ikut jam di Pengaturan"); } catch (err) { toast("Gagal menyimpan. Jalankan ulang schema.sql terbaru."); renderAdminPo(); }
+    return;
+  }
+  if (t.matches("[data-poquota]")) {
+    const row = t.closest("[data-po]"), id = row.dataset.po, q = {};
+    row.querySelectorAll("[data-poquota]").forEach(i => { if (i.value.trim() !== "") q[i.dataset.poquota] = Math.max(0, Math.round(Number(i.value) || 0)); });
+    try { await api.setPoFields(id, { quotas:q }); await refreshPos(); logAct("kuota_po", id, JSON.stringify(q)); toast("Kuota PO disimpan"); } catch (err) { toast("Gagal menyimpan. Jalankan ulang schema.sql terbaru."); renderAdminPo(); }
+    return;
+  }
+  if (!t.matches("[data-poopen]")) return;
   const id = t.closest("[data-po]").dataset.po;
   try { await api.setPoOpen(id, t.checked); await refreshPos(); toast(t.checked ? "PO dibuka" : "PO ditutup"); }
   catch (err) { toast("Gagal menyimpan. Coba lagi."); renderAdminPo(); }
@@ -1214,7 +1242,7 @@ function renderAdminMenu(){
       <div class="pmain">
         <div class="fgrid">
           <div><label class="fl" for="n-${esc(p.id)}">Nama</label><input type="text" id="n-${esc(p.id)}" data-f="name" value="${esc(p.name)}"></div>
-          <div><label class="fl" for="pr-${esc(p.id)}">Harga</label><input type="number" id="pr-${esc(p.id)}" data-f="price" value="${Number(p.price) || 0}" min="0" step="500" inputmode="numeric"></div>
+          <div><label class="fl" for="pr-${esc(p.id)}">Harga (Rp)</label><input type="text" id="pr-${esc(p.id)}" data-f="price" value="${(Number(p.price) || 0).toLocaleString("id-ID")}" inputmode="numeric" autocomplete="off"></div>
           <div><label class="fl" for="q-${esc(p.id)}">Kuota per PO</label><input type="number" id="q-${esc(p.id)}" data-f="quota" value="${p.quota == null ? "" : p.quota}" min="0" step="1" inputmode="numeric" placeholder="Tanpa batas"></div>
           <div class="full"><label class="fl" for="d-${esc(p.id)}">Deskripsi</label><input type="text" id="d-${esc(p.id)}" data-f="desc" value="${esc(p.desc)}"></div>
         </div>
@@ -1225,6 +1253,7 @@ function renderAdminMenu(){
             <div><label class="fl" for="em-${esc(p.id)}">Ikon</label><input type="text" id="em-${esc(p.id)}" data-f="emoji" value="${esc(p.emoji || "")}" maxlength="4"></div>
           </div></details>
         <div class="pbar"><label class="switch"><input type="checkbox" id="av-${esc(p.id)}" data-f="available" ${p.available === false ? "" : "checked"}><span class="track"></span><span>${p.available === false ? "Habis" : "Tersedia"}</span></label>
+          <span class="pmove"><button class="textbtn iconbtn-t" data-move="up" type="button" aria-label="Naikkan ${esc(p.name)}" title="Naikkan" ${products.indexOf(p) === 0 ? "disabled" : ""}>${ic("up")}</button><button class="textbtn iconbtn-t" data-move="down" type="button" aria-label="Turunkan ${esc(p.name)}" title="Turunkan" ${products.indexOf(p) === products.length - 1 ? "disabled" : ""}>${ic("down")}</button></span>
           <button class="textbtn ${armDel === p.id ? "dangerbtn" : ""}" data-del type="button">${armDel === p.id ? "Yakin hapus menu ini?" : ic("trash") + "Hapus"}</button></div>
       </div></div>`).join("");
   el.innerHTML = `
@@ -1269,7 +1298,7 @@ menuEl.addEventListener("change", async e => {
     let v;
     if (k === "available") v = t.checked;
     else if (k === "quota") v = t.value.trim() === "" ? null : Math.max(0, Math.round(Number(t.value) || 0));
-    else if (k === "price") v = Math.max(0, Math.round(Number(t.value) || 0));
+    else if (k === "price") v = Math.max(0, parseInt(String(t.value).replace(/\D/g, ""), 10) || 0);
     else if (k === "options") v = t.value.split(",").map(s => s.trim()).filter(Boolean);
     else if (k === "addons") v = parseAddons(t.value);
     else v = t.value.trim();
@@ -1288,6 +1317,14 @@ menuEl.addEventListener("click", async e => {
       for (const p of DEFAULT_PRODUCTS) await api.upsertProduct(p);
       await refreshProducts();
       toast("Menu awal terisi"); return;
+    }
+    const mv = e.target.closest("[data-move]");
+    if (mv) {
+      const pid = mv.closest("[data-pid]").dataset.pid, i = products.findIndex(p => p.id === pid), j = i + (mv.dataset.move === "up" ? -1 : 1);
+      if (i < 0 || j < 0 || j >= products.length) return;
+      const arr = products.slice(); [arr[i], arr[j]] = [arr[j], arr[i]];
+      for (let k = 0; k < arr.length; k++) if (Number(arr[k].sort) !== k + 1) await api.updateProduct(arr[k].id, { sort:k + 1 });
+      await refreshProducts(); logAct("urut_menu", pid, mv.dataset.move); toast("Urutan menu diperbarui"); return;
     }
     const d = e.target.closest("[data-del]");
     if (d) {
@@ -1323,9 +1360,19 @@ function renderAdminSet(){
       <p class="fhint">Tambah Rp 1 sampai 100 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
     <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("phone")}</span><div><h3>Kontak</h3></div></div><div class="fgrid">
       ${f("s-wa", "waNumber", "WhatsApp admin (62...)", s.waNumber, 'inputmode="numeric"')}
-    </div></section>`;
+    </div></section>
+    <section class="card setsec"><details id="log-d" ${logOpen ? "open" : ""}><summary>${ic("history")}Aktivitas terbaru</summary><ul class="loglist" id="log-list"><li class="note">Memuat...</li></ul></details></section>`;
+  if (logOpen) fillLog();
+}
+let logOpen = false;
+const LOGL = { pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
+async function fillLog(){
+  const ul = $("log-list"); if (!ul) return;
+  try { const rows = await api.loadLog(); ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.at))}</span><span><b>${esc(String(r.actor || "").split("@")[0] || "admin")}</b> ${esc(LOGL[r.action] || r.action)} <span class="mono">${esc(r.target)}</span></span></li>`).join("") : '<li class="note">Belum ada aktivitas.</li>'; }
+  catch (e) { ul.innerHTML = '<li class="note">Log belum tersedia. Jalankan ulang schema.sql terbaru.</li>'; }
 }
 const setEl = $("a-set");
+setEl.addEventListener("toggle", e => { if (e.target.id === "log-d") { logOpen = e.target.open; if (logOpen) fillLog(); } }, true);
 let setDirty = false;
 function renderSetSafe(){
   const a = document.activeElement;
