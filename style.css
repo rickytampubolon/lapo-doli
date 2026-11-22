@@ -498,3 +498,31 @@ textarea{min-height:84px;resize:vertical}
 .side-brand{flex-wrap:nowrap}
 .side-brand .brand{white-space:nowrap}
 .side-brand .logo.sm{width:36px;height:36px}
+
+/* detail pesanan: baris berikon, daftar item satu kali, aksi dipisah */
+.orow.open .o3{display:none}
+#admin .odetail{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:12px 28px;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
+.odetail .full{grid-column:1/-1}
+.ofacts{list-style:none;margin:0;padding:0;display:grid;gap:9px;align-content:start;font-size:.92rem}
+.ofacts li{display:flex;gap:10px;align-items:flex-start;line-height:1.4;overflow-wrap:anywhere}
+.ofacts .ic{width:18px;height:18px;margin:1px 0 0;color:var(--muted)}
+.ofacts a{color:var(--ink);font-weight:500;text-decoration:none}
+.ofacts a:hover{text-decoration:underline}
+.oitems{display:grid;gap:8px;align-content:start}
+.itl{gap:6px;font-size:.92rem}
+.itl li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:8px}
+.itl .q{color:var(--muted);font-variant-numeric:tabular-nums}
+.itl .p{font-variant-numeric:tabular-nums}
+.itl li.inl{display:block;padding-left:calc(2.2em + 8px);color:var(--muted);font-size:.84rem}
+.ototal{padding-top:8px}
+.odetail .onote{font-size:.86rem;padding:7px 12px}
+.odetail .acts{gap:8px;align-items:center}
+.odetail .acts .cancel{margin-left:auto}
+@media (max-width:700px){#admin .odetail{grid-template-columns:minmax(0,1fr)}.odetail .acts .cancel{margin-left:0}}
+@media (max-width:620px){
+  #admin .oside{grid-template-columns:minmax(0,1fr) auto}
+  #admin .oside .iconbtn{width:auto;min-width:46px;grid-column:2}
+  #admin .odetail .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #admin .odetail .acts .btn{width:100%;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:8px 8px;font-size:.86rem}
+  #admin .odetail .acts .btn .ic{margin-right:6px;width:18px;height:18px}
+}

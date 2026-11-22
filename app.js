@@ -491,29 +491,31 @@ function orderRow(o){
   const gk = orders.filter(x => x.gid === o.gid).reduce((t, x) => t + (x.kode || 0), 0);
   let sec = "";
   if (o.status !== "batal") {
-    if (o.payStatus === "cek") sec += `<button class="btn line" data-act="pay_no" ${dis}>Bayar tidak cocok</button>`;
-    if (o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")) sec += `<button class="btn line" data-act="pay_undo" ${dis}>Batalkan konfirmasi bayar</button>`;
-    if (o.status !== "selesai") sec += armCancel === o.id ? `<button class="btn danger" data-act="cancel" ${dis}>Yakin batalkan pesanan?</button>` : `<button class="btn line" data-act="arm_cancel" ${dis}>Batalkan pesanan</button>`;
+    if (o.payStatus === "cek") sec += `<button class="btn line sm" data-act="pay_no" ${dis}>${ic("xcircle")}Bayar tidak cocok</button>`;
+    if (o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")) sec += `<button class="btn line sm" data-act="pay_undo" ${dis}>${ic("undo")}Batalkan konfirmasi</button>`;
+    if (o.status !== "selesai") sec += armCancel === o.id ? `<button class="btn danger sm cancel" data-act="cancel" ${dis}>Yakin batalkan?</button>` : `<button class="btn line sm cancel" data-act="arm_cancel" ${dis}>${ic("ban")}Batalkan pesanan</button>`;
   }
-  return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""}" data-oid="${esc(o.id)}">
+  return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
       <div style="min-width:0"><div class="o1"><span class="num">${esc(o.id)}</span><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}</div>
         <div class="o2">${esc(meta)}</div><div class="o3">${esc(summary)}</div></div>
       <div class="oside"><span class="chip ${sc}">${sl}</span>${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
     </div>
     ${open ? `<div class="odetail">
-      <div class="dgrid">
-        <div class="kv"><small>Pelanggan</small><span>${esc(o.nama || "-")}<br><a href="${esc(wa)}" target="_blank" rel="noopener">${esc(o.hp)}</a></span></div>
-        <div class="kv"><small>${pk ? "Ambil di" : "Alamat antar"}</small><span>${pk ? esc(o.pickupLoc || pickLoc()) : esc((o.area ? o.area + " · " : "") + (o.alamat || "-"))}</span></div>
-        <div class="kv"><small>Jadwal</small><span>${pk ? "Ambil" : "Antar"} ${o.poDate ? esc(dLong(o.poDate)) : "-"}${o.hours ? ", jam " + esc(o.hours) : ""}</span></div>
-        <div class="kv"><small>Dipesan</small><span>${fmtTime(o.createdAt)} · ${o.method === "qris" ? "QRIS" : "Transfer"}</span></div>
+      <ul class="ofacts">
+        <li>${ic("chat")}<a href="${esc(wa)}" target="_blank" rel="noopener">${esc(o.hp)}</a></li>
+        <li>${ic("pin")}<span>${pk ? esc(o.pickupLoc || pickLoc()) : esc((o.area ? o.area + ", " : "") + (o.alamat || "-"))}</span></li>
+        <li>${ic("clock")}<span>${o.poDate ? esc(dShort(o.poDate)) : "-"}${o.hours ? ", " + esc(o.hours) : ""}</span></li>
+        <li>${ic("receipt")}<span>Dipesan ${fmtTime(o.createdAt)}</span></li>
+      </ul>
+      <div class="oitems">
+        <ul class="itl">${o.items.map(i => `<li><span class="q">${Number(i.qty) || 0}×</span><span class="n">${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}</span><span class="p">${Number(i.price) ? rp((Number(i.price) || 0) * (Number(i.qty) || 0)) : "Gratis"}</span></li>${i.note ? `<li class="inl">${esc(i.note)}</li>` : ""}`).join("")}${o.ongkir ? `<li><span class="q"></span><span class="n">Ongkir</span><span class="p">${rp(o.ongkir)}</span></li>` : ""}</ul>
+        <div class="ototal"><span>Total</span><span>${rp(o.total)}</span></div>
       </div>
-      ${o.notes ? `<p class="onote">Catatan: ${esc(o.notes)}</p>` : ""}
-      <ul class="itl">${o.items.map(i => `<li><span>${Number(i.qty) || 0} × ${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}</span><span>${Number(i.price) ? rp((Number(i.price) || 0) * (Number(i.qty) || 0)) : "Gratis"}</span></li>${i.note ? `<li class="inl">Catatan: ${esc(i.note)}</li>` : ""}`).join("")}${o.ongkir ? `<li><span>Ongkir Lalamove</span><span>${rp(o.ongkir)}</span></li>` : ""}</ul>
-      <div class="ototal"><span>Total pesanan ini</span><span>${rp(o.total)}</span></div>
-      ${gk ? `<p class="onote">Pelanggan diminta transfer ${rp(Number(o.groupTotal) + gk)}, termasuk kode unik ${rp(gk)}. Cari angka ini di mutasi bank.</p>` : ""}
-      ${grp ? `<p class="onote">Bayar gabungan untuk ${o.groupCount} tanggal PO, total ${rp(o.groupTotal)}. Konfirmasi bayar berlaku untuk semuanya.</p>` : ""}
-      <div class="acts"><a class="btn line" href="${esc(wa)}" target="_blank" rel="noopener">Chat pelanggan</a>${sec}</div>
+      ${o.notes ? `<p class="onote full">${esc(o.notes)}</p>` : ""}
+      ${gk ? `<p class="onote full">Transfer tepat ${rp(Number(o.groupTotal) + gk)} (kode unik ${rp(gk)}).</p>` : ""}
+      ${grp ? `<p class="onote full">Bayar gabungan ${o.groupCount} tanggal, total ${rp(o.groupTotal)}. Konfirmasi berlaku untuk semuanya.</p>` : ""}
+      <div class="acts full"><a class="btn line sm" href="${esc(wa)}" target="_blank" rel="noopener">${ic("chat")}Chat pelanggan</a>${sec}</div>
     </div>` : ""}</article>`;
 }
 function renderAdminOrders(){
