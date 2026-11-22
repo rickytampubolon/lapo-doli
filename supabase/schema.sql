@@ -92,6 +92,8 @@ create table if not exists public.orders (
 );
 -- kode unik 1-999 yang ditambahkan ke jumlah bayar (hanya di pesanan pertama dari satu kali checkout)
 alter table public.orders add column if not exists kode integer not null default 0 check (kode between 0 and 999);
+-- jalur foto bukti bayar di bucket privat 'proofs' (kosong = belum ada)
+alter table public.orders add column if not exists proof_path text not null default '';
 create index if not exists orders_po_idx on public.orders (po_id);
 create index if not exists orders_gid_idx on public.orders (gid);
 create index if not exists orders_created_idx on public.orders (created_at desc);
@@ -384,12 +386,13 @@ grant execute on function public.create_orders(jsonb, boolean) to anon, authenti
 -- ---------------------------------------------------------------------
 -- 6. Cek status pesanan oleh pembeli (butuh nomor pesanan dan nomor HP yang sama)
 -- ---------------------------------------------------------------------
+drop function if exists public.track_orders(text[], text);
 create or replace function public.track_orders(ids text[], phone text)
-returns table (id text, po_date date, fulfil text, hours text, pickup_loc text, total integer, pay_status text, status text)
+returns table (id text, po_date date, fulfil text, hours text, pickup_loc text, total integer, pay_status text, status text, has_proof boolean)
 language sql stable security definer
 set search_path = public
 as $$
-  select o.id, o.po_date, o.fulfil, o.hours, o.pickup_loc, o.total, o.pay_status, o.status
+  select o.id, o.po_date, o.fulfil, o.hours, o.pickup_loc, o.total, o.pay_status, o.status, (o.proof_path <> '') as has_proof
   from public.orders o
   where coalesce(array_length(ids, 1), 0) between 1 and 20
     and o.id = any (ids)
@@ -399,6 +402,31 @@ $$;
 
 revoke all on function public.track_orders(text[], text) from public;
 grant execute on function public.track_orders(text[], text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6c. Bukti bayar: pembeli mengunggah foto, lalu mengaitkannya ke pesanan lewat kode gabungan (gid)
+--     dan nomor HP yang sama. Hanya admin yang bisa melihat fotonya.
+-- ---------------------------------------------------------------------
+create or replace function public.attach_proof(p_gid text, phone text, p_path text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare n integer;
+begin
+  if p_gid !~ '^[A-Z0-9]{8}$' or p_path !~ ('^' || p_gid || '/[A-Za-z0-9_.-]{6,80}$') then
+    return false;
+  end if;
+  update public.orders set proof_path = p_path
+   where gid = p_gid and public.norm_hp(hp) = public.norm_hp(phone)
+     and status <> 'batal' and pay_status <> 'lunas';
+  get diagnostics n = row_count;
+  return n > 0;
+end;
+$$;
+revoke all on function public.attach_proof(text, text, text) from public;
+grant execute on function public.attach_proof(text, text, text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- 6b. Sisa kuota per menu dan tanggal PO (dibaca publik, hanya angka)
@@ -460,6 +488,25 @@ begin
     execute 'drop policy if exists menu_admin_delete on storage.objects';
     execute $p$create policy menu_admin_delete on storage.objects for delete to authenticated
                using (bucket_id = 'menu' and public.is_admin())$p$;
+  end if;
+end $$;
+
+do $$
+begin
+  if to_regclass('storage.buckets') is not null then
+    insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+      values ('proofs', 'proofs', false, 4194304, array['image/jpeg', 'image/png', 'image/webp'])
+      on conflict (id) do update set public = false, file_size_limit = 4194304,
+        allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
+    execute 'drop policy if exists proofs_insert on storage.objects';
+    execute $p$create policy proofs_insert on storage.objects for insert to anon, authenticated
+               with check (bucket_id = 'proofs' and name ~ '^[A-Z0-9]{8}/[A-Za-z0-9_.-]{6,80}$')$p$;
+    execute 'drop policy if exists proofs_admin_read on storage.objects';
+    execute $p$create policy proofs_admin_read on storage.objects for select to authenticated
+               using (bucket_id = 'proofs' and public.is_admin())$p$;
+    execute 'drop policy if exists proofs_admin_delete on storage.objects';
+    execute $p$create policy proofs_admin_delete on storage.objects for delete to authenticated
+               using (bucket_id = 'proofs' and public.is_admin())$p$;
   end if;
 end $$;
 

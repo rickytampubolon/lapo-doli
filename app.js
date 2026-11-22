@@ -52,7 +52,7 @@ const toProductRow = patch => {
 };
 const fromOrder = r => ({ id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
   area:r.area, alamat:r.alamat, fulfil:r.fulfil, pickupLoc:r.pickup_loc, notes:r.notes, method:r.method, items:Array.isArray(r.items) ? r.items : [],
-  ongkir:r.ongkir, total:r.total, kode:Number(r.kode) || 0, groupTotal:r.group_total, groupCount:r.group_count, hours:r.hours, payStatus:r.pay_status, status:r.status });
+  ongkir:r.ongkir, total:r.total, kode:Number(r.kode) || 0, groupTotal:r.group_total, groupCount:r.group_count, hours:r.hours, payStatus:r.pay_status, status:r.status, proofPath:r.proof_path || "" });
 const must = ({ data, error }) => { if (error) throw error; return data; };
 const api = {
   loadProducts: async () => must(await sb.from("products").select("*").order("sort").order("name")).map(fromProduct),
@@ -75,6 +75,12 @@ const api = {
   setOrder: async (id, p) => must(await sb.from("orders").update({ pay_status:p.payStatus, status:p.status }).eq("id", id)),
   createOrders: async (payload, asAdmin) => must(await sb.rpc("create_orders", { payload, as_admin:!!asAdmin })),
   loadRemaining: async () => must(await sb.rpc("po_remaining")),
+  uploadProof: async (gid, blob) => {
+    const path = gid + "/" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + ".jpg";
+    must(await sb.storage.from("proofs").upload(path, blob, { contentType:blob.type || "image/jpeg", cacheControl:"3600", upsert:false })); return path;
+  },
+  attachProof: async (gid, phone, path) => must(await sb.rpc("attach_proof", { p_gid:gid, phone, p_path:path })),
+  proofUrl: async path => { const r = await sb.storage.from("proofs").createSignedUrl(path, 600); if (r.error) throw r.error; return r.data.signedUrl; },
   trackOrders: async (ids, phone) => must(await sb.rpc("track_orders", { ids, phone }))
 };
 let remaining = {};                // sisa kuota: "poId::pid" -> angka (hanya menu yang punya kuota)
@@ -325,7 +331,7 @@ function renderCheckout(){
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
 }
-let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false;
+let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false;
 document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; saveCart(); renderCheckout(); });
 function renderPayInfo(){
   const hasQ = !!settings.qrisUrl;
@@ -335,6 +341,7 @@ function renderPayInfo(){
 }
 /* Kotak bayar di layar setelah pesan: jumlah tepat (dengan kode unik) dan tujuan transfer */
 function renderPay(){
+  $("d-proofwrap").hidden = !payVisible || placedProof; $("d-proofok").hidden = !(payVisible && placedProof);
   const box = $("d-pay"); box.hidden = !payVisible; if (!payVisible) return;
   $("d-amt").textContent = rp(placedPay.total + placedPay.kode);
   const k = $("d-kode"); k.hidden = !placedPay.kode; k.textContent = placedPay.kode ? "Termasuk kode unik " + rp(placedPay.kode) + " agar pembayaranmu mudah dicek." : "";
@@ -348,6 +355,19 @@ async function copyText(text, el, okMsg){
   try { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); if (document.execCommand && document.execCommand("copy")) { toast(okMsg); return; } } catch (e) {}
   toast("Tekan lama angkanya untuk menyalin");
 }
+$("d-file").onchange = async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+  const gid = placed[0] && placed[0].gid; if (!gid || !sb) { toast("Kirim lewat WhatsApp saja."); return; }
+  if (!/^image\//.test(f.type)) { toast("Pilih foto atau tangkapan layar."); return; }
+  const lab = $("d-up"), t = $("d-up-t"); lab.classList.add("busy"); t.textContent = "Mengirim...";
+  try {
+    const path = await api.uploadProof(gid, await shrink(f, 1400));
+    if (!(await api.attachProof(gid, trackHp, path))) throw new Error("attach");
+    placedProof = true; if (lastData) { lastData.proof = true; lsSet(LS.last, lastData); }
+    toast("Bukti terkirim"); renderPay();
+  } catch (err) { toast("Bukti belum terkirim. Coba lagi atau kirim lewat WhatsApp."); }
+  finally { lab.classList.remove("busy"); t.textContent = "Unggah bukti bayar"; }
+};
 $("copy-no").onclick = () => copyText(String(settings.bankNumber), $("d-bank-no"), "Nomor rekening disalin");
 $("copy-amt").onclick = () => copyText(String(placedPay.total + placedPay.kode), $("d-amt"), "Jumlah disalin");
 
@@ -397,14 +417,14 @@ async function submitOrder(){
   recorded = true; trackHp = customer.hp;
   const outGs = res.map(r => ({ poId:r.po_id, date:r.po_date, fulfil:r.fulfil, items:r.items, ongkir:r.total - r.items.reduce((a, i) => a + i.price * i.qty, 0), total:r.total }));
   const kodeSum = res.reduce((a, r) => a + (Number(r.kode) || 0), 0), nums = placed.map(o => o.id).join(", ");
-  placedPay = { total:grand(outGs), kode:kodeSum, method };
+  placedPay = { total:grand(outGs), kode:kodeSum, method }; placedProof = false;
   const msg = `Halo Lapo Doli, ini bukti bayar pesanan ${nums}.\nNama: ${customer.nama}\nTotal: ${rp(placedPay.total + kodeSum)}${kodeSum ? " (termasuk kode unik " + rp(kodeSum) + ")" : ""}\nBayar via: ${method === "qris" ? "QRIS" : "Transfer " + settings.bankName}\n\n(Bukti bayar terlampir)`;
   $("wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent(msg)}`;
   $("sum3").innerHTML = summaryHTML(outGs, kodeSum);
   /* pesanan sudah tercatat: kosongkan keranjang, ingat data pembeli dan pesanan ini */
   for (const k in cart) delete cart[k]; for (const k in itemNotes) delete itemNotes[k]; $("notes").value = "";
   saveCart(); saveCust();
-  lastData = { at:Date.now(), placed, outGs, pay:placedPay, wa:$("wa").href }; lastRows = {}; lsSet(LS.last, lastData); renderLast();
+  lastData = { at:Date.now(), placed, outGs, pay:placedPay, wa:$("wa").href, proof:false }; lastRows = {}; lsSet(LS.last, lastData); renderLast();
   unsubTrack(); renderTracker(); startTrack();
   go(3);
 }
@@ -415,7 +435,7 @@ let trackT = null, trackHp = "";
 const unsubTrack = () => { clearInterval(trackT); trackT = null; trackConf = {}; };
 async function pollTrack(){
   if (!placed.length || !sb) return;
-  try { const rows = await api.trackOrders(placed.map(o => o.id), trackHp); rows.forEach(r => { trackConf[r.id] = { payStatus:r.pay_status, status:r.status }; }); Object.assign(lastRows, trackConf); renderLast(); renderTracker(); } catch (e) {}
+  try { const rows = await api.trackOrders(placed.map(o => o.id), trackHp); rows.forEach(r => { trackConf[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof }; }); Object.assign(lastRows, trackConf); renderLast(); renderTracker(); } catch (e) {}
 }
 function startTrack(){ pollTrack(); trackT = setInterval(() => { if (screen === 3 && !document.hidden) pollTrack(); }, 8000); }
 
@@ -440,7 +460,7 @@ function renderTracker(){
   else if (!allPaid) { title = "Pesanan dicatat"; sub = "Transfer sesuai jumlah di bawah, lalu kirim bukti bayar."; }
   else if (allDone) { title = "Pesanan selesai"; sub = "Terima kasih, selamat makan!"; tone = "ok"; }
   else { title = "Pesanan terkonfirmasi"; sub = pk ? `Pembayaran diterima. Ambil di ${placed[0].pickupLoc || pickLoc()}, jam ${placed[0].hours || pickHours()}.` : `Pembayaran diterima. Diantar sesuai tanggal PO, jam ${hours()}.`; tone = "ok"; }
-  payVisible = !!recorded && !allPaid && !allCancel; renderPay();
+  placedProof = placedProof || cs.some(c => c.proof); payVisible = !!recorded && !allPaid && !allCancel; renderPay();
   $("d-title").textContent = title; $("d-sub").textContent = sub; $("d-dot").className = "dot " + (tone === "warn" ? "" : tone);
   tr.innerHTML = placed.map((o, i) => {
     const c = cs[i], [lb, cl] = statusLabel({ fulfil:o.fulfil, payStatus:c.payStatus, status:c.status });
@@ -466,11 +486,11 @@ function renderLast(){
 }
 async function pollLast(){
   if (!lastData || !sb) return;
-  try { const rows = await api.trackOrders(lastData.placed.map(o => o.id), lastData.placed[0].hp); rows.forEach(r => { lastRows[r.id] = { payStatus:r.pay_status, status:r.status }; }); renderLast(); } catch (e) {}
+  try { const rows = await api.trackOrders(lastData.placed.map(o => o.id), lastData.placed[0].hp); rows.forEach(r => { lastRows[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof }; }); if (rows.some(r => r.has_proof) && !lastData.proof) { lastData.proof = true; lsSet(LS.last, lastData); } renderLast(); } catch (e) {}
 }
 $("lastorder").onclick = () => {
   if (!lastData) return;
-  placed = lastData.placed; placedPay = lastData.pay || placedPay; recorded = true; trackHp = placed[0].hp;
+  placed = lastData.placed; placedPay = lastData.pay || placedPay; placedProof = !!lastData.proof; recorded = true; trackHp = placed[0].hp;
   $("wa").href = lastData.wa || "#"; $("sum3").innerHTML = summaryHTML(lastData.outGs, placedPay.kode);
   unsubTrack(); renderTracker(); startTrack(); go(3);
 };
@@ -531,7 +551,7 @@ function orderRow(o){
   }
   return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
-      <div style="min-width:0"><div class="o1"><span class="num">${esc(o.id)}</span><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}</div>
+      <div style="min-width:0"><div class="o1"><span class="num">${esc(o.id)}</span><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}${o.proofPath ? `<span class="otag proof">${ic("image")}Ada bukti</span>` : ""}</div>
         <div class="o2">${esc(meta)}</div><div class="o3">${esc(summary)}</div></div>
       <div class="oside"><span class="chip ${sc}">${sl}</span>${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
     </div>
@@ -549,7 +569,7 @@ function orderRow(o){
       ${o.notes ? `<p class="onote full">${esc(o.notes)}</p>` : ""}
       ${gk ? `<p class="onote full">Transfer tepat ${rp(Number(o.groupTotal) + gk)} (kode unik ${rp(gk)}).</p>` : ""}
       ${grp ? `<p class="onote full">Bayar gabungan ${o.groupCount} tanggal, total ${rp(o.groupTotal)}. Konfirmasi berlaku untuk semuanya.</p>` : ""}
-      <div class="acts full"><a class="btn line sm" href="${esc(wa)}" target="_blank" rel="noopener">${ic("chat")}Chat pelanggan</a>${sec}</div>
+      <div class="acts full">${o.proofPath ? `<button class="btn line sm" data-proof="${esc(o.proofPath)}" type="button">${ic("image")}Lihat bukti</button>` : ""}<a class="btn line sm" href="${esc(wa)}" target="_blank" rel="noopener">${ic("chat")}Chat pelanggan</a>${sec}</div>
     </div>` : ""}</article>`;
 }
 function renderAdminOrders(){
@@ -578,7 +598,16 @@ function renderAdminOrders(){
   setCek(cekAll);
 }
 $("a-orders").addEventListener("change", e => { if (e.target.id === "f-po") { poFilter = e.target.value; renderAdminOrders(); } });
+function openLightbox(url){
+  const box = document.createElement("div"); box.className = "lightbox"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Bukti bayar");
+  box.innerHTML = `<button type="button" class="lb-x" aria-label="Tutup">${ic("x")}</button><img src="${esc(url)}" alt="Foto bukti bayar">`;
+  const close = () => { box.remove(); document.removeEventListener("keydown", onKey); }, onKey = ev => { if (ev.key === "Escape") close(); };
+  box.addEventListener("click", ev => { if (ev.target === box || ev.target.closest(".lb-x")) close(); });
+  document.addEventListener("keydown", onKey); document.body.appendChild(box); box.querySelector(".lb-x").focus();
+}
 $("a-orders").addEventListener("click", async e => {
+  const pb = e.target.closest("[data-proof]");
+  if (pb) { try { openLightbox(await api.proofUrl(pb.dataset.proof)); } catch (err) { toast("Bukti belum bisa dibuka. Coba lagi."); } return; }
   if (e.target.closest("[data-newopen]")) { openNew(); return; }
   const fb = e.target.closest("[data-filter]");
   if (fb) { filter = fb.dataset.filter; armCancel = null; renderAdminOrders(); return; }
@@ -820,9 +849,9 @@ function renderMenuSafe(){
 }
 menuEl.addEventListener("focusout", () => setTimeout(() => { if (menuDirty) renderMenuSafe(); }, 50));
 menuEl.addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.adv) { if (d.open) advOpen.add(d.dataset.adv); else advOpen.delete(d.dataset.adv); } }, true);
-async function shrink(file){
+async function shrink(file, max = 900){
   try {
-    const bmp = await createImageBitmap(file), s = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
+    const bmp = await createImageBitmap(file), s = Math.min(1, max / Math.max(bmp.width, bmp.height));
     const c = document.createElement("canvas"); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
     c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
     return await new Promise(r => c.toBlob(r, "image/jpeg", 0.82)) || file;
