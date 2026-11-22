@@ -65,7 +65,7 @@ Di Vercel buka **Settings > Domains**, tambahkan domain, lalu ikuti petunjuk DNS
 - **Penjualan**: ringkasan penjualan per tanggal PO, menu terlaris, wilayah antar.
 - **Rekap dapur**: jumlah yang harus dimasak per menu dan varian, daftar antar per wilayah, daftar ambil sendiri. Bisa disalin, dicetak, atau diekspor ke CSV.
 - **Menu dan harga**: termasuk **kuota porsi per tanggal PO** (kosong berarti tanpa batas). Pembeli melihat "Sisa N" dan server menolak pesanan yang melebihi sisa.
-- **Pengaturan**: ongkir, jam, rekening, QRIS, dan **kode unik pembayaran** (tambahan 1 sampai 999 rupiah di jumlah transfer supaya mudah dicocokkan dengan mutasi bank).
+- **Pengaturan**: ongkir, jam, rekening, QRIS, dan **kode unik pembayaran** (tambahan 1 sampai 499 rupiah di jumlah transfer supaya mudah dicocokkan dengan mutasi bank).
 
 Setiap kali `supabase/schema.sql` berubah, jalankan ulang seluruh isinya di SQL Editor. Aman diulang.
 

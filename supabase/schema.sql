@@ -92,7 +92,7 @@ create table if not exists public.orders (
   pay_status  text not null default 'cek' check (pay_status in ('cek', 'lunas', 'ditolak')),
   status      text not null default 'baru' check (status in ('baru', 'diproses', 'diantar', 'selesai', 'batal'))
 );
--- kode unik 1-999 yang ditambahkan ke jumlah bayar (hanya di pesanan pertama dari satu kali checkout)
+-- kode unik 1-499 yang ditambahkan ke jumlah bayar (hanya di pesanan pertama dari satu kali checkout)
 alter table public.orders add column if not exists kode integer not null default 0 check (kode between 0 and 999);
 -- jalur foto bukti bayar di bucket privat 'proofs' (kosong = belum ada)
 alter table public.orders add column if not exists proof_path text not null default '';
@@ -339,10 +339,10 @@ begin
   end loop;
   v_count := jsonb_array_length(built);
 
-  -- Kode unik 1-999 dibuat di server: tidak sama dengan pesanan lain yang masih menunggu bayar dengan total yang sama
+  -- Kode unik 1-499 dibuat di server: tidak sama dengan pesanan lain yang masih menunggu bayar dengan total yang sama
   if v_use_kode then
     for n_try in 1..40 loop
-      v_kode := 1 + floor(random() * 999)::integer;
+      v_kode := 1 + floor(random() * 499)::integer;
       exit when not exists (
         select 1 from public.orders o
         where o.kode = v_kode and o.group_total = v_total_all and o.pay_status = 'cek'
@@ -460,7 +460,7 @@ grant execute on function public.po_remaining() to anon, authenticated;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 7 $$;
+returns integer language sql immutable as $$ select 8 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

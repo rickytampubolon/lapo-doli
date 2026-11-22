@@ -948,7 +948,7 @@ function renderAdminSet(){
       <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti" : "Unggah"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus QRIS</button>' : ""}</div></div></div></section>
     <section class="card setsec"><h3>Kode unik</h3>
       <label class="switch"><input type="checkbox" id="s-uc" data-s="uniqueCode" ${s.uniqueCode !== false ? "checked" : ""}><span class="track"></span><span>${s.uniqueCode !== false ? "Aktif" : "Mati"}</span></label>
-      <p class="fhint">Tambah Rp 1 sampai 999 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
+      <p class="fhint">Tambah Rp 1 sampai 499 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
     <section class="card setsec"><h3>Kontak</h3><div class="fgrid">
       ${f("s-wa", "waNumber", "WhatsApp admin (62...)", s.waNumber, 'inputmode="numeric"')}
     </div></section>`;
@@ -1275,7 +1275,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
