@@ -413,7 +413,7 @@ $("d-file").onchange = async e => {
     const path = await api.uploadProof(gid, await shrink(f, 1400));
     if (!(await api.attachProof(gid, trackHp, path))) throw new Error("attach");
     placedProof = true; if (lastData) { lastData.proof = true; lsSet(LS.last, lastData); }
-    toast("Bukti terkirim"); renderPay();
+    toast("Bukti terkirim"); renderTracker();
   } catch (err) { toast("Bukti belum terkirim. Coba lagi atau kirim lewat WhatsApp."); }
   finally { lab.classList.remove("busy"); t.textContent = "Unggah bukti bayar"; }
 };
@@ -494,7 +494,7 @@ const DLV_PICK = { baru:["Terkonfirmasi", "ok"], diproses:["Sedang diproses", "i
 function statusLabel(o){
   if (o.status === "batal") return ["Dibatalkan", ""];
   if (o.payStatus === "ditolak") return ["Bayar ditolak", "bad"];
-  if (o.payStatus !== "lunas") return ["Menunggu bayar", "warn"];
+  if (o.payStatus !== "lunas") return o.proof ? ["Bukti dicek admin", "info"] : ["Menunggu bayar", "warn"];
   return (o.fulfil === "ambil" ? DLV_PICK : DLV)[o.status] || DLV.baru;
 }
 function renderTracker(){
@@ -502,18 +502,19 @@ function renderTracker(){
   const cs = placed.map(o => trackConf[o.id] || { payStatus:"cek", status:"baru" });
   const allCancel = cs.length && cs.every(c => c.status === "batal"), anyNo = cs.some(c => c.payStatus === "ditolak");
   const allPaid = cs.every(c => c.payStatus === "lunas"), allDone = cs.every(c => c.status === "selesai" || c.status === "batal");
-  const pk = placed[0] && placed[0].fulfil === "ambil";
+  const pk = placed[0] && placed[0].fulfil === "ambil", anyProof = placedProof || cs.some(c => c.proof);
   let title, sub, tone = "warn";
   if (!recorded) { title = "Pesanan dibuat"; sub = "Belum tercatat otomatis. Kirim lewat WhatsApp supaya kami proses."; }
   else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
   else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Kirim bukti bayar lewat WhatsApp."; tone = "bad"; }
+  else if (!allPaid && anyProof) { title = "Bukti diterima"; sub = "Admin sedang mengecek pembayaranmu. Statusnya berubah di sini."; }
   else if (!allPaid) { title = "Pesanan dicatat"; sub = "Transfer sesuai jumlah di bawah, lalu kirim bukti bayar."; }
   else if (allDone) { title = "Pesanan selesai"; sub = "Terima kasih, selamat makan!"; tone = "ok"; }
   else { title = "Pesanan terkonfirmasi"; sub = pk ? `Pembayaran diterima. Ambil di ${placed[0].pickupLoc || pickLoc()}, jam ${placed[0].hours || pickHours()}.` : `Pembayaran diterima. Diantar sesuai tanggal PO, jam ${hours()}.`; tone = "ok"; }
   placedProof = placedProof || cs.some(c => c.proof); payVisible = !!recorded && !allPaid && !allCancel; renderPay();
   $("d-title").textContent = title; $("d-sub").textContent = sub; $("d-dot").className = "dot " + (tone === "warn" ? "" : tone);
   tr.innerHTML = placed.map((o, i) => {
-    const c = cs[i], [lb, cl] = statusLabel({ fulfil:o.fulfil, payStatus:c.payStatus, status:c.status });
+    const c = cs[i], [lb, cl] = statusLabel({ fulfil:o.fulfil, payStatus:c.payStatus, status:c.status, proof:c.proof || placedProof });
     return `<li><div><b>${esc(o.id)}</b><small>${ic("po")}${esc(dShort(o.poDate))}${ic("clock")}${esc(o.hours || hours())}</small></div><span class="chip ${cl}">${lb}</span></li>`;
   }).join("");
 }
@@ -530,7 +531,7 @@ function renderLast(){
   if (!lastData) { el.hidden = true; return; }
   const cs = lastData.placed.map(o => lastRows[o.id] || { payStatus:"cek", status:"baru" });
   if (cs.every(c => c.status === "selesai" || c.status === "batal")) { lsSet(LS.last, null); lastData = null; el.hidden = true; return; }
-  const i = Math.max(0, cs.findIndex(c => c.payStatus !== "lunas")), [lb, cl] = statusLabel({ fulfil:lastData.placed[i].fulfil, payStatus:cs[i].payStatus, status:cs[i].status });
+  const i = Math.max(0, cs.findIndex(c => c.payStatus !== "lunas")), [lb, cl] = statusLabel({ fulfil:lastData.placed[i].fulfil, payStatus:cs[i].payStatus, status:cs[i].status, proof:cs[i].proof || lastData.proof });
   $("lc-id").textContent = lastData.placed.map(o => o.id).join(", ");
   $("lc-chip").className = "chip " + cl; $("lc-chip").textContent = lb; el.hidden = false;
 }
@@ -1281,7 +1282,7 @@ $("ck-go").onclick = async () => {
   $("ck-go").disabled = true; out.innerHTML = "";
   try {
     const rows = await api.trackOrders(ids, hp);
-    out.innerHTML = rows.length ? rows.map(r => { const [lb, cl] = statusLabel({ fulfil:r.fulfil, payStatus:r.pay_status, status:r.status });
+    out.innerHTML = rows.length ? rows.map(r => { const [lb, cl] = statusLabel({ fulfil:r.fulfil, payStatus:r.pay_status, status:r.status, proof:!!r.has_proof });
       return `<li><div><b>${esc(r.id)}</b><small>${esc(dShort(r.po_date))} · ${r.fulfil === "ambil" ? "Ambil" : "Antar"} jam ${esc(r.hours)}</small></div><span class="chip ${cl}">${lb}</span></li>`; }).join("")
       : '<li><div class="note">Pesanan tidak ditemukan. Periksa nomor pesanan dan nomor HP yang dipakai saat memesan.</div></li>';
   } catch (e) { $("ck-err").textContent = "Belum bisa memeriksa. Coba lagi sebentar lagi."; }
