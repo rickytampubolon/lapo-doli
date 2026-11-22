@@ -1111,7 +1111,9 @@ body.sheet-open{overflow:hidden}
 .ahead .menubtn{background:var(--soft)}
 #help-wa{background:var(--accent);color:var(--on-accent);border-radius:999px}
 
-/* pemberitahuan area antar di kartu toko */
-.sc-area{display:flex;gap:var(--sp-2);align-items:flex-start;margin:var(--sp-3) 0 0;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-md);background:var(--amber-soft);color:var(--text-primary);font-size:14px;line-height:20px}
-.sc-area .ic{flex:none;width:18px;height:18px;margin-top:1px;color:var(--accent)}
-.sc-area b{font-weight:700}
+
+/* strip info: dua kolom, empat kotak */
+.sc-stats{grid-template-columns:1fr 1fr}
+.sc-stats div:nth-child(2n){border-left:1px solid var(--border-default)}
+.sc-stats div:nth-child(n+3){border-top:1px solid var(--border-default)}
+.sc-stats div:nth-child(3){border-left:0}
