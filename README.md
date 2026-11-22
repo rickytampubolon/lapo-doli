@@ -58,3 +58,22 @@ Di Vercel buka **Settings > Domains**, tambahkan domain, lalu ikuti petunjuk DNS
 - Harga, ongkir, dan batas waktu PO dihitung ulang di server, jadi tidak bisa dimanipulasi dari browser.
 - Email login bawaan Supabase punya batas kirim per jam. Kalau sering dipakai, pasang SMTP sendiri di Authentication > SMTP.
 - Pembeli bisa cek status lewat tombol Bantuan, memakai nomor pesanan dan nomor HP.
+
+## Fitur admin
+
+- **Pesanan**: konfirmasi bayar, ubah status, catat pesanan dari WhatsApp.
+- **Penjualan**: ringkasan penjualan per tanggal PO, menu terlaris, wilayah antar.
+- **Rekap dapur**: jumlah yang harus dimasak per menu dan varian, daftar antar per wilayah, daftar ambil sendiri. Bisa disalin, dicetak, atau diekspor ke CSV.
+- **Menu dan harga**: termasuk **kuota porsi per tanggal PO** (kosong berarti tanpa batas). Pembeli melihat "Sisa N" dan server menolak pesanan yang melebihi sisa.
+- **Pengaturan**: ongkir, jam, rekening, QRIS, dan **kode unik pembayaran** (tambahan 1 sampai 999 rupiah di jumlah transfer supaya mudah dicocokkan dengan mutasi bank).
+
+Setiap kali `supabase/schema.sql` berubah, jalankan ulang seluruh isinya di SQL Editor. Aman diulang.
+
+## Opsional: notifikasi pesanan baru ke Telegram
+
+Ikuti petunjuk di bagian atas `supabase/notify-telegram.sql`. Token bot disimpan di Supabase Vault, tidak pernah di repository.
+
+## Belum ada
+
+- Captcha untuk pembuatan pesanan. Saat ini pesanan dibatasi 5 kali per 10 menit per nomor HP. Captcha yang benar butuh pengecekan token di server (Supabase Edge Function), jadi perlu akun Cloudflare Turnstile.
+- Kalau nanti pakai domain sendiri, ganti `https://lapo-doli.vercel.app` di `index.html` (canonical dan og tags) dengan domain itu.

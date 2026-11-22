@@ -44,6 +44,8 @@ create table if not exists public.products (
   image       text not null default '',
   created_at  timestamptz not null default now()
 );
+-- batas porsi per tanggal PO; kosong = tanpa batas
+alter table public.products add column if not exists quota integer check (quota is null or quota >= 0);
 
 create table if not exists public.pos (
   id         text primary key,
@@ -88,6 +90,8 @@ create table if not exists public.orders (
   pay_status  text not null default 'cek' check (pay_status in ('cek', 'lunas', 'ditolak')),
   status      text not null default 'baru' check (status in ('baru', 'diproses', 'diantar', 'selesai', 'batal'))
 );
+-- kode unik 1-999 yang ditambahkan ke jumlah bayar (hanya di pesanan pertama dari satu kali checkout)
+alter table public.orders add column if not exists kode integer not null default 0 check (kode between 0 and 999);
 create index if not exists orders_po_idx on public.orders (po_id);
 create index if not exists orders_gid_idx on public.orders (gid);
 create index if not exists orders_created_idx on public.orders (created_at desc);
@@ -155,6 +159,7 @@ returns text language sql immutable as $$
   select case when d like '0%' then '62' || substr(d, 2) else d end
   from (select regexp_replace(coalesce(t, ''), '\D', '', 'g') as d) s;
 $$;
+create index if not exists orders_hp_idx on public.orders (public.norm_hp(hp), created_at desc);
 
 -- ---------------------------------------------------------------------
 -- 5. Membuat pesanan (dipanggil pembeli dan admin)
@@ -183,7 +188,7 @@ declare
   p public.products; po public.pos;
   built jsonb := '[]'::jsonb; items jsonb; food integer; qty integer; price integer;
   opts jsonb; opt jsonb; idx integer; ad jsonb; addon_id text;
-  mainq jsonb; addq jsonb; k text; seq integer; oid text; out jsonb := '[]'::jsonb;
+  mainq jsonb; addq jsonb; k text; seq integer; v_quota integer; v_sold integer; v_kode integer := 0; v_first boolean := true; oid text; out jsonb := '[]'::jsonb;
 begin
   if as_admin and not public.is_admin() then
     raise exception 'forbidden' using errcode = '42501';
@@ -217,8 +222,19 @@ begin
     v_area := ''; v_alamat := '';
   end if;
   v_notes := left(btrim(coalesce(payload ->> 'notes', '')), 300);
+  -- Batasi spam: satu nomor HP maksimal 5 kali kirim pesanan dalam 10 menit (admin dikecualikan)
+  if not as_admin and (
+       select count(distinct o.gid) from public.orders o
+       where o.created_at > now() - interval '10 minutes' and public.norm_hp(o.hp) = public.norm_hp(v_hp)
+     ) >= 5 then
+    raise exception 'rate_limited';
+  end if;
   v_source := case when as_admin then coalesce(nullif(payload ->> 'source', ''), 'wa') else 'web' end;
   v_paid := as_admin and coalesce((payload ->> 'paid')::boolean, false);
+  if not as_admin and coalesce(st ->> 'uniqueCode', 'true') <> 'false' then
+    v_kode := coalesce(nullif(payload ->> 'kode', '')::integer, 0);
+    if v_kode < 0 or v_kode > 999 then raise exception 'invalid_kode'; end if;
+  end if;
 
   if jsonb_typeof(payload -> 'groups') is distinct from 'array'
      or jsonb_array_length(payload -> 'groups') = 0
@@ -291,6 +307,22 @@ begin
       end if;
     end loop;
 
+    -- Kuota porsi per menu untuk tanggal PO ini (baris menu dikunci supaya dua pembeli tidak sama-sama lolos)
+    if not as_admin then
+      for k in select jsonb_object_keys(mainq) loop
+        select quota into v_quota from public.products where id = k for update;
+        if v_quota is not null then
+          select coalesce(sum((i.value ->> 'qty')::integer), 0) into v_sold
+          from public.orders o, jsonb_array_elements(o.items) i
+          where o.po_id = po.id and o.status <> 'batal' and o.pay_status <> 'ditolak'
+            and i.value ->> 'pid' = k and not coalesce((i.value ->> 'addon')::boolean, false);
+          if v_sold + (mainq ->> k)::integer > v_quota then
+            raise exception 'sold_out:%:%', k, greatest(0, v_quota - v_sold);
+          end if;
+        end if;
+      end loop;
+    end if;
+
     if as_admin and nullif(payload ->> 'ongkir', '') is not null then
       v_ongkir := greatest(0, (payload ->> 'ongkir')::integer);
     else
@@ -308,20 +340,29 @@ begin
       on conflict (po_id) do update set n = public.counters.n + 1
       returning n into seq;
     oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || lpad(seq::text, 2, '0');
+    -- Tanggal yang sama di tahun berikutnya memakai awalan DDMM yang sama: lewati nomor yang sudah terpakai
+    while exists (select 1 from public.orders where id = oid) loop
+      seq := seq + 1;
+      oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || lpad(seq::text, 2, '0');
+    end loop;
+    update public.counters set n = greatest(n, seq) where po_id = g ->> 'po_id';
     insert into public.orders (id, gid, po_id, po_date, source, nama, hp, fulfil, area, alamat, pickup_loc,
-                               notes, method, items, ongkir, total, group_total, group_count, hours, pay_status)
+                               notes, method, items, ongkir, total, group_total, group_count, hours, pay_status, kode)
     values (oid, v_gid, g ->> 'po_id', (g ->> 'po_date')::date, v_source, v_nama, v_hp, v_fulfil, v_area, v_alamat,
             case when v_fulfil = 'ambil' then v_pick_loc else '' end,
             v_notes, v_method, g -> 'items', (g ->> 'ongkir')::integer,
             (g ->> 'food')::integer + (g ->> 'ongkir')::integer, v_total_all, v_count,
             case when v_fulfil = 'ambil' then v_pick_hours else v_hours end,
-            case when v_paid then 'lunas' else 'cek' end);
+            case when v_paid then 'lunas' else 'cek' end,
+            case when v_first then v_kode else 0 end);
     out := out || jsonb_build_array(jsonb_build_object(
       'id', oid, 'gid', v_gid, 'po_id', g ->> 'po_id', 'po_date', g ->> 'po_date',
       'total', (g ->> 'food')::integer + (g ->> 'ongkir')::integer, 'fulfil', v_fulfil,
+      'kode', case when v_first then v_kode else 0 end,
       'hours', case when v_fulfil = 'ambil' then v_pick_hours else v_hours end,
       'pickup_loc', case when v_fulfil = 'ambil' then v_pick_loc else '' end,
       'items', g -> 'items'));
+    v_first := false;
   end loop;
 
   return out;
@@ -349,6 +390,30 @@ $$;
 
 revoke all on function public.track_orders(text[], text) from public;
 grant execute on function public.track_orders(text[], text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6b. Sisa kuota per menu dan tanggal PO (dibaca publik, hanya angka)
+-- ---------------------------------------------------------------------
+create or replace function public.po_remaining()
+returns table (po_id text, pid text, remaining integer)
+language sql stable security definer
+set search_path = public
+as $$
+  select p.id as po_id, pr.id as pid,
+         greatest(0, pr.quota - coalesce(s.sold, 0))::integer as remaining
+  from public.pos p
+  cross join public.products pr
+  left join (
+    select o.po_id, i.value ->> 'pid' as pid, sum((i.value ->> 'qty')::integer) as sold
+    from public.orders o, jsonb_array_elements(o.items) i
+    where o.status <> 'batal' and o.pay_status <> 'ditolak'
+      and not coalesce((i.value ->> 'addon')::boolean, false)
+    group by 1, 2
+  ) s on s.po_id = p.id and s.pid = pr.id
+  where pr.quota is not null;
+$$;
+revoke all on function public.po_remaining() from public;
+grant execute on function public.po_remaining() to anon, authenticated;
 
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to anon, authenticated;
