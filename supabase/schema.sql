@@ -96,6 +96,9 @@ create table if not exists public.orders (
 alter table public.orders add column if not exists kode integer not null default 0 check (kode between 0 and 999);
 -- jalur foto bukti bayar di bucket privat 'proofs' (kosong = belum ada)
 alter table public.orders add column if not exists proof_path text not null default '';
+-- kunci idempotensi dari browser: kirim ulang karena sinyal putus tidak membuat pesanan ganda
+alter table public.orders add column if not exists client_ref text;
+create index if not exists orders_ref_idx on public.orders (client_ref) where client_ref is not null;
 create index if not exists orders_po_idx on public.orders (po_id);
 create index if not exists orders_gid_idx on public.orders (gid);
 create index if not exists orders_created_idx on public.orders (created_at desc);
@@ -177,6 +180,10 @@ create index if not exists orders_hp_idx on public.orders (public.norm_hp(hp), c
 --        -- khusus admin: ongkir, paid, source
 --      }
 -- ---------------------------------------------------------------------
+-- Urutan nomor pesanan: 01..99, lalu 100, 101, ... (lpad memotong angka yang lebih panjang dari 2 digit)
+create or replace function public.fmt_seq(n integer)
+returns text language sql immutable as $$ select case when n < 100 then lpad(n::text, 2, '0') else n::text end $$;
+
 create or replace function public.create_orders(payload jsonb, as_admin boolean default false)
 returns jsonb
 language plpgsql
@@ -192,10 +199,22 @@ declare
   p public.products; po public.pos;
   built jsonb := '[]'::jsonb; items jsonb; food integer; qty integer; price integer;
   opts jsonb; opt jsonb; idx integer; ad jsonb; addon_id text;
-  mainq jsonb; addq jsonb; k text; seq integer; v_quota integer; v_sold integer; v_kode integer := 0; v_first boolean := true; v_use_kode boolean := false; n_try integer; oid text; out jsonb := '[]'::jsonb;
+  mainq jsonb; addq jsonb; k text; seq integer; v_quota integer; v_sold integer; v_kode integer := 0; v_first boolean := true; v_use_kode boolean := false; n_try integer; v_ref text; v_prev jsonb; oid text; out jsonb := '[]'::jsonb;
 begin
   if as_admin and not public.is_admin() then
     raise exception 'forbidden' using errcode = '42501';
+  end if;
+
+  -- Kirim ulang dengan kunci yang sama (dan nomor HP yang sama) mengembalikan pesanan yang sudah ada
+  v_ref := case when as_admin then null else nullif(left(btrim(coalesce(payload ->> 'ref', '')), 40), '') end;
+  if v_ref is not null then
+    if v_ref !~ '^[A-Za-z0-9-]{8,40}$' then raise exception 'invalid_ref'; end if;
+    perform pg_advisory_xact_lock(hashtext(v_ref));
+    select coalesce(jsonb_agg(jsonb_build_object('id', o.id, 'gid', o.gid, 'po_id', o.po_id, 'po_date', o.po_date, 'total', o.total,
+             'fulfil', o.fulfil, 'hours', o.hours, 'pickup_loc', o.pickup_loc, 'kode', o.kode, 'items', o.items) order by o.po_date, o.id), '[]'::jsonb)
+      into v_prev from public.orders o
+      where o.client_ref = v_ref and public.norm_hp(o.hp) = public.norm_hp(payload ->> 'hp');
+    if jsonb_array_length(v_prev) > 0 then return v_prev; end if;
   end if;
 
   select data into st from public.settings where id = 'shop';
@@ -355,22 +374,22 @@ begin
     insert into public.counters (po_id, n) values (g ->> 'po_id', 1)
       on conflict (po_id) do update set n = public.counters.n + 1
       returning n into seq;
-    oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || lpad(seq::text, 2, '0');
+    oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || public.fmt_seq(seq);
     -- Tanggal yang sama di tahun berikutnya memakai awalan DDMM yang sama: lewati nomor yang sudah terpakai
     while exists (select 1 from public.orders where id = oid) loop
       seq := seq + 1;
-      oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || lpad(seq::text, 2, '0');
+      oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || public.fmt_seq(seq);
     end loop;
     update public.counters set n = greatest(n, seq) where po_id = g ->> 'po_id';
     insert into public.orders (id, gid, po_id, po_date, source, nama, hp, fulfil, area, alamat, pickup_loc,
-                               notes, method, items, ongkir, total, group_total, group_count, hours, pay_status, kode)
+                               notes, method, items, ongkir, total, group_total, group_count, hours, pay_status, kode, client_ref)
     values (oid, v_gid, g ->> 'po_id', (g ->> 'po_date')::date, v_source, v_nama, v_hp, v_fulfil, v_area, v_alamat,
             case when v_fulfil = 'ambil' then v_pick_loc else '' end,
             v_notes, v_method, g -> 'items', (g ->> 'ongkir')::integer,
             (g ->> 'food')::integer + (g ->> 'ongkir')::integer, v_total_all, v_count,
             case when v_fulfil = 'ambil' then v_pick_hours else v_hours end,
             case when v_paid then 'lunas' else 'cek' end,
-            case when v_first then v_kode else 0 end);
+            case when v_first then v_kode else 0 end, v_ref);
     out := out || jsonb_build_array(jsonb_build_object(
       'id', oid, 'gid', v_gid, 'po_id', g ->> 'po_id', 'po_date', g ->> 'po_date',
       'total', (g ->> 'food')::integer + (g ->> 'ongkir')::integer, 'fulfil', v_fulfil,
@@ -461,7 +480,7 @@ grant execute on function public.po_remaining() to anon, authenticated;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 9 $$;
+returns integer language sql immutable as $$ select 11 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

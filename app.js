@@ -8,7 +8,6 @@ const SKEL = '<div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b>
 const ic = (n, c = "") => `<svg class="ic ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const rp = n => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 let toastT;
 function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
 
@@ -17,7 +16,6 @@ const dparse = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || "")
 const fmtD = (s, o) => { const d = dparse(s); return d ? new Intl.DateTimeFormat("id-ID", { timeZone:"UTC", ...o }).format(d) : ""; };
 const dLong = s => fmtD(s, { weekday:"long", day:"numeric", month:"long", year:"numeric" });
 const dShort = s => fmtD(s, { weekday:"short", day:"numeric", month:"short" });
-const codeOf = s => String(s).slice(8, 10) + String(s).slice(5, 7);   // 2026-09-18 -> 1809
 
 /* Contoh data. Dipakai kalau database belum tersedia, dan untuk "Isi menu awal". */
 const NASI = { id:"nasi", name:"Nasi", price:5000 }, SOP = { id:"sop", name:"Sop", price:0 };
@@ -73,7 +71,7 @@ const api = {
   setPoOpen: async (id, open) => must(await sb.from("pos").update({ open }).eq("id", id)),
   deletePo: async id => must(await sb.from("pos").delete().eq("id", id)),
   saveSettings: async data => must(await sb.from("settings").upsert({ id:"shop", data })),
-  setOrder: async (id, p) => must(await sb.from("orders").update({ pay_status:p.payStatus, status:p.status }).eq("id", id)),
+  updateOrders: async (ids, patch) => must(await sb.from("orders").update(patch).in("id", ids)),
   createOrders: async (payload, asAdmin) => must(await sb.rpc("create_orders", { payload, as_admin:!!asAdmin })),
   loadRemaining: async () => must(await sb.rpc("po_remaining")),
   uploadProof: async (gid, blob) => {
@@ -131,13 +129,6 @@ function variantsHTML(p, keyBase, mk){
   return groups.map(G => `<div class="vgroup">${G.title ? `<div class="vtitle">${esc(G.title)}</div>` : ""}${G.rows.map(r => `<div class="vrow ${showP ? "wp" : ""}"><span>${esc(r.label)}</span>${showP ? `<span class="vp">${rp(r.o.price)}</span>` : ""}${mk(keyBase + "::" + r.j, p.name + " " + r.o.name)}</div>`).join("")}</div>`).join("");
 }
 const openItems = new Set();
-function pickedText(poId, pid){
-  const p = (shopList() || []).find(x => x.id === pid); if (!p) return "";
-  const parts = [];
-  optsOf(p).forEach((o, j) => { const q = cart[`${poId}::${pid}::${j}`]; if (q) parts.push(`${o.name} × ${q}`); });
-  addonsOf(p).forEach(a => { const q = cart[addonKey(poId, pid, a.id)]; if (q) parts.push(`${a.name} × ${q}`); });
-  return parts.join(" · ");
-}
 const fromPrice = p => { const o = optsOf(p); return o.length ? Math.min(...o.map(x => x.price)) : Number(p.price) || 0; };
 const addonsOf = p => Array.isArray(p.addons) ? p.addons.filter(a => a && a.id && a.name) : [];
 const addonKey = (poId, pid, aid) => `${poId}::${pid}::+${aid}`;
@@ -147,7 +138,6 @@ const parseAddons = s => s.split(",").map(x => x.trim()).filter(Boolean).map(x =
   return { id:name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""), name, price:Math.max(0, Math.round(Number(String(pr || "0").replace(/\D/g, "")) || 0)) };
 }).filter(a => a.id && a.name);
 const fmtAddons = p => addonsOf(p).map(a => `${a.name}=${a.price}`).join(", ");
-const fmtWa = n => { const d = String(n).replace(/\D/g, ""); return d.startsWith("62") && d.length >= 11 ? `+62 ${d.slice(2, 5)}-${d.slice(5, 9)}-${d.slice(9)}` : "+" + d; };
 const normPhone = h => { const d = String(h).replace(/\D/g, ""); return d.startsWith("0") ? "62" + d.slice(1) : d; };
 const AREAS = ["Jakarta Pusat", "Jakarta Utara", "Jakarta Barat", "Jakarta Selatan", "Jakarta Timur"];
 
@@ -171,8 +161,7 @@ const countFor = poId => Object.keys(cart).filter(k => k.startsWith(poId + "::")
 
 function renderPoChips(){
   const el = $("pochips"), list = openPos();
-  if (poList() === null) { el.innerHTML = ""; $("poinfo").textContent = ""; return; }
-  if (!list.length) { el.innerHTML = ""; $("poinfo").textContent = ""; return; }
+  if (poList() === null || !list.length) { el.innerHTML = ""; return; }
   if (!list.some(x => x.id === activePo)) activePo = list[0].id;
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
@@ -191,7 +180,7 @@ function renderMenu(){
   renderPoChips();
   if (dbState === "error") { el.innerHTML = `<div class="empty">Menu belum bisa dimuat.<br><button class="btn sm" data-retry type="button" style="display:inline-flex;margin-top:12px">${ic("undo")}Coba lagi</button></div>`; $("closed").hidden = true; $("po-wrap").hidden = false; updateBar(); return; }
   if (!list || poList() === null) { el.innerHTML = SKEL; $("closed").hidden = true; updateBar(); return; }
-  for (const k of Object.keys(cart)) if (!resolveKey(k, list)) delete cart[k];
+  if (canPrune()) for (const k of Object.keys(cart)) if (!resolveKey(k, list)) delete cart[k];
   $("closed").hidden = pl.length > 0; $("po-wrap").hidden = pl.length === 0;
   if (!pl.length) { updateBar(); return; }
   if (!list.length) { el.innerHTML = '<div class="empty">Menu belum tersedia. Silakan cek lagi nanti.</div>'; updateBar(); return; }
@@ -312,22 +301,24 @@ function renderClosed(){
   $("np").hidden = !n; if (n) $("np").innerHTML = `<span>${ic("po")}PO ${esc(dShort(n.date))}</span><span>${ic("clock")}Buka ${esc(fmtWhen(n.opens_at))}</span>`;
   $("closed-wa-t").textContent = n ? "Ingatkan saya" : "Chat admin";
 }
+/* teks yang bergantung pada pengaturan dan jadwal PO; dipanggil saat keduanya berubah */
+function renderStatic(){
+  document.querySelectorAll("[data-hours]").forEach(x => { x.textContent = hours(); });
+  document.querySelectorAll("[data-ongkir]").forEach(x => { x.textContent = flat() ? rp(flat()) : "Gratis"; });
+  document.querySelectorAll("[data-pickloc]").forEach(x => { x.textContent = pickLoc(); });
+  document.querySelectorAll("[data-pickhours]").forEach(x => { x.textContent = pickHours(); });
+  document.querySelectorAll("[data-cutoff]").forEach(x => { x.textContent = cutoffLabel(); });
+  $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
+  renderClosed();
+}
 function updateBar(){
   saveCart();
   const gs = groups();
   $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? " · " + gs.length + " tanggal" : "");
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
   $("next").disabled = qtyTotal() === 0;
-  document.querySelectorAll("[data-hours]").forEach(x => { x.textContent = hours(); });
-  document.querySelectorAll("[data-ongkir]").forEach(x => { x.textContent = flat() ? rp(flat()) : "gratis"; });
-  document.querySelectorAll("[data-pickloc]").forEach(x => { x.textContent = pickLoc(); });
-  document.querySelectorAll("[data-pickhours]").forEach(x => { x.textContent = pickHours(); });
-  document.querySelectorAll("[data-wa]").forEach(x => { x.textContent = fmtWa(settings.waNumber); });
-  document.querySelectorAll("[data-cutoff]").forEach(x => { x.textContent = cutoffLabel(); });
-  renderClosed();
   const noPo = screen === 1 && poList() !== null && openPos().length === 0;
   $("bar").hidden = screen !== 1 || noPo || qtyTotal() === 0; $("shop").classList.toggle("no-po", noPo);
-  $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
 }
 function summaryHTML(gs, kode = 0){
   const h = gs.map(g => `<div class="gh">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}, ${esc(hoursFor(g.fulfil))}</div>` +
@@ -339,6 +330,7 @@ function summaryHTML(gs, kode = 0){
 /* --- layar: 1 pesan, 2 checkout, 3 selesai --- */
 let screen = 1, openSig = "";
 function pruneClosed(){
+  if (!canPrune()) return [];
   const ids = new Set(openPos().map(p => p.id)), gone = new Set();
   Object.keys(cart).forEach(k => { const pid = k.split("::")[0]; if (!ids.has(pid)) { gone.add(pid); delete cart[k]; } });
   return [...gone].map(id => { const po = (poList() || []).find(x => x.id === id); return po ? dShort(po.date) : id; });
@@ -445,10 +437,14 @@ function orderFailed(e){
   if (/rate_limited/.test(m)) { toast("Terlalu banyak pesanan dari nomor ini. Tunggu 10 menit lalu coba lagi."); return; }
   if (/invalid_hp/.test(m)) { toast("Nomor HP tidak valid."); return; }
   if (/invalid_(area|alamat)/.test(m)) { toast("Wilayah atau alamat belum benar."); return; }
+  if (/invalid_nama/.test(m)) { toast("Nama belum benar."); return; }
+  if (/po_not_found|option_required|invalid_(option|addon|qty|lines|groups|ref)|addon_exceeds_main|empty_group|duplicate_po/.test(m)) { toast("Isi pesanan tidak cocok dengan menu terbaru. Muat ulang halaman lalu pilih lagi."); refreshProducts(); refreshPos(); return; }
   toast("Pesanan belum terkirim. Periksa koneksi lalu coba lagi.");
 }
 const linePayload = i => ({ pid:i.pid, ...(i.addon ? { addon:i.addonId } : i.optIdx != null ? { opt:i.optIdx } : {}), qty:i.qty, note:i.note || "" });
 
+let pendingRef = null, pendingSig = "";
+const newRef = () => String(crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 12)).replace(/[^A-Za-z0-9-]/g, "").slice(0, 40);
 async function submitOrder(){
   const gone = pruneClosed();
   if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesananmu"); renderMenu(); if (qtyTotal()) renderCheckout(); else go(1); return; }
@@ -461,15 +457,19 @@ async function submitOrder(){
   const btn = $("paid"); btn.disabled = true; btn.textContent = "Memproses...";
   const method = document.querySelector("[name=pay]:checked").value, gs = groups();
   const customer = { nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : $("area").value, alamat:isPick() ? "" : $("alamat").value.trim(), notes:$("notes").value.trim(), method };
+  const payload = { ...customer, groups:gs.map(g => ({ po_id:g.poId, lines:g.items.map(linePayload) })) }, sig = JSON.stringify(payload);
+  /* kirim ulang isi yang sama (sinyal putus) memakai kunci yang sama, jadi server tidak membuat pesanan ganda */
+  if (!pendingRef || sig !== pendingSig) { pendingRef = newRef(); pendingSig = sig; }
   let res;
-  try { res = await api.createOrders({ ...customer, groups:gs.map(g => ({ po_id:g.poId, lines:g.items.map(linePayload) })) }); }
+  try { res = await api.createOrders({ ...payload, ref:pendingRef }); }
   catch (e) { btn.disabled = false; btn.textContent = "Pesan sekarang"; orderFailed(e); return; }
-  btn.disabled = false; btn.textContent = "Pesan sekarang";
+  btn.disabled = false; btn.textContent = "Pesan sekarang"; pendingRef = null;
   placed = res.map(r => ({ id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, fulfil:r.fulfil, hours:r.hours, pickupLoc:r.pickup_loc, total:r.total, items:r.items, ...customer }));
   recorded = true; trackHp = customer.hp;
   const outGs = res.map(r => ({ poId:r.po_id, date:r.po_date, fulfil:r.fulfil, items:r.items, ongkir:r.total - r.items.reduce((a, i) => a + i.price * i.qty, 0), total:r.total }));
   const kodeSum = res.reduce((a, r) => a + (Number(r.kode) || 0), 0), nums = placed.map(o => o.id).join(", ");
   placedPay = { total:grand(outGs), kode:kodeSum, method }; placedProof = false;
+  if (grand(gs) !== grand(outGs)) toast("Harga menu berubah. Cek jumlah transfer di bawah.");
   $("sum3").innerHTML = summaryHTML(outGs, kodeSum);
   /* pesanan sudah tercatat: kosongkan keranjang, ingat data pembeli dan pesanan ini */
   for (const k in cart) delete cart[k]; for (const k in itemNotes) delete itemNotes[k]; $("notes").value = "";
@@ -671,17 +671,18 @@ $("a-orders").addEventListener("click", async e => {
   const id = row.dataset.oid, act = b.dataset.act;
   const o = orders.find(x => x.id === id); if (!o || busy.has(id)) return;
   if (act === "arm_cancel") { armCancel = id; renderAdminOrders(); return; }
-  const group = () => o.gid ? orders.filter(x => x.gid === o.gid) : [o];
-  let targets = [o], mk;
-  if (act === "pay_ok") { targets = group(); mk = () => ({ payStatus:"lunas" }); }
-  else if (act === "pay_undo") { targets = group(); mk = () => ({ payStatus:"cek" }); }
-  else if (act === "pay_no") { targets = group(); mk = () => ({ payStatus:"ditolak", status:"baru" }); }
-  else if (act === "next") mk = x => ({ status:NEXT[x.status] });
-  else if (act === "cancel") mk = () => ({ status:"batal" });
-  else if (act === "reopen") mk = x => ({ status:"baru", payStatus:x.payStatus === "ditolak" ? "cek" : x.payStatus });
+  /* pembayaran berlaku untuk seluruh pesanan satu checkout, kecuali yang sudah dibatalkan */
+  const group = () => (o.gid ? orders.filter(x => x.gid === o.gid) : [o]).filter(x => x.status !== "batal");
+  let targets = [o], patch;
+  if (act === "pay_ok") { targets = group(); patch = { pay_status:"lunas" }; }
+  else if (act === "pay_undo") { targets = group(); patch = { pay_status:"cek" }; }
+  else if (act === "pay_no") { targets = group(); patch = { pay_status:"ditolak" }; }
+  else if (act === "next") patch = { status:NEXT[o.status] };
+  else if (act === "cancel") patch = { status:"batal" };
+  else if (act === "reopen") patch = { status:"baru", pay_status:o.payStatus === "ditolak" ? "cek" : o.payStatus };
   else return;
   armCancel = null; targets.forEach(x => busy.add(x.id)); renderAdminOrders();
-  try { for (const x of targets) await api.setOrder(x.id, { payStatus:x.payStatus, status:x.status, ...mk(x) }); await refreshOrders(); }
+  try { await api.updateOrders(targets.map(x => x.id), patch); await refreshOrders(); }
   catch (err) { toast("Gagal menyimpan. Coba lagi."); }
   targets.forEach(x => busy.delete(x.id)); renderAdminOrders();
 });
@@ -1126,7 +1127,7 @@ salesEl.addEventListener("change", e => { if (e.target.id === "s-po") { salesPo 
 
 /* --- rekap dapur dan ekspor --- */
 let rekapPo = null, rekapBasis = "semua";
-const dayStart = () => { const d = new Date(); return d.toISOString().slice(0, 10); };
+const dayStart = jakartaToday;
 function rekapData(){
   const poSorted = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
   if (!rekapPo || !poSorted.some(p => p.id === rekapPo)) { const up = poSorted.find(p => p.date >= dayStart()); rekapPo = (up || poSorted[poSorted.length - 1] || {}).id || null; }
@@ -1301,13 +1302,15 @@ async function refreshProducts(){
   catch (e) { if (products === null) dbState = "error"; renderMenu(); return; }
   await refreshRemaining(); if (view === "admin" && tab === "menu") renderMenuSafe();
 }
+let posOk = false;   // true setelah jadwal PO berhasil dimuat sekali; sebelum itu keranjang tidak boleh dipangkas
+const canPrune = () => dbState === "ok" && posOk;
 async function refreshPos(){
-  try { pos = await api.loadPos(); } catch (e) { if (pos === null) pos = []; }
-  renderMenu(); renderAdmin();
+  try { pos = await api.loadPos(); posOk = true; } catch (e) { if (pos === null) pos = []; }
+  renderStatic(); renderMenu(); renderAdmin();
 }
 function applySettings(d){
   settings = { ...DEFAULT_SETTINGS, ...d }; settings.qrisUrl = assetUrl(settings.qrisPath);
-  renderMenu(); renderPayInfo(); if (view === "admin" && tab === "set") renderSetSafe();
+  renderStatic(); renderMenu(); renderPayInfo(); if (view === "admin" && tab === "set") renderSetSafe();
 }
 async function refreshSettings(){ try { applySettings(await api.loadSettings()); } catch (e) {} }
 async function refreshOrders(){
@@ -1315,7 +1318,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 11;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
@@ -1332,7 +1335,7 @@ function subscribeRealtime(){
   ch.subscribe();
 }
 async function init(){
-  restoreState(); initLast();
+  restoreState(); initLast(); renderStatic();
   ["nama", "hp", "alamat"].forEach(k => $(k).addEventListener("input", saveCust)); $("area").addEventListener("change", saveCust);
   renderMenu(); updateBar(); go(1);
   setInterval(checkClosings, 15000); document.addEventListener("visibilitychange", checkClosings);

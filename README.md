@@ -83,6 +83,21 @@ Pesanan yang belum dibayar lebih dari 3 jam tidak lagi menahan kuota porsi. Pesa
 
 Setiap kali `supabase/schema.sql` berubah, jalankan ulang isinya di SQL Editor (aman diulang).
 
+## Pengujian logika
+
+Kalkulasi dan aturan pesanan diuji dengan Postgres sungguhan, bukan hanya dibaca. Skenario yang dicakup:
+harga varian dan tambahan, ongkir per tanggal, antar dan ambil sendiri, kode unik (1 sampai 499, tidak kembar di antara
+pesanan yang masih menunggu bayar), kuota per tanggal PO, PO tutup dan terjadwal, batas spam, nomor pesanan antar tahun,
+pesanan ganda saat kirim ulang (kunci idempotensi `ref`), hak admin, dan bukti bayar. Total yang dihitung browser juga
+dibandingkan dengan total database untuk ratusan keranjang acak.
+
+Menjalankan ulang: `PGHOST=localhost PGUSER=postgres sh tests/run.sh` (butuh Postgres lokal, tidak menyentuh Supabase). Hasil terakhir: 68 pemeriksaan lulus, 105 pesanan dalam satu PO bernomor unik, dan 119 keranjang acak totalnya sama antara browser dan database.
+
+Aturan penting yang tertanam:
+- Harga selalu dihitung ulang di server dari tabel menu. Angka di browser hanya tampilan.
+- Konfirmasi atau penolakan bayar berlaku untuk seluruh pesanan satu checkout, kecuali yang sudah dibatalkan.
+- Keranjang di browser tidak dipangkas sebelum jadwal PO berhasil dimuat, supaya sinyal buruk tidak menghapusnya.
+
 ## Design system
 
 Strukturnya mengikuti dokumentasi publik **Asphalt Aloha** (Gojek), dengan warna dan identitas Lapo Doli. Token ada di bagian akhir `style.css`.
