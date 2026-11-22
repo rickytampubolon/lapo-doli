@@ -601,3 +601,9 @@ textarea{min-height:84px;resize:vertical}
 .ahead .tag{color:var(--muted);border:1px solid var(--line)}
 .ahead .menubtn{background:rgba(163,40,28,.1);color:var(--ink)}
 .ahead .menubtn:focus-visible{outline-color:var(--accent)}
+
+/* aksen ulos tipis */
+:root{--ulos-h:linear-gradient(to bottom,#a3281c 0 2px,#f6e4cf 2px 3px,#6f1a12 3px 4px,#a3281c 4px 6px)}
+.pattern{height:6px;background:var(--ulos-h)}
+.ahead{padding-bottom:6px}
+.ahead::after{height:6px;background:var(--ulos-h)}
