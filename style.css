@@ -1165,3 +1165,18 @@ img.thumb{background:var(--soft)}
 .cancelbtn{display:block;margin:var(--sp-2) auto 0;min-height:44px;padding:0 var(--sp-4);color:var(--text-secondary);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .cancelbtn.arm{color:var(--bad);text-decoration:none}
 .cancelbtn[hidden]{display:none}
+
+/* cari alamat (Google Maps) */
+.combo{position:relative}
+#addr-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;margin:0;padding:var(--sp-1);list-style:none;background:#fff;border:1px solid var(--border-default);border-radius:var(--r-md);box-shadow:var(--shadow-high);max-height:300px;overflow:auto}
+#addr-list[hidden]{display:none}
+#addr-list li[data-i]{min-height:48px;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);cursor:pointer;display:grid;align-content:center}
+#addr-list li[data-i] b{font-size:14px;line-height:20px;font-weight:600}
+#addr-list li[data-i] small{font-size:12px;line-height:16px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#addr-list li[data-i]:hover,#addr-list li[aria-selected="true"]{background:var(--soft)}
+#addr-list .gpow{padding:var(--sp-1) var(--sp-3) 0;font-size:11px;line-height:16px;color:var(--text-secondary);text-align:right}
+#addr-hint{display:flex;gap:var(--sp-2);align-items:flex-start;margin:var(--sp-2) 0 0;font-size:12px;line-height:16px;color:var(--text-secondary)}
+#addr-hint[hidden]{display:none}
+#addr-hint .ic{flex:none;width:16px;height:16px;color:var(--accent)}
+.ofacts .maplink{margin-left:auto;flex:none;color:var(--accent);white-space:nowrap}
+#addr-q{scroll-margin-top:56px}

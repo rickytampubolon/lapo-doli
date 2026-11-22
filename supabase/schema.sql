@@ -98,6 +98,8 @@ alter table public.orders add column if not exists kode integer not null default
 alter table public.orders add column if not exists proof_path text not null default '';
 -- kunci idempotensi dari browser: kirim ulang karena sinyal putus tidak membuat pesanan ganda
 alter table public.orders add column if not exists client_ref text;
+-- tautan lokasi Google Maps yang dipilih pembeli (hanya tautan Google, maksimal 300 karakter)
+alter table public.orders add column if not exists maps_url text not null default '';
 create index if not exists orders_ref_idx on public.orders (client_ref) where client_ref is not null;
 create index if not exists orders_po_idx on public.orders (po_id);
 create index if not exists orders_gid_idx on public.orders (gid);
@@ -193,7 +195,7 @@ as $$
 declare
   st jsonb;
   v_cutoff text; v_hours text; v_pick_hours text; v_pick_loc text; v_flat integer;
-  v_fulfil text; v_method text; v_nama text; v_hp text; v_area text; v_alamat text; v_notes text;
+  v_fulfil text; v_method text; v_nama text; v_hp text; v_area text; v_alamat text; v_maps text; v_notes text;
   v_gid text; v_source text; v_paid boolean; v_ongkir integer; v_total_all integer := 0; v_count integer;
   grp jsonb; line jsonb; g jsonb;
   p public.products; po public.pos;
@@ -241,8 +243,10 @@ begin
     end if;
     v_alamat := btrim(coalesce(payload ->> 'alamat', ''));
     if char_length(v_alamat) < 10 or char_length(v_alamat) > 300 then raise exception 'invalid_alamat'; end if;
+    v_maps := btrim(coalesce(payload ->> 'maps', ''));
+    if char_length(v_maps) > 300 or v_maps !~ '^https://(www\.google\.com/maps|maps\.google\.com|maps\.app\.goo\.gl)([/?]|$)' then v_maps := ''; end if;
   else
-    v_area := ''; v_alamat := '';
+    v_area := ''; v_alamat := ''; v_maps := '';
   end if;
   v_notes := left(btrim(coalesce(payload ->> 'notes', '')), 300);
   -- Batasi spam: satu nomor HP maksimal 5 kali kirim pesanan dalam 10 menit (admin dikecualikan)
@@ -381,9 +385,9 @@ begin
       oid := to_char((g ->> 'po_date')::date, 'DDMM') || '-' || public.fmt_seq(seq);
     end loop;
     update public.counters set n = greatest(n, seq) where po_id = g ->> 'po_id';
-    insert into public.orders (id, gid, po_id, po_date, source, nama, hp, fulfil, area, alamat, pickup_loc,
+    insert into public.orders (id, gid, po_id, po_date, source, nama, hp, fulfil, area, alamat, maps_url, pickup_loc,
                                notes, method, items, ongkir, total, group_total, group_count, hours, pay_status, kode, client_ref)
-    values (oid, v_gid, g ->> 'po_id', (g ->> 'po_date')::date, v_source, v_nama, v_hp, v_fulfil, v_area, v_alamat,
+    values (oid, v_gid, g ->> 'po_id', (g ->> 'po_date')::date, v_source, v_nama, v_hp, v_fulfil, v_area, v_alamat, v_maps,
             case when v_fulfil = 'ambil' then v_pick_loc else '' end,
             v_notes, v_method, g -> 'items', (g ->> 'ongkir')::integer,
             (g ->> 'food')::integer + (g ->> 'ongkir')::integer, v_total_all, v_count,
@@ -501,7 +505,7 @@ grant execute on function public.po_remaining() to anon, authenticated;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 13 $$;
+returns integer language sql immutable as $$ select 14 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

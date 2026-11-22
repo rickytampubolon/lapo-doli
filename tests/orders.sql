@@ -183,6 +183,17 @@ begin
   r := public.create_orders(t.base('081200000063') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
   update public.orders set pay_status = 'lunas' where id = r->0->>'id';
   perform t.ck('13 sudah lunas: tidak bisa dibatalkan pembeli', public.cancel_orders(r->0->>'gid', '081200000063') = 0);
+
+  -- 14. lokasi Google Maps
+  delete from public.orders; delete from public.counters;
+  r := public.create_orders(t.base('081200000071') || '{"maps":"https://maps.google.com/?cid=123456","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('14 tautan Google Maps tersimpan', (select maps_url from public.orders where id = r->0->>'id') = 'https://maps.google.com/?cid=123456');
+  r := public.create_orders(t.base('081200000072') || '{"maps":"https://evil.example/maps","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('14 tautan non-Google dibuang', (select maps_url from public.orders where id = r->0->>'id') = '');
+  r := public.create_orders(t.base('081200000073') || '{"maps":"https://www.google.com.evil.com/maps","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('14 domain tiruan mirip Google dibuang', (select maps_url from public.orders where id = r->0->>'id') = '');
+  r := public.create_orders(t.base('081200000074', 'ambil') || '{"maps":"https://maps.google.com/?cid=1","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('14 ambil sendiri: tautan tidak disimpan', (select maps_url from public.orders where id = r->0->>'id') = '');
 end $$;
 
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;

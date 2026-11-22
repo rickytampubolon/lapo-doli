@@ -152,3 +152,16 @@ Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`,
 - Link status pesanan: `/?cek=NOMOR` membuka Bantuan dan langsung mencari.
 - Tombol bawah di checkout memakai kapsul yang sama dengan keranjang.
 - Pembeli bisa membatalkan pesanan sendiri di halaman bayar selama belum ada bukti bayar (`cancel_orders`, skema v13).
+
+## Pilih alamat dari Google Maps
+
+Di halaman pesanan, pembeli yang memilih "Antar" bisa mencari alamat lewat Google Maps. Pilihan mengisi alamat dan wilayah otomatis, dan tautan peta ikut tersimpan di pesanan (tombol "Buka peta" di detail pesanan admin). Alamat di luar Jakarta ditolak.
+
+Aktifkan dengan satu kunci:
+
+1. Di Google Cloud Console buat project, aktifkan **Places API (New)**, dan pasang billing (ada kuota gratis bulanan).
+2. Buat **API key**. Batasi di bagian *Application restrictions* ke **Websites** dengan alamat `https://lapo-doli.vercel.app/*` (tambah domain lain jika ada), dan di *API restrictions* hanya **Places API (New)**.
+3. Isi `GOOGLE_MAPS_KEY` di `config.js`. Kunci browser memang terlihat publik, karena itu pembatasan domain wajib.
+4. Jalankan ulang `supabase/schema.sql` (v14) untuk kolom `maps_url`.
+
+Tanpa kunci, kolom pencarian tersembunyi dan pembeli mengetik alamat seperti biasa. Pasang juga pagu anggaran (budget alert) di Google Cloud supaya biaya tidak mengejutkan.

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261122m">
+<link rel="stylesheet" href="/style.css?v=20261122o">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -92,6 +92,15 @@
           <input id="hp" type="tel" inputmode="numeric" autocomplete="tel" enterkeyhint="next" placeholder="08123456789">
           <div class="err" id="e-hp"></div>
           <div id="addr-fields">
+            <div id="addr-search" hidden>
+              <label class="lb" for="addr-q">Cari alamat</label>
+              <div class="combo">
+                <input id="addr-q" type="text" role="combobox" aria-expanded="false" aria-controls="addr-list" aria-autocomplete="list" autocomplete="off" enterkeyhint="search" placeholder="Ketik nama gedung atau jalan">
+                <ul id="addr-list" role="listbox" aria-label="Saran alamat" hidden></ul>
+              </div>
+              <p class="fhint" id="addr-hint" hidden><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>Lokasi dari Google Maps. Tambahkan tower, lantai, atau patokan di kolom alamat.</p>
+              <div class="err" id="e-addr-q"></div>
+            </div>
             <label class="lb" for="area">Wilayah <i class="req">*</i></label>
             <select id="area"><option value="">Pilih wilayah</option><option>Jakarta Pusat</option><option>Jakarta Utara</option><option>Jakarta Barat</option><option>Jakarta Selatan</option><option>Jakarta Timur</option></select>
             <div class="err" id="e-area"></div>
@@ -228,7 +237,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261122m"></script>
+<script defer src="/app.js?v=20261122o"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
