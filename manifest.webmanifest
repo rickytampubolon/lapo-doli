@@ -5,7 +5,7 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fbf7f0",
-  "theme_color": "#000000",
+  "theme_color": "#8c2117",
   "lang": "id",
-  "icons": [{ "src": "/favicon.png", "sizes": "any", "type": "image/png" }]
+  "icons": [{ "src": "/assets/apple-touch.png", "sizes": "180x180", "type": "image/png" }, { "src": "/favicon.png", "sizes": "192x192", "type": "image/png" }]
 }

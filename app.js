@@ -1,4 +1,5 @@
 const $ = id => document.getElementById(id);
+const ic = (n, c = "") => `<svg class="ic ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const rp = n => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -469,9 +470,9 @@ function setOrders(rows){
   renderAdmin();
 }
 const FILTERS = [
-  ["cek", "Perlu dicek", o => o.payStatus === "cek" && o.status !== "batal"],
-  ["siap", "Siap diproses", o => o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")],
-  ["kirim", "Dikirim / siap diambil", o => o.payStatus === "lunas" && o.status === "diantar"],
+  ["cek", "Dicek", o => o.payStatus === "cek" && o.status !== "batal"],
+  ["siap", "Proses", o => o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")],
+  ["kirim", "Kirim", o => o.payStatus === "lunas" && o.status === "diantar"],
   ["selesai", "Selesai", o => o.status === "selesai"],
   ["batal", "Batal", o => o.status === "batal" || o.payStatus === "ditolak"],
   ["semua", "Semua", () => true]
@@ -497,7 +498,7 @@ function orderRow(o){
     <div class="orow-h">
       <div style="min-width:0"><div class="o1"><span class="num">${esc(o.id)}</span><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}</div>
         <div class="o2">${esc(meta)}</div><div class="o3">${esc(summary)}</div></div>
-      <div class="oside"><span class="chip ${sc}">${sl}</span>${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm" data-toggle aria-expanded="${open}">${open ? "Tutup" : "Detail"}</button></div>
+      <div class="oside"><span class="chip ${sc}">${sl}</span>${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
     </div>
     ${open ? `<div class="odetail">
       <div class="dgrid">
@@ -518,7 +519,7 @@ function renderAdminOrders(){
   const el = $("a-orders");
   if (ordersState === "loading") { el.innerHTML = '<p class="note">Memuat pesanan...</p>'; return; }
   const cekAll = orders.filter(FILTERS[0][2]).length;
-  if (newOpen) { const nb = $("n-cek"); nb.hidden = !cekAll; nb.textContent = cekAll; return; }
+  if (newOpen) { setCek(cekAll); return; }
   if (poFilter !== "semua" && !(pos || []).some(p => p.id === poFilter)) poFilter = "semua";
   const base = orders.filter(o => poFilter === "semua" || o.poId === poFilter);
   const cnt = k => base.filter(FILTERS.find(f => f[0] === k)[2]).length;
@@ -529,15 +530,15 @@ function renderAdminOrders(){
   const byPo = {}; list.forEach(o => { const k = o.poDate || "-"; (byPo[k] = byPo[k] || []).push(o); });
   const dates = Object.keys(byPo).sort((a, b) => a === "-" ? 1 : b === "-" ? -1 : a.localeCompare(b));
   el.innerHTML = `
-    <div class="ph"><div><h2>Pesanan</h2><p>${orders.length} pesanan dari semua PO</p></div><button class="btn" data-newopen style="width:auto;padding:10px 16px">+ Pesanan</button></div>
     <div class="toolbar">
       <div class="stabs" role="group" aria-label="Filter status">${FILTERS.map(x => { const n = cnt(x[0]); return `<button type="button" data-filter="${x[0]}" aria-pressed="${x[0] === cur}">${x[1]}<span class="c ${x[0] === "cek" && n ? "hot" : ""}">${n}</span></button>`; }).join("")}</div>
       <select id="f-po" class="sel" aria-label="Filter tanggal PO"><option value="semua">Semua tanggal</option>${poOpts.map(p => `<option value="${esc(p.id)}" ${p.id === poFilter ? "selected" : ""}>${esc(dShort(p.date))}</option>`).join("")}</select>
+      <button class="btn sm add" data-newopen type="button">${ic("plus")}Pesanan</button>
     </div>
     ${dates.length ? dates.map(d => { const os = byPo[d], por = os.reduce((a, o) => a + o.items.filter(i => !i.addon).reduce((s, i) => s + (Number(i.qty) || 0), 0), 0);
       return `<div class="group"><span>${d === "-" ? "Tanggal PO tidak tercatat" : esc(dLong(d))}</span><span>${os.length} pesanan · ${por} porsi</span></div><div class="olist">${os.map(orderRow).join("")}</div>`; }).join("")
       : `<div class="empty" style="margin-top:16px">${EMPTY[cur] || EMPTY.semua}</div>`}`;
-  const n = $("n-cek"); n.hidden = !cekAll; n.textContent = cekAll;
+  setCek(cekAll);
 }
 $("a-orders").addEventListener("change", e => { if (e.target.id === "f-po") { poFilter = e.target.value; renderAdminOrders(); } });
 $("a-orders").addEventListener("click", async e => {
@@ -590,28 +591,30 @@ function renderNewForm(){
   const pl = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date))), list = products || [];
   const def = (pl.find(poOpenNow) || pl[0] || {}).id;
   $("a-new").innerHTML = `<div class="nform">
-    <div class="ph"><div><h2>Pesanan baru</h2><p>Catat pesanan pelanggan, misalnya yang masuk lewat WhatsApp.</p></div><button class="btn line sm" data-nclose type="button">Kembali ke daftar</button></div>
+    <div class="toolbar"><button class="btn line sm" data-nclose type="button">${ic("back")}Pesanan</button><b>Pesanan baru</b></div>
     <div class="grid2">
       <div><label class="lb" for="n-po" style="margin-top:0">Tanggal PO</label><select id="n-po">${pl.map(po => `<option value="${esc(po.id)}" ${po.id === def ? "selected" : ""}>${esc(dShort(po.date))}${poOpenNow(po) ? "" : " (ditutup)"}</option>`).join("")}</select></div>
       <div><label class="lb" style="margin-top:0">Cara terima</label><div class="seg" id="n-fulfil"><label><input type="radio" name="nf" value="antar" checked>Antar</label><label><input type="radio" name="nf" value="ambil">Ambil sendiri</label></div></div>
     </div>
-    <label class="lb" for="n-nama">Nama pelanggan</label><input type="text" id="n-nama" placeholder="Nama lengkap"><div class="err" id="n-e-nama"></div>
-    <label class="lb" for="n-hp">No. HP (WhatsApp)</label><input type="tel" id="n-hp" inputmode="tel" placeholder="08123456789"><div class="err" id="n-e-hp"></div>
+    <div class="grid2">
+      <div><label class="lb" for="n-nama">Nama</label><input type="text" id="n-nama" placeholder="Nama lengkap"><div class="err" id="n-e-nama"></div></div>
+      <div><label class="lb" for="n-hp">No. HP</label><input type="tel" id="n-hp" inputmode="tel" placeholder="08123456789"><div class="err" id="n-e-hp"></div></div>
+    </div>
     <div id="n-addr">
       <label class="lb" for="n-area">Wilayah</label><select id="n-area"><option value="">Pilih wilayah</option>${AREAS.map(a => `<option>${a}</option>`).join("")}</select><div class="err" id="n-e-area"></div>
       <label class="lb" for="n-alamat">Alamat lengkap</label><textarea id="n-alamat" placeholder="Jalan, nomor rumah, patokan"></textarea><div class="err" id="n-e-alamat"></div>
     </div>
-    <label class="lb" for="n-notes">Catatan (opsional)</label><textarea id="n-notes" placeholder="Contoh: tidak pakai cabai"></textarea>
-    <div class="label">Menu yang dipesan</div>
+    <label class="lb" for="n-notes">Catatan</label><textarea id="n-notes" placeholder="Contoh: tidak pakai cabai"></textarea>
+    <div class="label">Menu</div>
     ${list.map(p => { const opts = optsOf(p), adds = addonsOf(p);
       return `<div class="nitem"><div class="nrow"><div><b>${esc(p.name)}</b> <small>${optsOf(p).some(o => o.custom) ? "mulai " + rp(fromPrice(p)) : rp(p.price)}${p.available === false ? " · habis" : ""}</small></div>${opts.length ? "" : mstep(p.id, p.name)}</div>
         ${opts.length ? `<div class="vpanel" style="display:block">${variantsHTML(p, p.id, mstep)}</div>` : ""}
         ${adds.length ? `<div class="subs"><div class="subs-title">Tambahan</div>${adds.map(a => `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${mstep(p.id + "::+" + a.id, a.name + " untuk " + p.name)}</div>`).join("")}</div>` : ""}
-        <div class="noterow" style="margin-top:8px"><input type="text" class="inote" data-nnote="${esc(p.id)}" maxlength="120" placeholder="Catatan untuk ${esc(p.name)} (opsional)" aria-label="Catatan untuk ${esc(p.name)}"></div></div>`; }).join("") || '<div class="empty">Belum ada menu.</div>'}
+        <div class="noterow" style="margin-top:8px"><input type="text" class="inote" data-nnote="${esc(p.id)}" maxlength="120" placeholder="Catatan" aria-label="Catatan untuk ${esc(p.name)}"></div></div>`; }).join("") || '<div class="empty">Belum ada menu.</div>'}
     <div class="grid2" style="margin-top:12px">
       <div><label class="lb" for="n-ong" style="margin-top:0">Ongkir (Rp)</label><input type="number" id="n-ong" min="0" step="500" inputmode="numeric" value="${flat()}"></div>
       <div><label class="lb" for="n-method" style="margin-top:0">Bayar via</label><select id="n-method"><option value="transfer">Transfer</option><option value="qris">QRIS</option></select></div>
-      <div><label class="lb" for="n-pay" style="margin-top:0">Status bayar</label><select id="n-pay"><option value="cek">Belum dibayar (menunggu cek)</option><option value="lunas">Sudah lunas</option></select></div>
+      <div><label class="lb" for="n-pay" style="margin-top:0">Status bayar</label><select id="n-pay"><option value="cek">Belum bayar</option><option value="lunas">Lunas</option></select></div>
     </div>
     <div class="ntot"><span class="muted" id="n-sum"></span><b id="n-total">Rp 0</b></div>
     <button class="btn" id="n-save" type="button">Buat pesanan</button></div>`;
@@ -661,7 +664,7 @@ async function createManual(){
     const txt = manualText(o, paid);
     $("a-new").innerHTML = `<div class="nform"><div class="okbox"><h3>Pesanan ${esc(id)} dibuat</h3><span class="muted">${esc(o.nama)} · ${esc(dShort(o.poDate))} · ${rp(o.total)} · ${paid ? "sudah lunas" : "menunggu cek bayar"}</span></div>
       <label class="lb" for="n-text" style="margin-top:0">Teks balasan untuk pelanggan</label><textarea id="n-text" readonly style="min-height:200px">${esc(txt)}</textarea>
-      <div class="acts"><button class="btn" data-ncopy type="button">Salin teks</button><a class="btn line" target="_blank" rel="noopener" href="https://wa.me/${normPhone(o.hp)}?text=${encodeURIComponent(txt)}">Buka WhatsApp pelanggan</a></div>
+      <div class="acts"><button class="btn" data-ncopy type="button">${ic("copy")}Salin teks</button><a class="btn line" target="_blank" rel="noopener" href="https://wa.me/${normPhone(o.hp)}?text=${encodeURIComponent(txt)}">Buka WhatsApp pelanggan</a></div>
       <div class="acts" style="margin-top:18px"><button class="btn line" data-nagain type="button">Buat pesanan lain</button><button class="btn line" data-nclose type="button">Kembali ke daftar</button></div></div>`;
     window.scrollTo({ top:0 });
   } catch (e) { toast("Gagal menyimpan. Coba lagi."); btn.disabled = false; }
@@ -701,16 +704,12 @@ function renderAdminPo(){
     const noteLines = os.flatMap(o => o.items.filter(i => i.note).map(i => `${o.id} · ${i.name}${i.option && !i.addon ? " (" + i.option + ")" : ""}: ${i.note}`)).concat(os.filter(o => o.notes).map(o => `${o.id} · pesanan: ${o.notes}`));
     const auto = po.open === true && isPast(po), on = po.open === true && !auto;
     return `<div class="porow ${on ? "" : "off"}" data-po="${esc(po.id)}">
-      <div class="po-h"><div><h3>${esc(dLong(po.date))}</h3><span class="note">${on ? "Tutup otomatis pukul " + cutoffLabel() + " · " : auto ? "Ditutup otomatis pukul " + cutoffLabel() + " · " : ""}${os.length} pesanan aktif${os.length ? ` · ${lunas} lunas · ${os.filter(o => o.fulfil === "ambil").length} ambil sendiri` : ""}</span></div>
-        <label class="switch"><input type="checkbox" id="po-open-${esc(po.id)}" data-poopen ${on ? "checked" : ""} ${auto ? "disabled" : ""}><span class="track"></span><span>${on ? "Dibuka" : auto ? "Ditutup otomatis" : "Ditutup"}</span></label></div>
-      ${rekap ? `<div><div class="fl">Yang perlu dimasak (termasuk yang belum dicek bayar)</div><ul class="rekap">${rekap}</ul></div>` : '<div class="note">Belum ada pesanan.</div>'}
-      ${noteLines.length ? `<div><div class="fl">Catatan pelanggan</div><ul class="notelist">${noteLines.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
-      <div><button class="textbtn ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button">${armPoDel === po.id ? "Yakin hapus PO ini?" : "Hapus PO"}</button></div></div>`;
+      <div class="po-h"><div><h3>${esc(dLong(po.date))}</h3><span class="note">${os.length} pesanan${os.length ? ` · ${lunas} lunas` : ""}</span></div>
+        <label class="switch"><input type="checkbox" id="po-open-${esc(po.id)}" data-poopen ${on ? "checked" : ""} ${auto ? "disabled" : ""}><span class="track"></span><span>${on ? "Buka" : auto ? "Tutup otomatis" : "Tutup"}</span></label>
+        <button class="textbtn iconbtn-t ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button" aria-label="Hapus PO" title="Hapus PO">${armPoDel === po.id ? "Yakin hapus?" : ic("trash")}</button></div></div>`;
   }).join("");
-  el.innerHTML = `<div class="ph"><div><h2>PO</h2><p>Pembeli hanya melihat PO yang dibuka dan boleh ikut lebih dari satu.</p></div></div>
-    <div class="card"><div class="newpo"><div><label class="fl" for="po-new">Buka PO untuk tanggal</label><input type="date" id="po-new"></div>
-      <button class="btn" data-poadd style="width:auto;padding:11px 18px">Buka PO</button></div></div>
-    ${rows || '<div class="empty">Belum ada PO. Pilih tanggal di atas lalu tekan Buka PO.</div>'}`;
+  el.innerHTML = `<div class="newpo"><input type="date" id="po-new" aria-label="Tanggal PO baru"><button class="btn sm add" data-poadd type="button">${ic("plus")}Buka PO</button></div>
+    ${rows || '<div class="empty">Belum ada PO.</div>'}`;
 }
 const poEl = $("a-po");
 let poDirty = false;
@@ -757,23 +756,23 @@ function renderAdminMenu(){
       <label class="pimg" title="Ganti foto">${thumbAdmin(p)}${assetsNs ? "<small>Ganti foto</small>" : ""}${assetsNs ? `<input type="file" accept="image/*" data-up id="up-${esc(p.id)}" aria-label="Foto ${esc(p.name)}">` : ""}</label>
       <div class="pmain">
         <div class="fgrid">
-          <div><label class="fl" for="n-${esc(p.id)}">Nama menu</label><input type="text" id="n-${esc(p.id)}" data-f="name" value="${esc(p.name)}"></div>
-          <div><label class="fl" for="pr-${esc(p.id)}">Harga (Rp)</label><input type="number" id="pr-${esc(p.id)}" data-f="price" value="${Number(p.price) || 0}" min="0" step="500" inputmode="numeric"></div>
-          <div><label class="fl" for="q-${esc(p.id)}">Kuota porsi per tanggal PO</label><input type="number" id="q-${esc(p.id)}" data-f="quota" value="${p.quota == null ? "" : p.quota}" min="0" step="1" inputmode="numeric" placeholder="Tanpa batas"></div>
+          <div><label class="fl" for="n-${esc(p.id)}">Nama</label><input type="text" id="n-${esc(p.id)}" data-f="name" value="${esc(p.name)}"></div>
+          <div><label class="fl" for="pr-${esc(p.id)}">Harga</label><input type="number" id="pr-${esc(p.id)}" data-f="price" value="${Number(p.price) || 0}" min="0" step="500" inputmode="numeric"></div>
+          <div><label class="fl" for="q-${esc(p.id)}">Kuota per PO</label><input type="number" id="q-${esc(p.id)}" data-f="quota" value="${p.quota == null ? "" : p.quota}" min="0" step="1" inputmode="numeric" placeholder="Tanpa batas"></div>
           <div class="full"><label class="fl" for="d-${esc(p.id)}">Deskripsi</label><input type="text" id="d-${esc(p.id)}" data-f="desc" value="${esc(p.desc)}"></div>
         </div>
-        <details class="adv" data-adv="${esc(p.id)}" ${advOpen.has(p.id) ? "open" : ""}><summary>Varian, tambahan, dan ikon</summary>
+        <details class="adv" data-adv="${esc(p.id)}" ${advOpen.has(p.id) ? "open" : ""}><summary>Varian dan tambahan</summary>
           <div class="fgrid">
-            <div class="full"><label class="fl" for="op-${esc(p.id)}">Varian pilihan</label><input type="text" id="op-${esc(p.id)}" data-f="options" value="${esc((Array.isArray(p.options) ? p.options : []).join(", "))}" placeholder="250ml=35000, 500ml=65000"><p class="fhint">Pisahkan dengan koma. Harga berbeda per varian: nama=harga. Tanpa harga, varian ikut harga menu. Kosongkan kalau menu tidak punya varian.</p></div>
-            <div class="full"><label class="fl" for="ad-${esc(p.id)}">Tambahan (add-on)</label><input type="text" id="ad-${esc(p.id)}" data-f="addons" value="${esc(fmtAddons(p))}" placeholder="Nasi=5000, Sop=0"><p class="fhint">Format nama=harga, pisahkan dengan koma. Harga 0 berarti gratis.</p></div>
-            <div><label class="fl" for="em-${esc(p.id)}">Ikon jika tanpa foto</label><input type="text" id="em-${esc(p.id)}" data-f="emoji" value="${esc(p.emoji || "")}" maxlength="4"></div>
+            <div class="full"><label class="fl" for="op-${esc(p.id)}">Varian pilihan</label><input type="text" id="op-${esc(p.id)}" data-f="options" value="${esc((Array.isArray(p.options) ? p.options : []).join(", "))}" placeholder="250ml=35000, 500ml=65000"><p class="fhint">Pisahkan dengan koma. Harga beda: nama=harga.</p></div>
+            <div class="full"><label class="fl" for="ad-${esc(p.id)}">Tambahan</label><input type="text" id="ad-${esc(p.id)}" data-f="addons" value="${esc(fmtAddons(p))}" placeholder="Nasi=5000, Sop=0"><p class="fhint">Format nama=harga. Harga 0 berarti gratis.</p></div>
+            <div><label class="fl" for="em-${esc(p.id)}">Ikon</label><input type="text" id="em-${esc(p.id)}" data-f="emoji" value="${esc(p.emoji || "")}" maxlength="4"></div>
           </div></details>
         <div class="pbar"><label class="switch"><input type="checkbox" id="av-${esc(p.id)}" data-f="available" ${p.available === false ? "" : "checked"}><span class="track"></span><span>${p.available === false ? "Habis" : "Tersedia"}</span></label>
-          <button class="textbtn ${armDel === p.id ? "dangerbtn" : ""}" data-del type="button">${armDel === p.id ? "Yakin hapus menu ini?" : "Hapus menu"}</button></div>
+          <button class="textbtn ${armDel === p.id ? "dangerbtn" : ""}" data-del type="button">${armDel === p.id ? "Yakin hapus menu ini?" : ic("trash") + "Hapus"}</button></div>
       </div></div>`).join("");
   el.innerHTML = `
-    <div class="ph"><div><h2>Menu dan harga</h2><p>Perubahan tersimpan otomatis dan langsung tampil di toko.</p></div><button class="btn" data-add style="width:auto;padding:10px 16px">+ Tambah menu</button></div>
-    ${rows || `<div class="empty">Belum ada menu.<br><button class="btn sm" style="display:inline-block;margin-top:12px" data-seed>Isi menu awal (3 menu)</button></div>`}`;
+    <div class="toolbar"><span></span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
+    ${rows || `<div class="empty">Belum ada menu.<br><button class="btn sm" style="display:inline-block;margin-top:12px" data-seed>Isi menu awal</button></div>`}`;
 }
 const menuEl = $("a-menu");
 let menuDirty = false;
@@ -841,27 +840,27 @@ menuEl.addEventListener("click", async e => {
 function renderAdminSet(){
   const s = settings, el = $("a-set");
   const f = (id, key, label, val, opts = "", full = false) => `<div class="${full ? "full" : ""}"><label class="fl" for="${id}">${label}</label><input type="${opts.includes("number") ? "number" : "text"}" id="${id}" data-s="${key}" value="${esc(val)}" ${opts}></div>`;
-  el.innerHTML = `<div class="ph"><div><h2>Pengaturan</h2><p>Perubahan tersimpan otomatis.</p></div></div>
-    <section class="card setsec"><h3>Antar dan ambil sendiri</h3><div class="fgrid">
+  el.innerHTML = `
+    <section class="card setsec"><h3>Antar dan ambil</h3><div class="fgrid">
       ${f("s-jam", "deliveryHours", "Jam pengantaran", s.deliveryHours, 'placeholder="12.00 - 14.00"')}
-      ${f("s-og", "ongkir", "Ongkir flat Lalamove per pengiriman (Rp)", Number(s.ongkir) || 0, 'number min="0" step="500" inputmode="numeric"')}
-      ${f("s-pj", "pickupHours", "Jam ambil sendiri", s.pickupHours, 'placeholder="12.00 - 14.00"')}
-      ${f("s-pl", "pickupLocation", "Lokasi ambil sendiri", s.pickupLocation, "", true)}
-      ${f("s-co", "poCutoff", "PO ditutup otomatis pada hari H pukul", s.poCutoff, 'placeholder="10:00"')}
-    </div><p class="fhint">Isi ongkir 0 kalau pengantaran gratis.</p></section>
+      ${f("s-pj", "pickupHours", "Jam ambil", s.pickupHours, 'placeholder="12.00 - 14.00"')}
+      ${f("s-co", "poCutoff", "Tutup PO pukul", s.poCutoff, 'placeholder="10:00"')}
+      ${f("s-og", "ongkir", "Ongkir (Rp, 0 = gratis)", Number(s.ongkir) || 0, 'number min="0" step="500" inputmode="numeric"')}
+      ${f("s-pl", "pickupLocation", "Lokasi ambil", s.pickupLocation, "", true)}
+    </div></section>
     <section class="card setsec"><h3>Pembayaran</h3><div class="fgrid">
       ${f("s-bn", "bankName", "Nama bank", s.bankName)}
       ${f("s-bno", "bankNumber", "Nomor rekening", s.bankNumber, 'inputmode="numeric"')}
       ${f("s-bh", "bankHolder", "Atas nama", s.bankHolder)}
     </div>
     <div class="qrisbox">${s.qrisUrl ? `<img src="${esc(s.qrisUrl)}" alt="QRIS">` : ""}
-      <div><div class="fl">QRIS</div><p class="fhint" style="margin:0 0 10px">${s.qrisUrl ? "Pembeli bisa memilih bayar lewat QRIS." : "Belum ada gambar QRIS, jadi pembeli hanya melihat transfer bank."}</p>
-      <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti gambar QRIS" : "Unggah gambar QRIS"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Unggah gambar butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus QRIS</button>' : ""}</div></div></div></section>
-    <section class="card setsec"><h3>Kode unik pembayaran</h3>
+      <div><div class="fl">QRIS</div>${s.qrisUrl ? "" : '<p class="fhint" style="margin:0 0 8px">Belum ada gambar.</p>'}
+      <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti" : "Unggah"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus QRIS</button>' : ""}</div></div></div></section>
+    <section class="card setsec"><h3>Kode unik</h3>
       <label class="switch"><input type="checkbox" id="s-uc" data-s="uniqueCode" ${s.uniqueCode !== false ? "checked" : ""}><span class="track"></span><span>${s.uniqueCode !== false ? "Aktif" : "Mati"}</span></label>
-      <p class="fhint">Menambahkan 1 sampai 999 rupiah ke jumlah transfer setiap pesanan, supaya mudah dicocokkan dengan mutasi bank. Kode tidak masuk hitungan penjualan.</p></section>
+      <p class="fhint">Tambah Rp 1 sampai 999 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
     <section class="card setsec"><h3>Kontak</h3><div class="fgrid">
-      ${f("s-wa", "waNumber", "Nomor WhatsApp admin (format 62...)", s.waNumber, 'inputmode="numeric"')}
+      ${f("s-wa", "waNumber", "WhatsApp admin (62...)", s.waNumber, 'inputmode="numeric"')}
     </div></section>`;
 }
 const setEl = $("a-set");
@@ -946,24 +945,23 @@ function renderSales(){
   const seg = (cls, n, name) => n ? `<div class="sg ${cls}" style="flex:${n}" data-tip tabindex="0" data-a="${n} pesanan" data-b="${name}" data-c="${Math.round(n / tot * 100)}%">${n / tot >= .18 ? Math.round(n / tot * 100) + "%" : ""}</div>` : "";
 
   el.innerHTML = `<div class="sales">
-    <div class="ph" style="margin-bottom:0"><div><h2>Penjualan</h2><p>Ringkasan dari pesanan yang masuk.</p></div></div>
     <div class="toolbar">
       <select id="s-po" class="sel" aria-label="Filter tanggal PO"><option value="semua">Semua tanggal</option>${poSorted.map(p => `<option value="${esc(p.id)}" ${p.id === salesPo ? "selected" : ""}>${esc(dShort(p.date))}</option>`).join("")}</select>
-      <div class="stabs" role="group" aria-label="Dasar hitung"><button type="button" data-sbasis="lunas" aria-pressed="${salesBasis === "lunas"}">Lunas saja</button><button type="button" data-sbasis="semua" aria-pressed="${salesBasis === "semua"}">Termasuk belum dicek bayar</button></div>
+      <div class="stabs" role="group" aria-label="Dasar hitung"><button type="button" data-sbasis="lunas" aria-pressed="${salesBasis === "lunas"}">Lunas</button><button type="button" data-sbasis="semua" aria-pressed="${salesBasis === "semua"}">Semua</button></div>
     </div>
-    <div class="herostat"><span class="k">Penjualan makanan${salesBasis === "lunas" ? " (lunas)" : ""}</span><b>${rp(food)}</b><span class="s">${base.length} pesanan · uang masuk ${rp(food + fee)}, termasuk ongkir ${rp(fee)}</span></div>
+    <div class="herostat"><span class="k">Penjualan${salesBasis === "lunas" ? " lunas" : ""}</span><b>${rp(food)}</b><span class="s">${base.length} pesanan, masuk ${rp(food + fee)} dengan ongkir</span></div>
     <div class="tiles">
       <div class="tile"><span>Porsi terjual</span><b>${qty}</b></div>
-      <div class="tile"><span>Rata-rata per pesanan</span><b>${base.length ? rp(Math.round(food / base.length)) : "-"}</b></div>
-      <div class="tile"><span>Pelanggan</span><b>${cust}</b><small>${repeat} memesan lebih dari sekali</small></div>
+      <div class="tile"><span>Rata-rata pesanan</span><b>${base.length ? rp(Math.round(food / base.length)) : "-"}</b></div>
+      <div class="tile"><span>Pelanggan</span><b>${cust}</b><small>${repeat} berulang</small></div>
       <div class="tile"><span>Belum dicek bayar</span><b>${rp(waitSum)}</b><small>${wait.length} pesanan</small></div>
     </div>
     <div class="panels">
-      <div class="panel wide"><h3>Penjualan per tanggal PO</h3><p class="psub">Penjualan makanan tanpa ongkir. Klik batang untuk menyorot satu tanggal.</p>${items.length ? colChart(items) : '<p class="note">Belum ada PO.</p>'}</div>
-      <div class="panel"><h3>Menu terlaris</h3><p class="psub">Jumlah porsi, menu utama saja.</p>${menuRows.length ? hbars(menuRows) : '<p class="note">Belum ada data.</p>'}</div>
-      <div class="panel"><h3>Antar atau ambil sendiri</h3><p class="psub">Jumlah pesanan.</p>${base.length ? `<div class="stack">${seg("a", nAntar, "Antar")}${seg("b", nAmbil, "Ambil sendiri")}</div><div class="legend"><span><i class="sw a"></i>Antar <b>${nAntar}</b></span><span><i class="sw b"></i>Ambil sendiri <b>${nAmbil}</b></span></div>` : '<p class="note">Belum ada data.</p>'}</div>
-      <div class="panel"><h3>Wilayah pengantaran</h3><p class="psub">Jumlah pesanan antar per wilayah.</p>${areaRows.length ? hbars(areaRows) : '<p class="note">Belum ada pesanan antar.</p>'}</div>
-      <div class="panel"><h3>Nasi dan sop</h3><p class="psub">Tambahan yang dipesan.</p>${Object.keys(add).length ? hbars(Object.keys(add).map(n => ({ label:n, value:add[n].qty, a:add[n].qty + " porsi", c:add[n].rev ? rp(add[n].rev) : "Gratis" })).sort((a, b) => b.value - a.value)) : '<p class="note">Belum ada tambahan.</p>'}</div>
+      <div class="panel wide"><h3>Penjualan per tanggal PO</h3>${items.length ? colChart(items) : '<p class="note">Belum ada PO.</p>'}</div>
+      <div class="panel"><h3>Menu terlaris</h3>${menuRows.length ? hbars(menuRows) : '<p class="note">Belum ada data.</p>'}</div>
+      <div class="panel"><h3>Antar atau ambil sendiri</h3>${base.length ? `<div class="stack">${seg("a", nAntar, "Antar")}${seg("b", nAmbil, "Ambil sendiri")}</div><div class="legend"><span><i class="sw a"></i>Antar <b>${nAntar}</b></span><span><i class="sw b"></i>Ambil sendiri <b>${nAmbil}</b></span></div>` : '<p class="note">Belum ada data.</p>'}</div>
+      <div class="panel"><h3>Wilayah pengantaran</h3>${areaRows.length ? hbars(areaRows) : '<p class="note">Belum ada pesanan antar.</p>'}</div>
+      <div class="panel"><h3>Nasi dan sop</h3>${Object.keys(add).length ? hbars(Object.keys(add).map(n => ({ label:n, value:add[n].qty, a:add[n].qty + " porsi", c:add[n].rev ? rp(add[n].rev) : "Gratis" })).sort((a, b) => b.value - a.value)) : '<p class="note">Belum ada tambahan.</p>'}</div>
     </div>
     <details class="tview panel"><summary>Lihat sebagai tabel</summary><div class="tw"><table><thead><tr><th>Tanggal PO</th><th class="r">Pesanan</th><th class="r">Porsi</th><th class="r">Penjualan</th></tr></thead><tbody>${poSorted.map(po => { const os = live.filter(o => o.poId === po.id && inBasis(o));
       return `<tr><td>${esc(dLong(po.date))}</td><td class="r">${os.length}</td><td class="r">${os.reduce((a, o) => a + portionsOf(o), 0)}</td><td class="r">${rp(os.reduce((a, o) => a + foodOf(o), 0))}</td></tr>`; }).join("")}</tbody></table></div>
@@ -1034,19 +1032,18 @@ function renderRekap(){
   const orderCard = o => `<div class="rk-o"><div><b>${esc(o.nama)}</b> <span class="muted">${esc(o.id)} · ${esc(o.hp)}</span></div>${o.fulfil !== "ambil" ? `<div class="muted">${esc(o.alamat)}</div>` : ""}<div>${esc(itemLine(o))}</div>${o.notes ? `<div class="rk-note">Catatan: ${esc(o.notes)}</div>` : ""}</div>`;
   const areas = {}; r.antar.forEach(o => { (areas[o.area || "Tanpa wilayah"] = areas[o.area || "Tanpa wilayah"] || []).push(o); });
   el.innerHTML = `<div class="kitchen">
-    <div class="ph rk-tools"><div><h2>Rekap dapur</h2><p>Jumlah yang harus dimasak dan daftar kirim untuk satu tanggal PO.</p></div>
-      <div class="acts"><button class="btn line sm" data-rk="copy" type="button">Salin rekap</button><button class="btn line sm" data-rk="print" type="button">Cetak</button><button class="btn line sm" data-rk="csv" type="button">Ekspor semua ke CSV</button></div></div>
     <div class="toolbar rk-tools">
       <select id="rk-po" class="sel" aria-label="Tanggal PO">${r.poSorted.map(p => `<option value="${esc(p.id)}" ${p.id === rekapPo ? "selected" : ""}>${esc(dLong(p.date))}</option>`).join("")}</select>
-      <div class="stabs" role="group" aria-label="Pesanan yang dihitung"><button type="button" data-rkb="semua" aria-pressed="${rekapBasis === "semua"}">Semua yang masuk</button><button type="button" data-rkb="lunas" aria-pressed="${rekapBasis === "lunas"}">Lunas saja</button></div>
+      <div class="stabs" role="group" aria-label="Pesanan yang dihitung"><button type="button" data-rkb="semua" aria-pressed="${rekapBasis === "semua"}">Semua</button><button type="button" data-rkb="lunas" aria-pressed="${rekapBasis === "lunas"}">Lunas</button></div>
+      <div class="acts tools"><button class="btn line sm iconbtn" data-rk="copy" type="button" aria-label="Salin rekap" title="Salin rekap">${ic("copy")}</button><button class="btn line sm iconbtn" data-rk="print" type="button" aria-label="Cetak rekap" title="Cetak rekap">${ic("print")}</button><button class="btn line sm iconbtn" data-rk="csv" type="button" aria-label="Ekspor semua pesanan ke CSV" title="Ekspor semua pesanan ke CSV">${ic("download")}</button></div>
     </div>
     ${r.list.length ? `
     <div class="panels">
-      <div class="panel"><h3>Yang harus dimasak</h3><p class="psub">${r.list.length} pesanan, tidak termasuk yang batal atau ditolak.</p>
-        <table class="rk-t"><tbody>${Object.keys(r.cook).map(n => `<tr><th scope="row">${esc(n)}</th><td class="r"><b>${r.cook[n].total}</b> porsi</td></tr>${Object.keys(r.cook[n].opts).filter(k => k !== "Biasa" || Object.keys(r.cook[n].opts).length > 1).map(k => `<tr class="sub"><td colspan="2"><span>${esc(k)}</span><span>${r.cook[n].opts[k]}</span></td></tr>`).join("")}`).join("")}
-        ${Object.keys(r.add).map(n => `<tr class="add"><th scope="row">${esc(n)}</th><td class="r"><b>${r.add[n]}</b></td></tr>`).join("")}</tbody></table></div>
-      <div class="panel"><h3>Antar (${r.antar.length})</h3><p class="psub">Dikelompokkan per wilayah.</p>${r.antar.length ? Object.keys(areas).sort().map(k => `<h4 class="rk-h">${esc(k)} <span class="muted">${areas[k].length}</span></h4>${areas[k].map(orderCard).join("")}`).join("") : '<p class="note">Tidak ada pesanan antar.</p>'}</div>
-      <div class="panel"><h3>Ambil sendiri (${r.ambil.length})</h3><p class="psub">${esc(pickLoc())}, ${esc(pickHours())}.</p>${r.ambil.length ? r.ambil.map(orderCard).join("") : '<p class="note">Tidak ada pesanan ambil sendiri.</p>'}</div>
+      <div class="panel"><h3>Dimasak (${r.list.length} pesanan)</h3>
+        <table class="rk-t"><tbody>${Object.keys(r.cook).map(n => `<tr><th scope="row">${esc(n)}</th><td class="r"><b>${r.cook[n].total}</b> porsi</td></tr>${Object.keys(r.cook[n].opts).filter(k => k !== "Biasa" || Object.keys(r.cook[n].opts).length > 1).map(k => `<tr class="rk-sub"><td>${esc(k)}</td><td>${r.cook[n].opts[k]}</td></tr>`).join("")}`).join("")}
+        ${Object.keys(r.add).map(n => `<tr class="rk-add"><th scope="row">${esc(n)}</th><td class="r"><b>${r.add[n]}</b></td></tr>`).join("")}</tbody></table></div>
+      <div class="panel"><h3>Antar (${r.antar.length})</h3>${r.antar.length ? Object.keys(areas).sort().map(k => `<h4 class="rk-h">${esc(k)} <span class="muted">${areas[k].length}</span></h4>${areas[k].map(orderCard).join("")}`).join("") : '<p class="note">Tidak ada pesanan antar.</p>'}</div>
+      <div class="panel"><h3>Ambil sendiri (${r.ambil.length})</h3>${r.ambil.length ? r.ambil.map(orderCard).join("") : '<p class="note">Tidak ada pesanan ambil sendiri.</p>'}</div>
     </div>` : '<div class="empty">Belum ada pesanan untuk tanggal ini.</div>'}
   </div>`;
 }
@@ -1080,14 +1077,25 @@ function setTab(t){
   if (t === "menu") renderAdminMenu();
   if (t === "set") renderAdminSet();
 }
-$("tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+/* jumlah pesanan yang perlu dicek, tampil di sidebar dan di tombol Menu (HP) */
+function setCek(n){ [$("n-cek"), $("n-cek-top")].forEach(b => { b.hidden = !n; b.textContent = n; }); }
+/* sidebar: tetap di kiri pada layar lebar, drawer pada HP */
+const adminEl = $("admin"), menuBtn = $("menu-btn");
+function setSide(open){
+  adminEl.classList.toggle("side-open", open); $("side-scrim").hidden = !open; menuBtn.setAttribute("aria-expanded", String(open));
+  if (open) { const cur = document.querySelector('#tabs [aria-selected="true"]'); if (cur) cur.focus(); } 
+}
+menuBtn.onclick = () => setSide(!adminEl.classList.contains("side-open"));
+$("side-scrim").onclick = () => { setSide(false); menuBtn.focus(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && adminEl.classList.contains("side-open")) { setSide(false); menuBtn.focus(); } });
+$("tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) { setTab(b.dataset.tab); setSide(false); window.scrollTo({ top:0 }); } });
 
 const VIEWS = { shop:"shop", admin:"admin", help:"help-view" };
 function setView(v){
   view = v;
   for (const k in VIEWS) $(VIEWS[k]).hidden = k !== v;
   if (v === "admin") {
-    $("admin-body").hidden = !isAdmin; $("admin-denied").hidden = isAdmin;
+    $("admin-body").hidden = !isAdmin; $("admin-denied").hidden = isAdmin; adminEl.classList.toggle("authed", isAdmin); setSide(false);
     if (!isAdmin) renderGate();
     renderAdmin();
   }
@@ -1096,7 +1104,7 @@ function setView(v){
 }
 window.addEventListener("hashchange", () => { const v = location.hash === "#admin" ? "admin" : (view === "admin" ? "shop" : view); if (v !== view) setView(v); });
 $("to-admin").onclick = () => setView("admin");
-$("to-shop").onclick = () => setView("shop");
+$("to-shop").onclick = $("to-shop-top").onclick = () => setView("shop");
 document.querySelectorAll("[data-help]").forEach(b => { b.onclick = () => setView("help"); });
 $("help-back").onclick = () => setView("shop");
 
