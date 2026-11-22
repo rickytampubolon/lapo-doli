@@ -53,6 +53,8 @@ create table if not exists public.pos (
   open       boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- PO terjadwal: belum bisa dipesan sebelum waktu ini (kosong = langsung buka)
+alter table public.pos add column if not exists opens_at timestamptz;
 
 create table if not exists public.settings (
   id   text primary key default 'shop',
@@ -250,6 +252,9 @@ begin
       raise exception 'duplicate_po';
     end if;
     if not as_admin then
+      if po.opens_at is not null and now() < po.opens_at then
+        raise exception 'po_not_open:%', to_char(po.date, 'YYYY-MM-DD');
+      end if;
       if not po.open or now() >= ((po.date::text || ' ' || v_cutoff || ':00+07')::timestamptz) then
         raise exception 'po_closed:%', to_char(po.date, 'YYYY-MM-DD');
       end if;

@@ -68,7 +68,8 @@ const api = {
     const ext = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg", path = `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
     must(await sb.storage.from("menu").upload(path, blob, { contentType:blob.type || "image/jpeg", cacheControl:"31536000" })); return path;
   },
-  addPo: async date => must(await sb.from("pos").insert({ id:"po-" + date.replace(/-/g, ""), date, open:true })),
+  addPo: async (date, opensAt) => must(await sb.from("pos").insert({ id:"po-" + date.replace(/-/g, ""), date, open:true, opens_at:opensAt || null })),
+  setPoOpensAt: async (id, v) => must(await sb.from("pos").update({ opens_at:v }).eq("id", id)),
   setPoOpen: async (id, open) => must(await sb.from("pos").update({ open }).eq("id", id)),
   deletePo: async id => must(await sb.from("pos").delete().eq("id", id)),
   saveSettings: async data => must(await sb.from("settings").upsert({ id:"shop", data })),
@@ -101,7 +102,10 @@ const cutoffTime = () => /^\d{1,2}[:.]\d{2}$/.test(settings.poCutoff || "") ? se
 const cutoffLabel = () => cutoffTime().replace(":", ".");
 const cutoffAt = po => Date.parse(`${po.date}T${cutoffTime()}:00+07:00`);
 const isPast = po => Date.now() >= cutoffAt(po);
-const poOpenNow = po => po.open === true && !isPast(po) && !serverClosed.has(po.date);
+const notYet = po => !!po.opens_at && Date.parse(po.opens_at) > Date.now();
+const poScheduled = po => po.open === true && notYet(po) && !isPast(po);
+const poOpenNow = po => po.open === true && !isPast(po) && !serverClosed.has(po.date) && !notYet(po);
+const fmtWhen = iso => new Intl.DateTimeFormat("id-ID", { timeZone:"Asia/Jakarta", weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }).format(new Date(iso));
 const openPos = () => (poList() || []).filter(poOpenNow).sort((a, b) => String(a.date).localeCompare(String(b.date)));
 const hours = () => settings.deliveryHours || "12.00 - 14.00";
 const pickHours = () => settings.pickupHours || hours();
@@ -277,6 +281,16 @@ function restoreState(){
   if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); if (u.area) $("area").value = u.area; }
   stateReady = true;
 }
+/* layar PO kosong: kalau admin sudah menjadwalkan PO, tampilkan tanggal dan jam bukanya */
+function renderClosed(){
+  const n = (poList() || []).filter(poScheduled).sort((x, y) => String(x.date).localeCompare(String(y.date)))[0];
+  const msg = n ? `Halo admin Lapo Doli, tolong kabari saya saat PO ${dShort(n.date)} dibuka.` : "Halo admin Lapo Doli, kapan PO berikutnya dibuka?";
+  $("closed-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent(msg)}`;
+  $("closed-h").textContent = n ? "PO segera dibuka" : "PO belum dibuka";
+  $("closed-p").hidden = !!n;
+  $("np").hidden = !n; if (n) $("np").innerHTML = `<span>${ic("po")}PO ${esc(dShort(n.date))}</span><span>${ic("clock")}Buka ${esc(fmtWhen(n.opens_at))}</span>`;
+  $("closed-wa-t").textContent = n ? "Ingatkan saya" : "Chat admin";
+}
 function updateBar(){
   saveCart();
   const gs = groups();
@@ -289,7 +303,7 @@ function updateBar(){
   document.querySelectorAll("[data-pickhours]").forEach(x => { x.textContent = pickHours(); });
   document.querySelectorAll("[data-wa]").forEach(x => { x.textContent = fmtWa(settings.waNumber); });
   document.querySelectorAll("[data-cutoff]").forEach(x => { x.textContent = cutoffLabel(); });
-  $("closed-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, kapan PO berikutnya dibuka?")}`;
+  renderClosed();
   const noPo = screen === 1 && poList() !== null && openPos().length === 0;
   $("bar").hidden = screen !== 1 || noPo; $("shop").classList.toggle("no-po", noPo);
   $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
@@ -389,6 +403,7 @@ function orderFailed(e){
   }
   const sold = /sold_out:([^:]+):(\d+)/.exec(m);
   if (sold) { toast("Porsi tidak cukup. Sisa " + sold[2] + " untuk menu ini. Kurangi jumlahnya lalu coba lagi."); refreshRemaining(); return; }
+  if (/po_not_open/.test(m)) { toast("PO ini belum dibuka."); refreshPos(); return; }
   if (/menu_unavailable/.test(m)) { toast("Ada menu yang sudah habis. Muat ulang halaman lalu pilih lagi."); refreshProducts(); return; }
   if (/rate_limited/.test(m)) { toast("Terlalu banyak pesanan dari nomor ini. Tunggu 10 menit lalu coba lagi."); return; }
   if (/invalid_hp/.test(m)) { toast("Nomor HP tidak valid."); return; }
@@ -768,13 +783,15 @@ function renderAdminPo(){
     os.forEach(o => o.items.forEach(i => { const k = i.addon ? i.name : i.name + (i.option ? " (" + i.option + ")" : ""); rk[k] = (rk[k] || 0) + (Number(i.qty) || 0); }));
     const rekap = Object.keys(rk).map(k => `<li>${esc(k)} × ${rk[k]}</li>`).join("");
     const noteLines = os.flatMap(o => o.items.filter(i => i.note).map(i => `${o.id} · ${i.name}${i.option && !i.addon ? " (" + i.option + ")" : ""}: ${i.note}`)).concat(os.filter(o => o.notes).map(o => `${o.id} · pesanan: ${o.notes}`));
-    const auto = po.open === true && isPast(po), on = po.open === true && !auto;
+    const auto = po.open === true && isPast(po), on = po.open === true && !auto, sched = poScheduled(po);
     return `<div class="porow ${on ? "" : "off"}" data-po="${esc(po.id)}">
-      <div class="po-h"><div><h3>${esc(dLong(po.date))}</h3><span class="note">${os.length} pesanan${os.length ? ` · ${lunas} lunas` : ""}</span></div>
-        <label class="switch"><input type="checkbox" id="po-open-${esc(po.id)}" data-poopen ${on ? "checked" : ""} ${auto ? "disabled" : ""}><span class="track"></span><span>${on ? "Buka" : auto ? "Tutup otomatis" : "Tutup"}</span></label>
+      <div class="po-h"><div><h3>${esc(dLong(po.date))}</h3><span class="note">${sched ? `Buka ${esc(fmtWhen(po.opens_at))}` : `${os.length} pesanan${os.length ? ` · ${lunas} lunas` : ""}`}</span></div>
+        <label class="switch"><input type="checkbox" id="po-open-${esc(po.id)}" data-poopen ${on ? "checked" : ""} ${auto ? "disabled" : ""}><span class="track"></span><span>${sched ? "Terjadwal" : on ? "Buka" : auto ? "Tutup otomatis" : "Tutup"}</span></label>
+        ${sched ? `<button class="textbtn opennow" data-popennow type="button">${ic("check")}Buka sekarang</button>` : ""}
         <button class="textbtn iconbtn-t ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button" aria-label="Hapus PO" title="Hapus PO">${armPoDel === po.id ? "Yakin hapus?" : ic("trash")}</button></div></div>`;
   }).join("");
-  el.innerHTML = `<div class="newpo"><input type="date" id="po-new" aria-label="Tanggal PO baru"><button class="btn sm add" data-poadd type="button">${ic("plus")}Buka PO</button></div>
+  el.innerHTML = `<div class="newpo"><input type="date" id="po-new" aria-label="Tanggal PO"><input type="datetime-local" id="po-opens" aria-label="Buka otomatis (opsional)" title="Buka otomatis pada. Kosongkan untuk buka sekarang."><button class="btn sm add" data-poadd type="button">${ic("plus")}<span id="po-add-t">Buka PO</span></button></div>
+    <p class="fhint" style="margin:-4px 0 10px">Waktu buka otomatis (opsional): PO baru bisa dipesan setelah waktu itu.</p>
     ${rows || '<div class="empty">Belum ada PO.</div>'}`;
 }
 const poEl = $("a-po");
@@ -785,6 +802,7 @@ function renderPoSafe(){
   poDirty = false; renderAdminPo();
 }
 poEl.addEventListener("focusout", () => setTimeout(() => { if (poDirty) renderPoSafe(); }, 50));
+poEl.addEventListener("input", e => { if (e.target.id === "po-opens") $("po-add-t").textContent = e.target.value ? "Jadwalkan" : "Buka PO"; });
 poEl.addEventListener("change", async e => {
   const t = e.target; if (!t.matches("[data-poopen]")) return;
   const id = t.closest("[data-po]").dataset.po;
@@ -798,8 +816,14 @@ poEl.addEventListener("click", async e => {
       if (!dparse(v)) { toast("Pilih tanggal PO dulu"); return; }
       const id = "po-" + v.replace(/-/g, "");
       if ((pos || []).some(p => p.id === id)) { toast("PO tanggal itu sudah ada"); return; }
-      await api.addPo(v); await refreshPos();
-      toast("PO dibuka"); return;
+      const ov = $("po-opens").value, opensAt = ov ? new Date(ov) : null;
+      if (opensAt && isNaN(opensAt)) { toast("Waktu buka tidak valid"); return; }
+      await api.addPo(v, opensAt ? opensAt.toISOString() : null); await refreshPos();
+      toast(opensAt ? "PO dijadwalkan" : "PO dibuka"); return;
+    }
+    if (e.target.closest("[data-popennow]")) {
+      const id = e.target.closest("[data-po]").dataset.po;
+      await api.setPoOpensAt(id, null); await refreshPos(); toast("PO dibuka"); return;
     }
     const d = e.target.closest("[data-podel]");
     if (d) {

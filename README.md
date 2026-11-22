@@ -83,6 +83,10 @@ Pesanan yang belum dibayar lebih dari 3 jam tidak lagi menahan kuota porsi. Pesa
 
 Setiap kali `supabase/schema.sql` berubah, jalankan ulang isinya di SQL Editor (aman diulang).
 
+## Jadwal buka PO
+
+Di tab **PO** admin, isi kolom waktu (opsional) saat menambah PO untuk menjadwalkannya. PO terjadwal belum bisa dipesan (server juga menolak sebelum waktunya), dan layar toko menampilkan "PO segera dibuka" dengan tanggal dan jam bukanya serta tombol "Ingatkan saya" lewat WhatsApp. Tombol **Buka sekarang** membukanya lebih awal. Perlu menjalankan ulang `supabase/schema.sql`.
+
 ## Bukti bayar
 
 Foto bukti bayar disimpan di bucket **privat** `proofs` (maksimal 4 MB, hanya JPEG, PNG, atau WebP). Pembeli hanya bisa menambah berkas dan mengaitkannya ke pesanannya sendiri lewat nomor HP yang sama. Hanya admin yang bisa melihatnya: tanda "Ada bukti" muncul di daftar pesanan, dan tombol **Lihat bukti** di detail pesanan membuka fotonya. Semua ini dibuat oleh `supabase/schema.sql`, jadi jalankan ulang file itu sesudah update.

@@ -669,3 +669,11 @@ textarea{min-height:84px;resize:vertical}
 .lightbox{position:fixed;inset:0;z-index:60;background:rgba(59,44,39,.82);display:grid;place-items:center;padding:16px}
 .lightbox img{max-width:100%;max-height:88vh;border-radius:12px;background:var(--card)}
 .lb-x{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+
+/* PO terjadwal */
+.closed .np{justify-content:center;margin:0 0 20px;font-size:.98rem}
+.closed .np span{color:var(--ink)}
+#admin .newpo{flex-wrap:wrap}
+#admin .newpo input[type=datetime-local]{width:auto;min-width:190px}
+.opennow{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:500}
+.opennow .ic{width:16px;height:16px;margin:0}
