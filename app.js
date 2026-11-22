@@ -564,7 +564,6 @@ function orderRow(o){
   const wa = `https://wa.me/${normPhone(o.hp)}?text=${encodeURIComponent(`Halo kak ${o.nama || ""}, soal pesanan ${o.id} dari Lapo Doli: `)}`;
   const main = o.items.filter(i => !i.addon), adds = o.items.filter(i => i.addon), hasNote = !!o.notes || o.items.some(i => i.note);
   const summary = main.map(i => `${Number(i.qty) || 0}× ${i.name}${i.option ? " (" + i.option + ")" : ""}`).join(" · ") + (adds.length ? ` · +${adds.reduce((a, i) => a + (Number(i.qty) || 0), 0)} tambahan` : "");
-  const meta = [pk ? "Ambil sendiri" : "Antar" + (o.area ? " · " + o.area : ""), rp(o.total), o.method === "qris" ? "QRIS" : "Transfer"].concat(grp ? ["Gabungan " + o.groupCount + " tanggal"] : []).join(" · ");
   const gk = orders.filter(x => x.gid === o.gid).reduce((t, x) => t + (x.kode || 0), 0);
   let sec = "";
   if (o.status !== "batal") {
@@ -574,16 +573,19 @@ function orderRow(o){
   }
   return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
-      <div style="min-width:0"><div class="o1"><span class="num">${esc(o.id)}</span><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}${o.proofPath ? `<span class="otag proof">${ic("image")}Ada bukti</span>` : ""}</div>
-        <div class="o2">${esc(meta)}</div><div class="o3">${esc(summary)}</div></div>
-      <div class="oside"><span class="chip ${sc}">${sl}</span>${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
+      <span class="num">${esc(o.id)}</span>
+      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}${o.proofPath ? `<span class="otag proof">${ic("image")}Ada bukti</span>` : ""}</div><div class="o3">${esc(summary)}</div></div>
+      <span class="how">${pk ? "Ambil sendiri" : "Antar" + (o.area ? ", " + esc(o.area) : "")}${grp ? ", gabungan " + o.groupCount + " tanggal" : ""}</span>
+      <span class="amt">${rp(o.total)}</span>
+      <span class="chip st ${sc}">${sl}</span>
+      <div class="oside">${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
     </div>
     ${open ? `<div class="odetail">
       <ul class="ofacts">
         <li>${ic("chat")}<a href="${esc(wa)}" target="_blank" rel="noopener">${esc(o.hp)}</a></li>
         <li>${ic("pin")}<span>${pk ? esc(o.pickupLoc || pickLoc()) : esc((o.area ? o.area + ", " : "") + (o.alamat || "-"))}</span></li>
         <li>${ic("clock")}<span>${o.poDate ? esc(dShort(o.poDate)) : "-"}${o.hours ? ", " + esc(o.hours) : ""}</span></li>
-        <li>${ic("receipt")}<span>Dipesan ${fmtTime(o.createdAt)}</span></li>
+        <li>${ic("receipt")}<span>Dipesan ${fmtTime(o.createdAt)}, ${o.method === "qris" ? "QRIS" : "transfer"}</span></li>
       </ul>
       <div class="oitems">
         <ul class="itl">${o.items.map(i => `<li><span class="q">${Number(i.qty) || 0}×</span><span class="n">${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}</span><span class="p">${Number(i.price) ? rp((Number(i.price) || 0) * (Number(i.qty) || 0)) : "Gratis"}</span></li>${i.note ? `<li class="inl">${esc(i.note)}</li>` : ""}`).join("")}${o.ongkir ? `<li><span class="q"></span><span class="n">Ongkir</span><span class="p">${rp(o.ongkir)}</span></li>` : ""}</ul>
@@ -616,7 +618,8 @@ function renderAdminOrders(){
       <button class="btn sm add" data-newopen type="button">${ic("plus")}Pesanan</button>
     </div>
     ${dates.length ? dates.map(d => { const os = byPo[d], por = os.reduce((a, o) => a + o.items.filter(i => !i.addon).reduce((s, i) => s + (Number(i.qty) || 0), 0), 0);
-      return `<div class="group"><span>${d === "-" ? "Tanggal PO tidak tercatat" : esc(dLong(d))}</span><span>${os.length} pesanan · ${por} porsi</span></div><div class="olist">${os.map(orderRow).join("")}</div>`; }).join("")
+      const sum = os.filter(o => o.status !== "batal" && o.payStatus !== "ditolak").reduce((t, o) => t + o.total, 0);
+      return `<div class="group"><span>${d === "-" ? "Tanggal PO tidak tercatat" : esc(dLong(d))}</span><span>${os.length} pesanan, ${por} porsi, <b>${rp(sum)}</b></span></div><div class="olist">${os.map(orderRow).join("")}</div>`; }).join("")
       : `<div class="empty" style="margin-top:16px">${EMPTY[cur] || EMPTY.semua}</div>`}`;
   setCek(cekAll);
 }
@@ -716,6 +719,7 @@ function nSync(){
     c.querySelector("[data-q]").textContent = mcart[k] || 0;
     if ((s[1] || "").startsWith("+")) c.querySelector('[data-nd="1"]').disabled = (mcart[k] || 0) >= mMain(s[0]);
   });
+  document.querySelectorAll("#a-new .nitem").forEach(n => { const inp = n.querySelector("[data-nnote]"); if (inp) n.classList.toggle("on", mMain(inp.dataset.nnote) > 0); });
   const t = nTotals(); $("n-total").textContent = rp(t.total); $("n-sum").textContent = `Menu ${rp(t.food)} + ongkir ${rp(t.ong)}`;
 }
 function manualText(o, paid){
