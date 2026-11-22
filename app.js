@@ -177,8 +177,10 @@ function renderPoChips(){
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const act = list.find(x => x.id === activePo);
-  const when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" });
-  $("poinfo").innerHTML = (hours() === pickHours() ? `<span>${ic("clock")}Antar/ambil ${esc(hours().replace(/\s*-\s*/, "-"))}</span>` : `<span>${ic("truck")}Antar ${esc(hours())}</span><span>${ic("pin")}Ambil ${esc(pickHours())}</span>`) + `<span>${ic("lock")}Tutup ${esc(when)} ${esc(cutoffLabel())}</span>`;
+  const when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" }), hr = s => s.replace(/\s*-\s*/, "-");
+  $("sc-hours").textContent = hours() === pickHours() ? hr(hours()) : hr(hours()) + ", " + hr(pickHours());
+  $("sc-cut").textContent = when + " " + cutoffLabel();
+  $("sc-fee").textContent = flat() ? rp(flat()) : "Gratis";
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
@@ -198,19 +200,32 @@ function renderMenu(){
   el.innerHTML = list.map((p, i) => {
     const opts = optsOf(p), adds = addonsOf(p), k = act.id + "::" + p.id, img = imgSrc(p), rem = remainOf(act.id, p.id), off = p.available === false || rem === 0, showP = opts.some(o => o.custom);
     const thumb = img ? `<img class="thumb" src="${esc(img)}" alt="${esc(p.name)}">` : `<div class="thumb tile" aria-hidden="true">${esc(p.emoji || "🍽️")}</div>`;
-    const inl = !off && opts.length > 0 && opts.length <= 2;
-    const ctl = off ? '<span class="soldout">Habis</span>' : inl ? "" : opts.length ? '<button type="button" class="pickbtn" data-pick aria-expanded="false">Pilih</button>' : stepper(k, p.name);
+    const custom = !off && (opts.length > 0 || adds.length > 0);
+    const ctl = off ? '<span class="soldout">Habis</span>' : custom ? '<button type="button" class="addbtn" data-pick aria-haspopup="dialog" aria-expanded="false">Tambah</button>' : stepper(k, p.name);
     const addsHTML = !off && adds.length ? `<div class="subs adds" data-po="${esc(act.id)}" data-pid="${esc(p.id)}" hidden><div class="subs-title">Tambahan</div>${adds.map(a => { const ak = addonKey(act.id, p.id, a.id);
       return `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${stepper(ak, a.name + " untuk " + p.name, (cart[ak] || 0) >= mainQty(act.id, p.id))}</div>`; }).join("")}</div>` : "";
-    const panel = !off && opts.length ? `<div class="vpanel">${variantsHTML(p, k, stepper)}${addsHTML}</div>` : addsHTML;
-    return `<div class="item ${off ? "off" : ""} ${inl ? "open inl" : ""}" data-pid="${esc(p.id)}" data-po="${esc(act.id)}" style="--i:${i}">
-      <div class="ihead">${thumb}<div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="ifoot"><span class="pricebox"><span class="price">${showP ? "Mulai " + rp(fromPrice(p)) : rp(p.price)}</span>${rem != null && rem > 0 && rem <= 10 ? `<span class="left">Sisa ${rem}</span>` : ""}</span>${ctl}</div></div></div>
-      ${opts.length && !off ? '<div class="picked" hidden></div>' : ""}${panel}${off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note value="${esc(itemNotes[k] || "")}" maxlength="120" placeholder="Catatan untuk ${esc(p.name)}, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}" value="${esc(itemNotes[act.id + "::" + p.id] || "")}"></div>`}</div>`;
+    const note = off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note value="${esc(itemNotes[k] || "")}" maxlength="120" placeholder="Catatan, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}"></div>`;
+    const priceTxt = `${showP ? "dari " : ""}${rp(showP ? fromPrice(p) : p.price)}`;
+    const sheet = custom ? `<div class="sheet" role="dialog" aria-label="Sesuaikan ${esc(p.name)}">
+        <span class="sheet-grab" aria-hidden="true"></span>
+        <div class="sheet-h"><div><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><b class="price">${priceTxt}</b></div><button type="button" class="sheet-x" data-close aria-label="Tutup">${ic("x")}</button></div>
+        <div class="sheet-b">
+          <div class="sg"><div class="sg-h"><b>${opts.length ? "Pilih varian" : "Jumlah"}</b><small>${opts.length ? "Boleh lebih dari satu" : ""}</small></div>${opts.length ? variantsHTML(p, k, stepper) : `<div class="vrow"><span>Porsi</span>${stepper(k, p.name)}</div>`}</div>
+          ${addsHTML ? `<div class="sg">${addsHTML}</div>` : ""}
+          ${note ? `<div class="sg"><div class="sg-h"><b>Catatan</b></div>${note}</div>` : ""}
+        </div>
+        <div class="sheet-f"><button type="button" class="btn" data-close>Selesai<span data-sub></span></button></div>
+      </div>` : "";
+    return `<div class="item ${off ? "off" : ""}" data-pid="${esc(p.id)}" data-po="${esc(act.id)}" style="--i:${i}">
+      <div class="ihead"><div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="irow2"><span class="price">${priceTxt}</span>${rem != null && rem > 0 && rem <= 10 ? `<span class="left">sisa ${rem}</span>` : ""}</div></div>${thumb}</div>
+      <div class="ifoot">${custom ? `<span class="cust">${ic("settings")}Bisa disesuaikan</span>` : "<span></span>"}${ctl}</div>
+      ${sheet}${custom ? "" : note}</div>`;
   }).join("");
   syncMenuDom();
   if (!menuShown) { menuShown = true; el.classList.add("enter"); setTimeout(() => el.classList.remove("enter"), 1000); }
   updateBar();
 }
+const itemSubtotal = (po, pid) => lines().filter(l => l.poId === po && l.pid === pid).reduce((t, l) => t + l.sub, 0);
 function syncMenuDom(){
   document.querySelectorAll("#menu [data-key]").forEach(ctl => {
     const k = ctl.dataset.key, [poId, pid] = k.split("::");
@@ -223,12 +238,18 @@ function syncMenuDom(){
     it.classList.toggle("on", mainQty(po, pid) > 0);
     const nr = it.querySelector(".noterow"); if (nr) nr.hidden = mainQty(po, pid) === 0;
     if (!btn) return;
-    const sel = pickedText(po, pid), pk = it.querySelector(".picked");
-    it.classList.toggle("open", open); btn.setAttribute("aria-expanded", String(open)); btn.textContent = open ? "Tutup" : sel ? "Ubah" : "Pilih";
-    if (pk) { pk.textContent = sel ? "Dipilih: " + sel : ""; pk.hidden = open || !sel; }
+    const q = mainQty(po, pid);
+    it.classList.toggle("open", open); btn.setAttribute("aria-expanded", String(open));
+    btn.textContent = q > 0 ? q + " porsi" : "Tambah"; btn.classList.toggle("has", q > 0);
+    const sub = it.querySelector("[data-sub]"); if (sub) sub.textContent = q > 0 ? " - " + rp(itemSubtotal(po, pid)) : "";
   });
+  const anyOpen = openItems.size > 0; $("scrim").hidden = !anyOpen; document.body.classList.toggle("sheet-open", anyOpen);
 }
+$("scrim").onclick = () => { openItems.clear(); syncMenuDom(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && openItems.size) { openItems.clear(); syncMenuDom(); } });
 $("menu").addEventListener("click", e => {
+  const cl = e.target.closest("[data-close]");
+  if (cl) { const it = cl.closest(".item"); openItems.delete(it.dataset.po + "::" + it.dataset.pid); syncMenuDom(); return; }
   const pb = e.target.closest("[data-pick]");
   if (pb) { const it = pb.closest(".item"), id = it.dataset.po + "::" + it.dataset.pid; if (openItems.has(id)) openItems.delete(id); else openItems.add(id); syncMenuDom(); return; }
   const b = e.target.closest("button[data-d]"); if (!b) return;
@@ -292,15 +313,12 @@ function renderClosed(){
   $("np").hidden = !n; if (n) $("np").innerHTML = `<span>${ic("po")}PO ${esc(dShort(n.date))}</span><span>${ic("clock")}Buka ${esc(fmtWhen(n.opens_at))}</span>`;
   $("closed-wa-t").textContent = n ? "Ingatkan saya" : "Chat admin";
 }
-let lastQty = 0;
 function updateBar(){
   saveCart();
-  const q = qtyTotal(); $("cart-n").textContent = q; $("cart-n").hidden = !q;
-  if (q > lastQty) { const c = $("cartic"); c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump"); } lastQty = q;
   const gs = groups();
   $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? " · " + gs.length + " tanggal" : "");
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
-  $("next").disabled = qtyTotal() === 0; $("next").textContent = qtyTotal() === 0 ? "Pilih menu dulu" : "Lanjut";
+  $("next").disabled = qtyTotal() === 0;
   document.querySelectorAll("[data-hours]").forEach(x => { x.textContent = hours(); });
   document.querySelectorAll("[data-ongkir]").forEach(x => { x.textContent = flat() ? rp(flat()) : "gratis"; });
   document.querySelectorAll("[data-pickloc]").forEach(x => { x.textContent = pickLoc(); });
@@ -309,7 +327,7 @@ function updateBar(){
   document.querySelectorAll("[data-cutoff]").forEach(x => { x.textContent = cutoffLabel(); });
   renderClosed();
   const noPo = screen === 1 && poList() !== null && openPos().length === 0;
-  $("bar").hidden = screen !== 1 || noPo; $("shop").classList.toggle("no-po", noPo);
+  $("bar").hidden = screen !== 1 || noPo || qtyTotal() === 0; $("shop").classList.toggle("no-po", noPo);
   $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
 }
 function summaryHTML(gs, kode = 0){
@@ -339,17 +357,26 @@ function updateSteps(n){
 function go(n){
   screen = n;
   document.querySelectorAll("#shop section").forEach((s, i) => s.classList.toggle("show", i + 1 === n));
-  $("bar").hidden = n !== 1; $("shop").classList.toggle("has-bar", n === 1); $("shop").classList.toggle("home", n === 1);
-  updateSteps(n);
+  $("bar").hidden = n !== 1 || qtyTotal() === 0; $("shop").classList.toggle("has-bar", n === 1 && qtyTotal() > 0); $("shop").classList.toggle("home", n === 1);
+  updateSteps(n); openItems.clear();
   if (n === 2) renderCheckout();
   window.scrollTo({ top:0 });
 }
 $("next").onclick = () => go(2);
-$("back1").onclick = () => go(1);
+$("back1").onclick = $("addmore").onclick = () => go(1);
 
+function itemsHTML(gs){
+  return gs.map(g => `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + g.items.map(l => `<div class="li"><span class="q">${l.qty}x</span><span class="n">${esc(l.name)}${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}</span><span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`).join("")).join("");
+}
+function payRowsHTML(gs){
+  const food = gs.reduce((t, g) => t + g.food, 0), fee = gs.reduce((t, g) => t + (g.ongkir || 0), 0);
+  return `<div><span>Harga</span><span>${rp(food)}</span></div>` + (fee ? `<div><span>Ongkir</span><span>${rp(fee)}</span></div>` : `<div><span>Ongkir</span><span>Gratis</span></div>`) + `<div class="total"><span>Total pembayaran</span><span>${rp(grand(gs))}</span></div>`;
+}
 function renderCheckout(){
-  $("sum2").innerHTML = summaryHTML(groups());
-  $("addr-fields").hidden = isPick(); $("pick-box").hidden = !isPick();
+  const gsx = groups();
+  $("sum-items").innerHTML = itemsHTML(gsx); $("sum2").innerHTML = payRowsHTML(gsx); $("cb-total").textContent = rp(grand(gsx));
+  $("pick-line").textContent = pickLoc();
+  $("addr-fields").hidden = isPick(); $("pick-box").hidden = true;
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
 }
