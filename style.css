@@ -1,3 +1,9 @@
+@font-face{font-family:"Fredoka";font-style:normal;font-weight:500;font-display:swap;src:url("/assets/fonts/fredoka-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Fredoka";font-style:normal;font-weight:600;font-display:swap;src:url("/assets/fonts/fredoka-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Geist";font-style:normal;font-weight:400;font-display:swap;src:url("/assets/fonts/geist-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Geist";font-style:normal;font-weight:500;font-display:swap;src:url("/assets/fonts/geist-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Geist";font-style:normal;font-weight:600;font-display:swap;src:url("/assets/fonts/geist-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Geist Mono";font-style:normal;font-weight:500;font-display:swap;src:url("/assets/fonts/geist-mono-latin-500-normal.woff2") format("woff2")}
 html{-webkit-text-size-adjust:100%}
 img{max-width:100%}
 :root{color-scheme:light}
@@ -649,3 +655,17 @@ textarea{min-height:84px;resize:vertical}
 .lastcard b{font-family:var(--mono);font-weight:500}
 .dlv li > div{min-width:0}
 .dlv .chip{flex:none}
+
+/* unggah bukti bayar */
+.actions.duo{display:grid;gap:8px}
+#d-up{display:flex;align-items:center;justify-content:center}
+#d-up .ic{margin-right:8px}
+.filebtn.btn{position:relative}
+#d-up.busy{opacity:.7;pointer-events:none}
+.proofok{display:flex;align-items:center;gap:10px;margin:0 0 4px;padding:12px 14px;border-radius:12px;background:#e4efe6;color:#27533b;font-weight:500}
+.proofok .ic{width:20px;height:20px;flex:none}
+.otag.proof{display:inline-flex;align-items:center;gap:4px;color:var(--ok);border-color:currentColor}
+.otag.proof .ic{width:13px;height:13px}
+.lightbox{position:fixed;inset:0;z-index:60;background:rgba(59,44,39,.82);display:grid;place-items:center;padding:16px}
+.lightbox img{max-width:100%;max-height:88vh;border-radius:12px;background:var(--card)}
+.lb-x{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}

@@ -76,12 +76,20 @@ Ikuti petunjuk di bagian atas `supabase/notify-telegram.sql`. Token bot disimpan
 ## Alur pembeli
 
 1. Pilih tanggal PO, pilih menu, lalu **Pesan sekarang**. Pesanan langsung tercatat (status menunggu bayar).
-2. Layar berikutnya menampilkan jumlah transfer yang tepat (dengan kode unik yang dibuat server) dan nomor rekening atau QRIS. Pembeli lalu mengirim bukti bayar lewat WhatsApp.
+2. Layar berikutnya menampilkan jumlah transfer yang tepat (dengan kode unik yang dibuat server) dan nomor rekening atau QRIS. Pembeli mengunggah foto bukti bayar langsung di halaman, atau mengirimnya lewat WhatsApp.
 3. Keranjang, data pembeli, dan pesanan terakhir disimpan di browser. Pembeli bisa kembali ke info bayar dan status dari kartu di beranda.
 
 Pesanan yang belum dibayar lebih dari 3 jam tidak lagi menahan kuota porsi. Pesanannya tetap ada di admin sampai dibatalkan.
 
 Setiap kali `supabase/schema.sql` berubah, jalankan ulang isinya di SQL Editor (aman diulang).
+
+## Bukti bayar
+
+Foto bukti bayar disimpan di bucket **privat** `proofs` (maksimal 4 MB, hanya JPEG, PNG, atau WebP). Pembeli hanya bisa menambah berkas dan mengaitkannya ke pesanannya sendiri lewat nomor HP yang sama. Hanya admin yang bisa melihatnya: tanda "Ada bukti" muncul di daftar pesanan, dan tombol **Lihat bukti** di detail pesanan membuka fotonya. Semua ini dibuat oleh `supabase/schema.sql`, jadi jalankan ulang file itu sesudah update.
+
+## Font
+
+Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`, tanpa Google Fonts.
 
 ## Analitik (opsional)
 
