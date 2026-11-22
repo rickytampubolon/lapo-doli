@@ -39,9 +39,10 @@
     <section id="s1" class="show">
       <div class="closed" id="closed" hidden>
         <span class="logo emptylogo" role="img" aria-label="Logo Lapo Doli"></span>
-        <h2>PO belum dibuka</h2>
-        <p>Chat admin untuk tahu jadwal berikutnya.</p>
-        <a class="btn" id="closed-wa" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Chat admin</a>
+        <h2 id="closed-h">PO belum dibuka</h2>
+        <p id="closed-p">Chat admin untuk tahu jadwal berikutnya.</p>
+        <div class="meta np" id="np" hidden></div>
+        <a class="btn" id="closed-wa" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg><span id="closed-wa-t">Chat admin</span></a>
       </div>
       <button class="lastcard" id="lastorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span class="lc-t"><b id="lc-id"></b></span><span class="chip" id="lc-chip"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button>
       <div id="po-wrap">
@@ -179,6 +180,7 @@
     </aside>
     <div class="side-scrim" id="side-scrim" hidden></div>
     <main class="content" id="admin-body">
+    <div class="schemawarn" id="schema-warn" role="alert" hidden><svg class="ic" aria-hidden="true"><use href="#i-ban"/></svg><span><b>Database belum diperbarui.</b> Jalankan ulang <code>supabase/schema.sql</code> di Supabase SQL Editor. Sebelum itu, kode unik, kuota, dan bukti bayar belum bekerja.</span></div>
     <div id="a-orders"></div>
     <div id="a-new" hidden></div>
     <div id="a-sales" hidden></div>
