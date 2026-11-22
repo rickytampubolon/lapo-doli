@@ -1049,3 +1049,9 @@ body.sheet-open{overflow:hidden}
 .checkout-bar .btn{width:auto;min-width:168px;border-radius:999px}
 #s2{padding-bottom:128px}
 #s2 .actions{display:none}
+
+/* kartu toko tanpa mengulang logo dan nama (sudah ada di header) */
+.storecard{padding:14px 16px}
+.sc-top{justify-content:space-between}
+.sc-tag{margin:0;font-size:16px;line-height:24px;font-weight:700}
+.sc-stats{margin-top:var(--sp-3)}
