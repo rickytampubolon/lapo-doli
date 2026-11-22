@@ -393,7 +393,7 @@ textarea{min-height:84px;resize:vertical}
 .side-foot .textbtn:hover{color:#fff;background:rgba(255,255,255,.07)}
 @media (min-width:860px){
   #admin.authed .ahead{display:none}
-  #admin.authed .shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+  #admin.authed .shell{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
   .side{position:sticky;top:0;height:100vh;width:auto;transform:none;transition:none;z-index:1;overflow:visible;padding-bottom:18px}
   .content{padding:36px clamp(24px,4vw,56px) 80px;width:100%;margin:0}
 }
@@ -483,3 +483,18 @@ textarea{min-height:84px;resize:vertical}
 .no-po main{min-height:calc(100svh - 80px);display:flex;align-items:center;justify-content:center}
 .no-po main > section{width:100%}
 .no-po #foot{display:none}
+
+/* aksen ulos: pita merah, garis anggur tua, garis krem. Menggantikan deret segitiga */
+:root{
+  --ulos-h:linear-gradient(to bottom,#6f1a12 0 2px,#f6e4cf 2px 3px,#a3281c 3px 7px,#3b0d09 7px 9px,#a3281c 9px 13px,#f6e4cf 13px 14px,#6f1a12 14px 16px);
+  --ulos-v:linear-gradient(to right,#6f1a12 0 2px,#f6e4cf 2px 3px,#a3281c 3px 7px,#3b0d09 7px 9px,#a3281c 9px 13px,#f6e4cf 13px 14px,#6f1a12 14px 16px);
+}
+.pattern{height:16px;background:var(--ulos-h)}
+.pattern::before{content:none}
+.ahead{padding-bottom:16px}
+.ahead::after{height:16px;background:var(--ulos-h);-webkit-mask:none;mask:none}
+.side{padding-right:28px}
+.side::after{content:"";position:absolute;top:0;bottom:0;right:0;width:16px;background:var(--ulos-v)}
+.side-brand{flex-wrap:nowrap}
+.side-brand .brand{white-space:nowrap}
+.side-brand .logo.sm{width:36px;height:36px}
