@@ -1055,3 +1055,50 @@ body.sheet-open{overflow:hidden}
 .sc-top{justify-content:space-between}
 .sc-tag{margin:0;font-size:16px;line-height:24px;font-weight:700}
 .sc-stats{margin-top:var(--sp-3)}
+
+
+/* =========================================================
+   Admin memakai sistem toko: kapsul, kartu berikon, pilihan radio, bilah bawah yang menempel
+   ========================================================= */
+#admin .btn,#admin .btn.sm,#admin .btn.line,#admin .pillbtn{border-radius:999px}
+#admin .btn.iconbtn,#admin .btn.sm.iconbtn{border-radius:50%;width:36px;min-width:36px;padding:0}
+#admin .btn.sm{min-height:36px;padding:0 var(--sp-4)}
+#admin .btn.line{border-color:var(--accent);color:var(--accent);background:#fff}
+#admin .btn.line:hover{background:var(--amber-soft)}
+#admin .btn.danger{background:#fff;color:var(--bad);border:1px solid var(--bad)}
+#admin .odetail .btn.line.cancel{border-color:var(--border-strong);color:var(--text-primary)}
+
+/* filter: pil, aktif terisi */
+#admin .stabs{background:none;padding:0;gap:var(--sp-2);border-radius:0;overflow-x:auto}
+#admin .stabs button{min-height:36px;padding:0 var(--sp-4);border:1px solid var(--border-strong);border-radius:999px;background:#fff;color:var(--text-primary);font-weight:600;box-shadow:none;white-space:nowrap}
+#admin .stabs button[aria-pressed=true]{background:var(--hero);border-color:var(--hero);color:var(--on-accent);box-shadow:none}
+#admin .stabs .c{margin-left:6px;opacity:.8}
+#admin .stabs .c.hot{background:var(--amber);color:var(--ink);opacity:1;border-radius:999px;padding:0 7px}
+#admin .stabs button[aria-pressed=true] .c.hot{background:var(--amber);color:var(--ink)}
+
+/* kartu Pengaturan dan PO */
+#admin .setsec .gc-h{margin-bottom:var(--sp-4)}
+#admin .setsec .gc-h h3{margin:0;font-size:16px;line-height:24px}
+#admin .porow{padding:var(--sp-3) var(--sp-4)}
+#admin .porow h3{font-size:16px}
+#admin .group span:first-child{font-family:var(--head);font-size:20px;line-height:24px;font-weight:700}
+#admin .group{font-size:14px}
+#admin .odetail{background:none}
+#admin .tile b,#admin .herostat b{font-weight:700}
+#admin .herostat b{font-size:34px;line-height:40px}
+#admin .tile b{font-size:20px;line-height:24px}
+#admin .newpo input[type=date],#admin .newpo input[type=datetime-local]{border-radius:999px;padding:0 var(--sp-4)}
+
+/* form pesanan baru: pilihan radio dua kolom dan bilah total menempel di bawah */
+#admin .opts-row{grid-template-columns:1fr 1fr}
+#admin .opts-row .opt{padding:var(--sp-2) var(--sp-3)}
+#admin .nitem{background:#fff;border:1px solid var(--border-default);border-radius:var(--r-lg);box-shadow:var(--shadow-low);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3)}
+#admin .nitem.on{border-color:var(--accent)}
+#admin .nform .label{font-size:20px;line-height:24px;font-weight:700;margin:var(--sp-5) 0 var(--sp-3)}
+#admin .nbar{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;gap:var(--sp-4);margin:var(--sp-4) calc(var(--sp-4) * -1) 0;padding:var(--sp-3) var(--sp-4);background:#fff;border-top:1px solid var(--border-default);box-shadow:var(--shadow-high)}
+#admin .nbar .ntot{flex:1;display:block;margin:0}
+#admin .nbar .ntot b{display:block;font-size:20px;line-height:24px}
+#admin .nbar .btn{width:auto;min-width:168px}
+
+/* bukti bayar: lembar tengah */
+.lb-x{border:1px solid var(--border-default)}
