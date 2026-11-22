@@ -564,3 +564,25 @@ textarea{min-height:84px;resize:vertical}
 .meta span{display:inline-flex;align-items:center;gap:6px}
 .meta .ic{width:17px;height:17px}
 .item p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* beranda: padat */
+.cover .col{padding-top:6px;padding-bottom:14px}
+.cover .title{font-size:clamp(1.6rem,7.4vw,2.2rem);line-height:1.1;max-width:none;white-space:nowrap}
+.cover .lede{margin-top:2px;font-size:.98rem}
+.pattern{height:12px}
+.pattern{background:linear-gradient(to bottom,#6f1a12 0 2px,#f6e4cf 2px 3px,#a3281c 3px 5px,#3b0d09 5px 7px,#a3281c 7px 9px,#f6e4cf 9px 10px,#6f1a12 10px 12px)}
+.chips{margin-top:14px}
+.cbtn{min-width:62px;padding:7px 12px 6px;border-radius:12px}
+.cbtn .dnum{font-size:1.35rem;margin:1px 0}
+.cbtn .dow,.cbtn .mon{font-size:.76rem}
+.meta{margin-top:10px}
+.menu{margin-top:6px}
+.item{padding:12px 0}
+.item.on{padding-left:12px}
+.thumb{width:78px;height:78px;border-radius:12px}
+.item h3{font-size:1.08rem}
+.ifoot{padding-top:4px;min-height:38px}
+@media (min-width:600px){.cover .col{padding-top:8px;padding-bottom:20px}.cover .title{white-space:normal;max-width:12em}}
+
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.chips{margin-top:16px}
