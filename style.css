@@ -1132,3 +1132,9 @@ input, textarea, select{font-size:16px}
   .cp-l b,.cp-r b,.checkout-bar .cp-l b,.checkout-bar .cp-r b{font-size:15px}
   .title,#s2 .title,#s3 .title,.status .title{font-size:20px;line-height:26px}
 }
+
+/* ponsel: skala 95% lewat CSS (tanpa mengubah viewport) */
+@media (max-width:480px){html{zoom:.95}}
+
+a.brandrow{color:inherit;text-decoration:none;min-height:44px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+a.brandrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
