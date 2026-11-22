@@ -9,6 +9,8 @@
 <meta name="color-scheme" content="light">
 <link rel="icon" href="/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/apple-touch.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="/style.css">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -42,73 +44,76 @@
         <p>Chat admin untuk tahu jadwal berikutnya.</p>
         <a class="btn" id="closed-wa" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Chat admin</a>
       </div>
+      <button class="lastcard" id="lastorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span class="lc-t"><b id="lc-id"></b></span><span class="chip" id="lc-chip"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button>
       <div id="po-wrap">
-        <div class="label">Pilih tanggal</div>
+        <div class="label">Pilih tanggal <small>dimasak khusus di tanggal itu</small></div>
         <div class="chips" id="pochips"></div>
         <p class="hint meta" id="poinfo"></p>
         <div class="label">Pilih menu</div>
-        <div id="menu" class="menu"><p class="note">Memuat menu...</p></div>
+        <div id="menu" class="menu" aria-busy="true"><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div></div>
       </div>
     </section>
 
     <section id="s2">
       <button class="back" id="back1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg>Ubah pesanan</button>
-      <h1 class="title" style="font-size:1.5rem;margin-top:12px">Checkout</h1>
+      <h1 class="title" style="font-size:1.5rem;margin-top:12px">Detail pesanan</h1>
 
-      <div class="label">Pesanan</div>
-      <div class="sum" id="sum2"></div>
+      <div class="sum" id="sum2" style="margin-top:14px"></div>
 
       <div class="label">Cara terima</div>
       <div class="seg" id="fulfil">
         <label><input type="radio" name="fulfil" value="antar" checked>Antar<small>Jakarta, Lalamove</small></label>
         <label><input type="radio" name="fulfil" value="ambil">Ambil sendiri<small>Tanpa ongkir</small></label>
       </div>
-      <div class="soft" id="pick-box" hidden style="margin-top:12px">Ambil di <b id="pick-loc"></b><br><span class="muted">Jam <span id="pick-hours"></span></span></div>
+      <div class="soft" id="pick-box" hidden style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg><span>Ambil di <b id="pick-loc"></b>, jam <span id="pick-hours"></span></span></div>
 
-      <div class="label">Data pemesan</div>
+      <div class="label">Data kamu</div>
       <div id="form">
         <label class="lb" for="nama" style="margin-top:0">Nama</label>
-        <input id="nama" type="text" autocomplete="name" placeholder="Nama lengkap">
+        <input id="nama" type="text" autocomplete="name" autocapitalize="words" enterkeyhint="next" placeholder="Nama lengkap">
         <div class="err" id="e-nama"></div>
-        <label class="lb" for="hp">No. HP (WhatsApp)</label>
-        <input id="hp" type="tel" inputmode="tel" autocomplete="tel" placeholder="08123456789">
+        <label class="lb" for="hp">No. WhatsApp</label>
+        <input id="hp" type="tel" inputmode="numeric" autocomplete="tel" enterkeyhint="next" placeholder="08123456789">
         <div class="err" id="e-hp"></div>
         <div id="addr-fields">
-          <label class="lb" for="area">Wilayah (Jakarta)</label>
+          <label class="lb" for="area">Wilayah</label>
           <select id="area"><option value="">Pilih wilayah</option><option>Jakarta Pusat</option><option>Jakarta Utara</option><option>Jakarta Barat</option><option>Jakarta Selatan</option><option>Jakarta Timur</option></select>
           <div class="err" id="e-area"></div>
           <label class="lb" for="alamat">Alamat lengkap</label>
-          <textarea id="alamat" autocomplete="street-address" placeholder="Jalan, nomor rumah, patokan"></textarea>
+          <textarea id="alamat" autocomplete="street-address" enterkeyhint="next" placeholder="Jalan, nomor rumah, patokan"></textarea>
           <div class="err" id="e-alamat"></div>
         </div>
-        <label class="lb" for="notes">Catatan (opsional)</label>
+        <label class="lb" for="notes">Catatan</label>
         <textarea id="notes" placeholder="Contoh: tidak pakai cabai"></textarea>
       </div>
 
-      <div class="label">Pembayaran</div>
-      <div class="paytotal"><span>Total yang dibayar</span><b id="pay-total">Rp 0</b></div>
-      <p class="note" id="pay-code-note" hidden></p>
-      <div class="seg" id="paymethods">
-        <label><input type="radio" name="pay" value="transfer" checked>Transfer bank</label>
-        <label id="qris-opt"><input type="radio" name="pay" value="qris">QRIS</label>
+      <div id="paymethod-wrap" hidden>
+        <div class="label">Bayar pakai</div>
+        <div class="seg" id="paymethods">
+          <label><input type="radio" name="pay" value="transfer" checked>Transfer bank</label>
+          <label id="qris-opt"><input type="radio" name="pay" value="qris">QRIS</label>
+        </div>
       </div>
-      <div class="soft payinfo show" id="pi-transfer">
-        <span class="muted">Transfer tepat ke</span><br>
-        <b id="bank-name"></b> <span class="muted" id="bank-holder"></span>
-        <div class="bankrow"><div class="copy" id="bank-no"></div><button class="copybtn" id="copy-no" type="button" aria-label="Salin nomor rekening" title="Salin nomor rekening"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
-      </div>
-      <div class="payinfo" id="pi-qris"><p class="note" style="text-align:center;margin:0 0 10px">Scan QRIS, lalu masukkan nominal sesuai total di atas.</p><div class="qris" id="qris-box"></div></div>
-      <p class="note" style="margin:12px 0 0">Setelah transfer, kirim bukti bayar lewat WhatsApp.</p>
 
-      <div class="actions"><button class="btn" id="paid" type="button">Saya sudah bayar</button></div>
+      <div class="actions"><button class="btn" id="paid" type="button">Pesan sekarang</button></div>
+      <p class="note" style="text-align:center;margin:10px 0 0">Nomor rekening muncul di langkah berikutnya.</p>
     </section>
 
     <section id="s3">
-      <div class="status" style="margin-top:28px"><span class="dot" id="d-dot"></span><h1 class="title" id="d-title" style="margin:0;font-size:1.5rem">Pesanan diterima</h1></div>
-      <p class="intro" id="d-sub" style="margin:8px 0 22px"></p>
-      <ul class="dlv" id="track"></ul>
+      <div class="status" style="margin-top:24px"><span class="dot" id="d-dot"></span><h1 class="title" id="d-title" style="margin:0;font-size:1.5rem">Pesanan dicatat</h1></div>
+      <p class="intro" id="d-sub" style="margin:8px 0 18px"></p>
+
+      <div class="paybox" id="d-pay" hidden>
+        <div class="payamt"><div><span class="muted">Transfer tepat</span><b id="d-amt">Rp 0</b></div><button class="copybtn" id="copy-amt" type="button" aria-label="Salin jumlah" title="Salin jumlah"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
+        <p class="note" id="d-kode" hidden></p>
+        <div id="d-bank"><div class="bankname"><b id="d-bank-name"></b> <span class="muted" id="d-bank-holder"></span></div>
+          <div class="bankrow"><div class="copy" id="d-bank-no"></div><button class="copybtn" id="copy-no" type="button" aria-label="Salin nomor rekening" title="Salin nomor rekening"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div></div>
+        <div id="d-qris" hidden><p class="note" style="text-align:center;margin:0 0 10px">Scan QRIS, lalu isi nominal sesuai jumlah di atas.</p><div class="qris" id="qris-box"></div></div>
+      </div>
+
       <div class="actions"><a class="btn" id="wa" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Kirim bukti bayar</a></div>
-      <div class="sum" id="sum3" style="margin-top:22px"></div>
+      <ul class="dlv" id="track" style="margin-top:18px"></ul>
+      <div class="sum" id="sum3" style="margin-top:18px"></div>
       <div class="actions"><button class="btn line" id="again" type="button">Pesan lagi</button></div>
     </section>
 
@@ -140,7 +145,7 @@
       <details><summary>Apa itu PO?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Boleh pesan beberapa tanggal sekaligus dan bayar sekali. PO tutup pukul <span data-cutoff></span> di hari itu.</p></details>
       <details><summary>Antar atau ambil sendiri?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Antar ke Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir <span data-ongkir></span> per tanggal. Ambil sendiri di <span data-pickloc></span>, jam <span data-pickhours></span>, tanpa ongkir.</p></details>
       <details><summary>Nasi dan sop tambahan<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Muncul setelah menu utama dipilih. Jumlahnya maksimal sama dengan menu utama.</p></details>
-      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah Anda transfer dan kirim bukti bayar lewat WhatsApp, admin mengecek lalu mengubah statusnya.</p></details>
+      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah kamu transfer dan kirim bukti bayar lewat WhatsApp, admin mengecek lalu mengubah statusnya.</p></details>
       <details><summary>Ubah atau batalkan pesanan?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Hubungi admin lewat WhatsApp dengan nomor pesanan.</p></details>
     </div>
     <a class="btn ink" id="help-wa" style="margin-top:20px" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Chat admin <span data-wa></span></a>
@@ -187,8 +192,9 @@
 <div class="toast" id="toast" role="status"></div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 
-<script src="/config.js"></script>
-<script src="/vendor/supabase.js"></script>
-<script src="/app.js"></script>
+<script defer src="/config.js"></script>
+<script defer src="/vendor/supabase.js"></script>
+<script defer src="/app.js"></script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

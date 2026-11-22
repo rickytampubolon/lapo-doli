@@ -611,3 +611,40 @@ textarea{min-height:84px;resize:vertical}
 #s1 .label{margin:16px 0 8px;font-size:.95rem}
 #s1 .chips{margin-top:0}
 .bar .btn:disabled{white-space:nowrap}
+
+/* alur pembeli: kartu pesanan terakhir, kotak bayar, kerangka, tombol lebih besar */
+.label small{font-weight:400;color:var(--muted);font-size:.82rem;margin-left:6px}
+.lastcard{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px;margin:14px 0 0;cursor:pointer;color:var(--ink)}
+.lastcard .lc-t{flex:1;min-width:0}
+.lastcard b{display:block;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lastcard small{color:var(--muted);font-size:.8rem}
+.lastcard .ic{color:var(--muted);width:20px;height:20px}
+.lastcard .ic:last-child{transform:rotate(-90deg)}
+.lastcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.paybox{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff;display:grid;gap:10px;margin-bottom:16px}
+.payamt{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.payamt .muted{display:block;font-size:.86rem}
+.payamt b{display:block;font-family:var(--head);font-size:1.9rem;line-height:1.15;font-variant-numeric:tabular-nums}
+.paybox .note{margin:0}
+.bankname{font-size:.95rem}
+.paybox .bankrow{margin-top:6px}
+.copy{user-select:all;-webkit-user-select:all}
+.soft .ic{width:18px;height:18px;margin-right:8px;vertical-align:-3px}
+#pick-box{display:flex;align-items:flex-start}
+#pick-box .ic{margin-top:3px;flex:none}
+.skel{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.skel i{width:78px;height:78px;border-radius:12px;background:var(--soft);flex:none}
+.skel div{flex:1;display:grid;gap:9px;align-content:center}
+.skel b{height:12px;border-radius:6px;background:var(--soft);display:block}
+.skel b:nth-child(1){width:55%;height:15px}
+.skel b:nth-child(2){width:92%}
+.skel b:nth-child(3){width:38%}
+@keyframes skelpulse{50%{opacity:.5}}
+@media (prefers-reduced-motion:no-preference){.skel i,.skel b{animation:skelpulse 1.2s ease-in-out infinite}}
+.step{gap:10px}
+.step button{width:40px;height:40px;font-size:1.2rem}
+.item.inl .vpanel{margin-top:8px}
+.item.inl .ifoot{min-height:0}
+.lastcard .chip{flex:none}
+.lastcard b{font-family:var(--mono);font-weight:500}
+.dlv small{flex-wrap:nowrap;white-space:nowrap}

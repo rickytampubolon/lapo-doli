@@ -188,7 +188,7 @@ declare
   p public.products; po public.pos;
   built jsonb := '[]'::jsonb; items jsonb; food integer; qty integer; price integer;
   opts jsonb; opt jsonb; idx integer; ad jsonb; addon_id text;
-  mainq jsonb; addq jsonb; k text; seq integer; v_quota integer; v_sold integer; v_kode integer := 0; v_first boolean := true; oid text; out jsonb := '[]'::jsonb;
+  mainq jsonb; addq jsonb; k text; seq integer; v_quota integer; v_sold integer; v_kode integer := 0; v_first boolean := true; v_use_kode boolean := false; n_try integer; oid text; out jsonb := '[]'::jsonb;
 begin
   if as_admin and not public.is_admin() then
     raise exception 'forbidden' using errcode = '42501';
@@ -231,10 +231,7 @@ begin
   end if;
   v_source := case when as_admin then coalesce(nullif(payload ->> 'source', ''), 'wa') else 'web' end;
   v_paid := as_admin and coalesce((payload ->> 'paid')::boolean, false);
-  if not as_admin and coalesce(st ->> 'uniqueCode', 'true') <> 'false' then
-    v_kode := coalesce(nullif(payload ->> 'kode', '')::integer, 0);
-    if v_kode < 0 or v_kode > 999 then raise exception 'invalid_kode'; end if;
-  end if;
+  v_use_kode := not as_admin and coalesce(st ->> 'uniqueCode', 'true') <> 'false';
 
   if jsonb_typeof(payload -> 'groups') is distinct from 'array'
      or jsonb_array_length(payload -> 'groups') = 0
@@ -315,6 +312,7 @@ begin
           select coalesce(sum((i.value ->> 'qty')::integer), 0) into v_sold
           from public.orders o, jsonb_array_elements(o.items) i
           where o.po_id = po.id and o.status <> 'batal' and o.pay_status <> 'ditolak'
+            and not (o.pay_status = 'cek' and o.created_at < now() - interval '3 hours')
             and i.value ->> 'pid' = k and not coalesce((i.value ->> 'addon')::boolean, false);
           if v_sold + (mainq ->> k)::integer > v_quota then
             raise exception 'sold_out:%:%', k, greatest(0, v_quota - v_sold);
@@ -333,6 +331,17 @@ begin
       'po_id', po.id, 'po_date', po.date, 'items', items, 'food', food, 'ongkir', v_ongkir));
   end loop;
   v_count := jsonb_array_length(built);
+
+  -- Kode unik 1-999 dibuat di server: tidak sama dengan pesanan lain yang masih menunggu bayar dengan total yang sama
+  if v_use_kode then
+    for n_try in 1..40 loop
+      v_kode := 1 + floor(random() * 999)::integer;
+      exit when not exists (
+        select 1 from public.orders o
+        where o.kode = v_kode and o.group_total = v_total_all and o.pay_status = 'cek'
+          and o.status <> 'batal' and o.created_at > now() - interval '3 hours');
+    end loop;
+  end if;
 
   -- Tahap 2: simpan, dengan nomor urut atomik per PO (contoh 1809-03)
   for g in select e.value from jsonb_array_elements(built) e loop
@@ -407,6 +416,7 @@ as $$
     select o.po_id, i.value ->> 'pid' as pid, sum((i.value ->> 'qty')::integer) as sold
     from public.orders o, jsonb_array_elements(o.items) i
     where o.status <> 'batal' and o.pay_status <> 'ditolak'
+      and not (o.pay_status = 'cek' and o.created_at < now() - interval '3 hours')
       and not coalesce((i.value ->> 'addon')::boolean, false)
     group by 1, 2
   ) s on s.po_id = p.id and s.pid = pr.id
