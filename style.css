@@ -1096,3 +1096,39 @@ body.sheet-open{overflow:hidden}
 
 /* iOS memperbesar halaman saat mengisi kolom bila font < 16px */
 input, textarea, select{font-size:16px}
+
+/* ponsel: lebih padat, seperti aplikasi (tampilan lebih kecil, area ketuk tetap 44px) */
+@media (max-width:480px){
+  body{font-size:14px;line-height:1.45}
+  .col{padding-left:14px;padding-right:14px}
+  .logo.sm{width:28px;height:28px}
+  .brand{font-size:15px}
+  .storecard{margin:12px 0 6px;padding:12px 14px}
+  .sc-tag{font-size:15px;line-height:22px}
+  .sc-stats div{padding:8px 4px}
+  .sc-stats b{font-size:13px;line-height:18px}
+  .sc-stats small{font-size:11px;line-height:14px}
+  #s1 .label{font-size:16px;line-height:22px;margin:14px 0 var(--sp-2)}
+  #s1 .label small,.label small{font-size:12px}
+  .cbtn{min-width:56px;padding:6px 10px 5px;border-radius:12px}
+  .cbtn .dnum{font-size:19px;margin:0}
+  .cbtn small,.cbtn span{font-size:11px;line-height:14px}
+  .item{padding:var(--sp-3) 0}
+  .item h3{font-size:15px;line-height:20px}
+  .item .desc,.item p{font-size:13px;line-height:18px}
+  .item .price,.item .from{font-size:14px}
+  .thumb{width:80px;height:80px;border-radius:12px}
+  .addbtn{min-width:84px;padding:0 var(--sp-4);font-size:13px}
+  .step button,.sheet-x{position:relative;width:34px;height:34px;font-size:18px}
+  .step button::before,.sheet-x::before{content:"";position:absolute;inset:-5px}
+  .addbtn,.pillbtn,.sharecard .pillbtn,.reorder{min-height:40px}
+  .vrow{font-size:13px;padding:4px 0}
+  .sheet-h h3{font-size:16px;line-height:22px}
+  .sheet-h p,.sheet-h small{font-size:13px;line-height:18px}
+  .reorder{font-size:13px;margin-top:var(--sp-2)}
+  .li{font-size:14px}
+  #s2 .gc-h h2,.gc-h h2{font-size:15px}
+  .cartpill,.checkout-bar .cartpill{min-height:50px}
+  .cp-l b,.cp-r b,.checkout-bar .cp-l b,.checkout-bar .cp-r b{font-size:15px}
+  .title,#s2 .title,#s3 .title,.status .title{font-size:20px;line-height:26px}
+}
