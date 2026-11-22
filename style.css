@@ -786,3 +786,53 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 .item.on{padding-left:14px;box-shadow:inset 3px 0 0 var(--amber)}
 .bar{padding:10px 10px 10px 12px}
 .paybox{padding-top:14px}
+
+/* =========================================================
+   Admin selaras dengan tampilan pembeli: kartu lembut, sudut membulat, huruf judul Fredoka,
+   kapsul status, bayangan tipis. Garis hanya seperlunya.
+   ========================================================= */
+#admin .group{margin:24px 2px 10px;align-items:baseline;font-weight:400;color:var(--muted);font-size:.88rem;font-variant-numeric:tabular-nums}
+#admin .group span:first-child{font-family:var(--head);font-size:1.2rem;font-weight:600;color:var(--ink)}
+#admin .group span:last-child b{color:var(--ink);font-weight:600}
+
+/* pesanan: satu kartu per tanggal, baris dipisah garis sangat tipis */
+#admin .olist{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--lift-s)}
+#admin .orow{padding:12px 16px;border-bottom:1px solid rgba(47,41,38,.07)}
+#admin .orow:last-child{border-bottom:0}
+#admin .orow.attn{box-shadow:inset 3px 0 0 var(--amber)}
+#admin .orow-h{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"num amt" "who who" "how st" "side side";gap:2px 12px;align-items:baseline}
+#admin .orow .num{grid-area:num;color:var(--muted);font-size:.86rem}
+#admin .orow .who{grid-area:who;min-width:0}
+#admin .orow .how{grid-area:how;color:var(--muted);font-size:.86rem}
+#admin .orow .amt{grid-area:amt;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+#admin .orow .st{grid-area:st;justify-self:end}
+#admin .orow .oside{grid-area:side;margin-top:8px}
+#admin .oname{font-size:1rem}
+#admin .o3{margin-top:1px;color:var(--muted);font-size:.88rem}
+@media (min-width:1100px){
+  #admin .orow-h{grid-template-columns:76px minmax(0,1.5fr) minmax(0,1.2fr) 104px 168px auto;grid-template-areas:"num who how amt st side";align-items:center;gap:0 16px}
+  #admin .orow .oside{margin-top:0;justify-content:flex-end}
+  #admin .orow .st{justify-self:start}
+}
+#admin .odetail{border-top:1px dashed var(--line);margin-top:10px;padding-top:12px}
+
+/* kartu dan judul kartu */
+#admin .panel,#admin .card,#admin .porow,#admin .prow,#admin .tview{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--lift-s)}
+#admin .porow.off,#admin .prow.off{background:var(--soft);box-shadow:none}
+#admin .panel,#admin .tview{padding:16px}
+#admin .panel h3,#admin .card h3,#admin .porow h3{font-family:var(--head);font-weight:600;font-size:1.1rem}
+#admin .tiles{border-radius:16px;box-shadow:var(--lift-s);background:var(--line)}
+#admin .tile{background:var(--card)}
+#admin .tile b,#admin .herostat b{font-family:var(--head);font-weight:600}
+#admin .setsec{margin-bottom:12px}
+
+/* tata letak menu yang rapat */
+@media (min-width:1000px){
+  #admin .pmain{grid-template-columns:minmax(0,1fr) 150px;gap:6px 24px;align-items:start}
+  #admin .pmain > .fgrid{grid-column:1;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr)}
+  #admin .pmain > .fgrid .full{grid-column:1/-1}
+  #admin .pmain > .adv{grid-column:1}
+  #admin .pmain > .pbar{grid-column:2;grid-row:1 / span 2;flex-direction:column;align-items:flex-start;gap:14px;padding-top:20px}
+}
+
+#a-new .nitem:not(.on) .noterow{display:none}
