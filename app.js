@@ -149,7 +149,7 @@ const parseAddons = s => s.split(",").map(x => x.trim()).filter(Boolean).map(x =
 const fmtAddons = p => addonsOf(p).map(a => `${a.name}=${a.price}`).join(", ");
 const fmtWa = n => { const d = String(n).replace(/\D/g, ""); return d.startsWith("62") && d.length >= 11 ? `+62 ${d.slice(2, 5)}-${d.slice(5, 9)}-${d.slice(9)}` : "+" + d; };
 const normPhone = h => { const d = String(h).replace(/\D/g, ""); return d.startsWith("0") ? "62" + d.slice(1) : d; };
-const AREAS = ["Jakarta", "Jakarta Pusat", "Jakarta Utara", "Jakarta Barat", "Jakarta Selatan", "Jakarta Timur"];
+const AREAS = ["Jakarta Pusat", "Jakarta Utara", "Jakarta Barat", "Jakarta Selatan", "Jakarta Timur"];
 
 /* ================= TOKO ================= */
 const mainQty = (poId, pid) => Object.keys(cart).filter(k => k.split("::")[0] === poId && k.split("::")[1] === pid && !isAddonKey(k)).reduce((a, k) => a + cart[k], 0);
@@ -294,13 +294,13 @@ function groups(){
 const grand = gs => gs.reduce((a, g) => a + g.total, 0);
 let stateReady = false;
 function saveCart(){ if (stateReady) lsSet(LS.cart, { cart, notes:itemNotes, po:activePo, fulfil }); }
-function saveCust(){ if (stateReady) lsSet(LS.cust, { nama:$("nama").value, hp:$("hp").value, alamat:$("alamat").value }); }
+function saveCust(){ if (stateReady) lsSet(LS.cust, { nama:$("nama").value, hp:$("hp").value, area:$("area").value, alamat:$("alamat").value }); }
 function restoreState(){
   const c = lsGet(LS.cart);
   if (c && c.cart) { Object.assign(cart, c.cart); Object.assign(itemNotes, c.notes || {}); if (c.po) activePo = c.po;
     if (c.fulfil === "ambil") { fulfil = "ambil"; const r = document.querySelector("[name=fulfil][value=ambil]"); if (r) r.checked = true; } }
   const u = lsGet(LS.cust);
-  if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); }
+  if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); if (u.area) $("area").value = u.area; }
   stateReady = true;
 }
 /* layar PO kosong: kalau admin sudah menjadwalkan PO, tampilkan tanggal dan jam bukanya */
@@ -456,12 +456,12 @@ async function submitOrder(){
   let ok = true;
   const chk = (k, m) => { $("e-" + k).textContent = m; if (m) ok = false; };
   chk("nama", val.nama($("nama").value)); chk("hp", val.hp($("hp").value));
-  if (isPick()) chk("alamat", ""); else chk("alamat", val.alamat($("alamat").value));
+  if (isPick()) { chk("area", ""); chk("alamat", ""); } else { chk("area", val.area($("area").value)); chk("alamat", val.alamat($("alamat").value)); }
   if (!ok) { const f = [...document.querySelectorAll("#s2 .err")].find(x => x.textContent && !x.closest("[hidden]")); if (f) f.scrollIntoView({ behavior:"smooth", block:"center" }); return; }
   if (!sb) { toast("Toko belum tersambung ke database."); return; }
   const btn = $("paid"); btn.disabled = true; btn.textContent = "Memproses...";
   const method = document.querySelector("[name=pay]:checked").value, gs = groups();
-  const customer = { nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : "Jakarta", alamat:isPick() ? "" : $("alamat").value.trim(), notes:$("notes").value.trim(), method };
+  const customer = { nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : $("area").value, alamat:isPick() ? "" : $("alamat").value.trim(), notes:$("notes").value.trim(), method };
   let res;
   try { res = await api.createOrders({ ...customer, groups:gs.map(g => ({ po_id:g.poId, lines:g.items.map(linePayload) })) }); }
   catch (e) { btn.disabled = false; btn.textContent = "Pesan sekarang"; orderFailed(e); return; }
@@ -480,7 +480,7 @@ async function submitOrder(){
   go(3);
 }
 $("paid").onclick = submitOrder;
-["nama", "hp", "alamat"].forEach(k => { $(k).addEventListener("input", () => { $("e-" + k).textContent = ""; }); });
+["nama", "hp", "area", "alamat"].forEach(k => { $(k).addEventListener("input", () => { $("e-" + k).textContent = ""; }); });
 /* Status pesanan di layar selesai diperbarui tiap 8 detik. */
 let trackT = null, trackHp = "";
 const unsubTrack = () => { clearInterval(trackT); trackT = null; trackConf = {}; };
@@ -1316,7 +1316,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 9;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
@@ -1334,7 +1334,7 @@ function subscribeRealtime(){
 }
 async function init(){
   restoreState(); initLast();
-  ["nama", "hp", "alamat"].forEach(k => $(k).addEventListener("input", saveCust));
+  ["nama", "hp", "alamat"].forEach(k => $(k).addEventListener("input", saveCust)); $("area").addEventListener("change", saveCust);
   renderMenu(); updateBar(); go(1);
   setInterval(checkClosings, 15000); document.addEventListener("visibilitychange", checkClosings);
   const q = new URLSearchParams(location.search), hasTokens = /access_token|refresh_token|error_description/.test(location.hash);

@@ -81,9 +81,11 @@
           <input id="hp" type="tel" inputmode="numeric" autocomplete="tel" enterkeyhint="next" placeholder="08123456789">
           <div class="err" id="e-hp"></div>
           <div id="addr-fields">
-            <input type="hidden" id="area" value="Jakarta">
-            <label class="lb" for="alamat">Alamat lengkap di Jakarta <i class="req">*</i></label>
-            <textarea id="alamat" autocomplete="street-address" enterkeyhint="next" placeholder="Jalan, nomor rumah, kecamatan, patokan"></textarea>
+            <label class="lb" for="area">Wilayah <i class="req">*</i></label>
+            <select id="area"><option value="">Pilih wilayah</option><option>Jakarta Pusat</option><option>Jakarta Utara</option><option>Jakarta Barat</option><option>Jakarta Selatan</option><option>Jakarta Timur</option></select>
+            <div class="err" id="e-area"></div>
+            <label class="lb" for="alamat">Alamat lengkap <i class="req">*</i></label>
+            <textarea id="alamat" autocomplete="street-address" enterkeyhint="next" placeholder="Jalan, nomor rumah, patokan"></textarea>
             <div class="err" id="e-alamat"></div>
           </div>
           <label class="lb" for="notes">Catatan (opsional)</label>

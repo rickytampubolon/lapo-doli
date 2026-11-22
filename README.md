@@ -75,7 +75,7 @@ Ikuti petunjuk di bagian atas `supabase/notify-telegram.sql`. Token bot disimpan
 
 ## Alur pembeli
 
-1. Pilih tanggal PO, pilih menu, lalu **Pesan sekarang**. Pengantaran hanya untuk Jakarta, jadi pembeli tidak memilih wilayah (tersimpan sebagai "Jakarta"). Pesanan langsung tercatat (status menunggu bayar).
+1. Pilih tanggal PO, pilih menu, lalu **Pesan sekarang**. Pesanan langsung tercatat (status menunggu bayar).
 2. Layar berikutnya menampilkan jumlah transfer yang tepat (dengan kode unik yang dibuat server) dan nomor rekening atau QRIS. Pembeli mengunggah foto bukti bayar langsung di halaman (tidak lewat WhatsApp). Kalau admin menandai pembayaran tidak cocok, pembeli bisa mengunggah ulang dan statusnya kembali ke dicek.
 3. Keranjang, data pembeli, dan pesanan terakhir disimpan di browser. Pembeli bisa kembali ke info bayar dan status dari kartu di beranda.
 
