@@ -713,7 +713,7 @@ function renderNewForm(){
     <div class="toolbar"><button class="btn line sm" data-nclose type="button">${ic("back")}Pesanan</button><b>Pesanan baru</b></div>
     <div class="grid2">
       <div><label class="lb" for="n-po" style="margin-top:0">Tanggal PO</label><select id="n-po">${pl.map(po => `<option value="${esc(po.id)}" ${po.id === def ? "selected" : ""}>${esc(dShort(po.date))}${poOpenNow(po) ? "" : " (ditutup)"}</option>`).join("")}</select></div>
-      <div><label class="lb" style="margin-top:0">Cara terima</label><div class="seg" id="n-fulfil"><label><input type="radio" name="nf" value="antar" checked>Antar</label><label><input type="radio" name="nf" value="ambil">Ambil sendiri</label></div></div>
+      <div><label class="lb" style="margin-top:0">Cara terima</label><div class="opts opts-row" id="n-fulfil"><label class="opt"><input type="radio" name="nf" value="antar" checked><span class="opt-t"><b>Antar</b></span><i class="dot" aria-hidden="true"></i></label><label class="opt"><input type="radio" name="nf" value="ambil"><span class="opt-t"><b>Ambil sendiri</b></span><i class="dot" aria-hidden="true"></i></label></div></div>
     </div>
     <div class="grid2">
       <div><label class="lb" for="n-nama">Nama</label><input type="text" id="n-nama" placeholder="Nama lengkap"><div class="err" id="n-e-nama"></div></div>
@@ -735,8 +735,8 @@ function renderNewForm(){
       <div><label class="lb" for="n-method" style="margin-top:0">Bayar via</label><select id="n-method"><option value="transfer">Transfer</option><option value="qris">QRIS</option></select></div>
       <div><label class="lb" for="n-pay" style="margin-top:0">Status bayar</label><select id="n-pay"><option value="cek">Belum bayar</option><option value="lunas">Lunas</option></select></div>
     </div>
-    <div class="ntot"><span class="muted" id="n-sum"></span><b id="n-total">Rp 0</b></div>
-    <button class="btn" id="n-save" type="button">Buat pesanan</button></div>`;
+    <div class="nbar"><div class="ntot"><span class="muted" id="n-sum"></span><b id="n-total">Rp 0</b></div>
+    <button class="btn" id="n-save" type="button">Buat pesanan</button></div></div>`;
   nSync();
 }
 function nTotals(){ const ls = mLines(), food = ls.reduce((a, l) => a + l.price * l.qty, 0), ong = $("n-ong") ? Math.max(0, Math.round(Number($("n-ong").value) || 0)) : 0; return { ls, food, ong, total:food + ong }; }
@@ -970,14 +970,14 @@ function renderAdminSet(){
   const s = settings, el = $("a-set");
   const f = (id, key, label, val, opts = "", full = false) => `<div class="${full ? "full" : ""}"><label class="fl" for="${id}">${label}</label><input type="${opts.includes("number") ? "number" : "text"}" id="${id}" data-s="${key}" value="${esc(val)}" ${opts}></div>`;
   el.innerHTML = `
-    <section class="card setsec"><h3>Antar dan ambil</h3><div class="fgrid">
+    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("truck")}</span><div><h3>Antar dan ambil</h3></div></div><div class="fgrid">
       ${f("s-jam", "deliveryHours", "Jam pengantaran", s.deliveryHours, 'placeholder="12.00 - 14.00"')}
       ${f("s-pj", "pickupHours", "Jam ambil", s.pickupHours, 'placeholder="12.00 - 14.00"')}
       ${f("s-co", "poCutoff", "Tutup PO pukul", s.poCutoff, 'placeholder="10:00"')}
       ${f("s-og", "ongkir", "Ongkir (Rp, 0 = gratis)", Number(s.ongkir) || 0, 'number min="0" step="500" inputmode="numeric"')}
       ${f("s-pl", "pickupLocation", "Lokasi ambil", s.pickupLocation, "", true)}
     </div></section>
-    <section class="card setsec"><h3>Pembayaran</h3><div class="fgrid">
+    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("receipt")}</span><div><h3>Pembayaran</h3></div></div><div class="fgrid">
       ${f("s-bn", "bankName", "Nama bank", s.bankName)}
       ${f("s-bno", "bankNumber", "Nomor rekening", s.bankNumber, 'inputmode="numeric"')}
       ${f("s-bh", "bankHolder", "Atas nama", s.bankHolder)}
@@ -985,10 +985,10 @@ function renderAdminSet(){
     <div class="qrisbox">${s.qrisUrl ? `<img src="${esc(s.qrisUrl)}" alt="QRIS">` : ""}
       <div><div class="fl">QRIS</div>${s.qrisUrl ? "" : '<p class="fhint" style="margin:0 0 8px">Belum ada gambar.</p>'}
       <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti" : "Unggah"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus QRIS</button>' : ""}</div></div></div></section>
-    <section class="card setsec"><h3>Kode unik</h3>
+    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("check")}</span><div><h3>Kode unik</h3></div></div>
       <label class="switch"><input type="checkbox" id="s-uc" data-s="uniqueCode" ${s.uniqueCode !== false ? "checked" : ""}><span class="track"></span><span>${s.uniqueCode !== false ? "Aktif" : "Mati"}</span></label>
       <p class="fhint">Tambah Rp 1 sampai 499 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
-    <section class="card setsec"><h3>Kontak</h3><div class="fgrid">
+    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("phone")}</span><div><h3>Kontak</h3></div></div><div class="fgrid">
       ${f("s-wa", "waNumber", "WhatsApp admin (62...)", s.waNumber, 'inputmode="numeric"')}
     </div></section>`;
 }
