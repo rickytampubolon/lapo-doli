@@ -97,12 +97,12 @@
         <label id="qris-opt"><input type="radio" name="pay" value="qris">QRIS</label>
       </div>
       <div class="soft payinfo show" id="pi-transfer">
-        <span class="muted">Transfer tepat sesuai total ke</span><br>
+        <span class="muted">Transfer tepat ke</span><br>
         <b id="bank-name"></b> <span class="muted" id="bank-holder"></span>
         <div class="bankrow"><div class="copy" id="bank-no"></div><button class="copybtn" id="copy-no" type="button" aria-label="Salin nomor rekening" title="Salin nomor rekening"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
       </div>
       <div class="payinfo" id="pi-qris"><p class="note" style="text-align:center;margin:0 0 10px">Scan QRIS, lalu masukkan nominal sesuai total di atas.</p><div class="qris" id="qris-box"></div></div>
-      <p class="note" style="margin:12px 0 0">Setelah membayar, kirim bukti bayar ke admin lewat WhatsApp. Pesanan terkonfirmasi setelah admin mengecek pembayaran.</p>
+      <p class="note" style="margin:12px 0 0">Setelah transfer, kirim bukti bayar lewat WhatsApp.</p>
 
       <div class="actions"><button class="btn" id="paid" type="button">Saya sudah bayar</button></div>
     </section>
@@ -111,9 +111,8 @@
       <div class="status" style="margin-top:28px"><span class="dot" id="d-dot"></span><h1 class="title" id="d-title" style="margin:0;font-size:1.5rem">Pesanan diterima</h1></div>
       <p class="intro" id="d-sub" style="margin:8px 0 22px"></p>
       <ul class="dlv" id="track"></ul>
-      <div class="actions"><a class="btn" id="wa" target="_blank" rel="noopener">Kirim bukti bayar via WhatsApp</a></div>
-      <div class="label">Ringkasan</div>
-      <div class="sum" id="sum3"></div>
+      <div class="actions"><a class="btn" id="wa" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Kirim bukti bayar</a></div>
+      <div class="sum" id="sum3" style="margin-top:22px"></div>
       <div class="actions"><button class="btn line" id="again" type="button">Pesan lagi</button></div>
     </section>
 
@@ -132,24 +131,23 @@
   </div></header>
   <main class="col">
     <h1 class="title">Bantuan</h1>
-    <dl class="faq">
-      <dt>Apa itu PO (pre-order)?</dt><dd>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Pilih tanggal yang dibuka, pesan, dan makanan diantar atau bisa diambil pada tanggal itu. Anda boleh ikut lebih dari satu PO, bayarnya cukup sekali. PO ditutup otomatis pada hari pengantaran pukul <span data-cutoff></span>.</dd>
-      <dt>Antar atau ambil sendiri</dt><dd>Antar hanya untuk wilayah Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir flat <span data-ongkir></span> per tanggal. Ambil sendiri di <span data-pickloc></span> jam <span data-pickhours></span>, tanpa ongkir.</dd>
-      <dt>Nasi dan sop tambahan</dt><dd>Muncul di bawah menu setelah Anda menambahkannya. Jumlahnya tidak bisa melebihi jumlah menu utama.</dd>
-      <dt>Kapan pesanan terkonfirmasi?</dt><dd>Setelah Anda membayar (transfer atau QRIS) dan mengirim bukti bayar ke admin lewat WhatsApp, admin mengecek pembayaran. Statusnya berubah di layar pesanan setelah dikonfirmasi.</dd>
-      <dt>Mau ubah atau batalkan pesanan?</dt><dd>Hubungi admin lewat WhatsApp secepatnya dan sebutkan nomor pesanan Anda.</dd>
-    </dl>
-    <div class="label">Cek status pesanan</div>
-    <div class="card">
-      <label class="fl" for="ck-id">Nomor pesanan</label>
-      <input type="text" id="ck-id" placeholder="Contoh: 1809-03" autocomplete="off">
-      <label class="fl" for="ck-hp" style="margin-top:10px">No. HP saat memesan</label>
-      <input type="tel" id="ck-hp" inputmode="tel" placeholder="08123456789" autocomplete="tel">
+    <div class="card checkcard">
+      <h2 class="ct">Cek status pesanan</h2>
+      <div class="ckrow"><div><label class="fl" for="ck-id">Nomor pesanan</label><input type="text" id="ck-id" placeholder="1809-03" autocomplete="off"></div>
+      <div><label class="fl" for="ck-hp">No. HP</label><input type="tel" id="ck-hp" inputmode="tel" placeholder="08123456789" autocomplete="tel"></div></div>
       <div class="err" id="ck-err"></div>
       <button class="btn" id="ck-go" type="button" style="margin-top:6px">Cek status</button>
       <ul class="dlv" id="ck-out" style="margin-top:14px"></ul>
     </div>
-    <a class="btn ink" id="help-wa" style="margin-top:20px" target="_blank" rel="noopener">Chat admin · <span data-wa></span></a>
+    <div class="label">Pertanyaan umum</div>
+    <div class="faq">
+      <details><summary>Apa itu PO?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Boleh pesan beberapa tanggal sekaligus dan bayar sekali. PO tutup pukul <span data-cutoff></span> di hari itu.</p></details>
+      <details><summary>Antar atau ambil sendiri?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Antar ke Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir <span data-ongkir></span> per tanggal. Ambil sendiri di <span data-pickloc></span>, jam <span data-pickhours></span>, tanpa ongkir.</p></details>
+      <details><summary>Nasi dan sop tambahan<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Muncul setelah menu utama dipilih. Jumlahnya maksimal sama dengan menu utama.</p></details>
+      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah Anda transfer dan kirim bukti bayar lewat WhatsApp, admin mengecek lalu mengubah statusnya.</p></details>
+      <details><summary>Ubah atau batalkan pesanan?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Hubungi admin lewat WhatsApp dengan nomor pesanan.</p></details>
+    </div>
+    <a class="btn ink" id="help-wa" style="margin-top:20px" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Chat admin <span data-wa></span></a>
   </main>
 </div>
 

@@ -487,14 +487,11 @@ textarea{min-height:84px;resize:vertical}
 /* aksen ulos: pita merah, garis anggur tua, garis krem. Menggantikan deret segitiga */
 :root{
   --ulos-h:linear-gradient(to bottom,#6f1a12 0 2px,#f6e4cf 2px 3px,#a3281c 3px 7px,#3b0d09 7px 9px,#a3281c 9px 13px,#f6e4cf 13px 14px,#6f1a12 14px 16px);
-  --ulos-v:linear-gradient(to right,#6f1a12 0 2px,#f6e4cf 2px 3px,#a3281c 3px 7px,#3b0d09 7px 9px,#a3281c 9px 13px,#f6e4cf 13px 14px,#6f1a12 14px 16px);
 }
 .pattern{height:16px;background:var(--ulos-h)}
 .pattern::before{content:none}
 .ahead{padding-bottom:16px}
 .ahead::after{height:16px;background:var(--ulos-h);-webkit-mask:none;mask:none}
-.side{padding-right:28px}
-.side::after{content:"";position:absolute;top:0;bottom:0;right:0;width:16px;background:var(--ulos-v)}
 .side-brand{flex-wrap:nowrap}
 .side-brand .brand{white-space:nowrap}
 .side-brand .logo.sm{width:36px;height:36px}
@@ -526,3 +523,35 @@ textarea{min-height:84px;resize:vertical}
   #admin .odetail .acts .btn{width:100%;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:8px 8px;font-size:.86rem}
   #admin .odetail .acts .btn .ic{margin-right:6px;width:18px;height:18px}
 }
+
+/* bantuan: daftar lipat */
+.faq{margin:6px 0 24px;border-top:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;font-weight:600;cursor:pointer;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .ic{color:var(--muted);transition:transform .15s}
+.faq details[open] summary .ic{transform:rotate(180deg)}
+.faq p{margin:0 0 14px;color:var(--muted);line-height:1.55}
+.faq summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+.checkcard .ct{margin:0 0 10px;font-size:1.05rem;font-weight:600}
+.ckrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.ckrow{grid-template-columns:1fr}}
+#help-view .label{margin-top:22px}
+.dlv small{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dlv small .ic{width:15px;height:15px;margin-right:-2px}
+.dlv small .ic:not(:first-child){margin-left:6px}
+#wa .ic{margin-right:8px;vertical-align:-4px}
+#help-wa .ic{margin-right:8px;vertical-align:-4px}
+/* rekap: kartu pesanan berikon */
+.rk-o{display:grid;gap:5px;padding:10px 0;border-bottom:1px solid var(--line)}
+.rk-top{display:flex;align-items:center;gap:8px}
+.rk-top .muted{font-size:.82rem;margin-right:auto}
+.rk-wa{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;color:var(--ink);border:1px solid var(--line)}
+.rk-wa .ic{width:17px;height:17px}
+.rk-r{display:flex;gap:8px;align-items:flex-start;color:var(--muted);font-size:.9rem;line-height:1.4}
+.rk-r .ic{width:16px;height:16px;margin-top:2px}
+.rk-i{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:.92rem}
+.rk-i li{display:grid;grid-template-columns:2em minmax(0,1fr);gap:6px}
+.rk-i .q{color:var(--muted);font-variant-numeric:tabular-nums}
+.rk-i em{color:var(--muted);font-style:normal;font-size:.84rem}
+.rk-note{border-left:3px solid var(--amber);padding:3px 10px;background:var(--amber-soft);border-radius:0 8px 8px 0;font-size:.88rem}
