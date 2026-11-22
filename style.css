@@ -44,8 +44,10 @@ button,input,textarea,select{font:inherit;color:inherit}
 .brand{font-family:var(--head);font-weight:600;font-size:1.02rem;letter-spacing:.01em}
 .logo{display:block;background:var(--logo) center/contain no-repeat;flex:none}
 .logo.sm{width:30px;height:30px;border-radius:8px;background-color:#000}
-.hlink{background:none;border:0;color:#cdbbaa;font:inherit;font-weight:500;padding:10px 4px;margin:-6px -4px;cursor:pointer;min-height:44px}
-.hlink:hover{color:#fff}
+.hlink{background:none;border:0;color:var(--muted);font:inherit;font-weight:500;padding:10px 4px;margin:-6px -4px;cursor:pointer;min-height:44px}
+.hlink:hover{color:var(--ink)}
+.home .top .hlink{color:#cdbbaa}
+.home .top .hlink:hover{color:#fff}
 .hlink:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:6px}
 #shop:not(.home){padding-bottom:84px}
 .textbtn{background:none;border:0;padding:6px 0;color:var(--muted);cursor:pointer;font-size:.88rem}

@@ -90,6 +90,8 @@ create table if not exists public.orders (
   pay_status  text not null default 'cek' check (pay_status in ('cek', 'lunas', 'ditolak')),
   status      text not null default 'baru' check (status in ('baru', 'diproses', 'diantar', 'selesai', 'batal'))
 );
+-- kode unik 1-999 yang ditambahkan ke jumlah bayar (hanya di pesanan pertama dari satu kali checkout)
+alter table public.orders add column if not exists kode integer not null default 0 check (kode between 0 and 999);
 create index if not exists orders_po_idx on public.orders (po_id);
 create index if not exists orders_gid_idx on public.orders (gid);
 create index if not exists orders_created_idx on public.orders (created_at desc);
@@ -186,7 +188,7 @@ declare
   p public.products; po public.pos;
   built jsonb := '[]'::jsonb; items jsonb; food integer; qty integer; price integer;
   opts jsonb; opt jsonb; idx integer; ad jsonb; addon_id text;
-  mainq jsonb; addq jsonb; k text; seq integer; v_quota integer; v_sold integer; oid text; out jsonb := '[]'::jsonb;
+  mainq jsonb; addq jsonb; k text; seq integer; v_quota integer; v_sold integer; v_kode integer := 0; v_first boolean := true; oid text; out jsonb := '[]'::jsonb;
 begin
   if as_admin and not public.is_admin() then
     raise exception 'forbidden' using errcode = '42501';
@@ -229,6 +231,10 @@ begin
   end if;
   v_source := case when as_admin then coalesce(nullif(payload ->> 'source', ''), 'wa') else 'web' end;
   v_paid := as_admin and coalesce((payload ->> 'paid')::boolean, false);
+  if not as_admin and coalesce(st ->> 'uniqueCode', 'true') <> 'false' then
+    v_kode := coalesce(nullif(payload ->> 'kode', '')::integer, 0);
+    if v_kode < 0 or v_kode > 999 then raise exception 'invalid_kode'; end if;
+  end if;
 
   if jsonb_typeof(payload -> 'groups') is distinct from 'array'
      or jsonb_array_length(payload -> 'groups') = 0
@@ -341,19 +347,22 @@ begin
     end loop;
     update public.counters set n = greatest(n, seq) where po_id = g ->> 'po_id';
     insert into public.orders (id, gid, po_id, po_date, source, nama, hp, fulfil, area, alamat, pickup_loc,
-                               notes, method, items, ongkir, total, group_total, group_count, hours, pay_status)
+                               notes, method, items, ongkir, total, group_total, group_count, hours, pay_status, kode)
     values (oid, v_gid, g ->> 'po_id', (g ->> 'po_date')::date, v_source, v_nama, v_hp, v_fulfil, v_area, v_alamat,
             case when v_fulfil = 'ambil' then v_pick_loc else '' end,
             v_notes, v_method, g -> 'items', (g ->> 'ongkir')::integer,
             (g ->> 'food')::integer + (g ->> 'ongkir')::integer, v_total_all, v_count,
             case when v_fulfil = 'ambil' then v_pick_hours else v_hours end,
-            case when v_paid then 'lunas' else 'cek' end);
+            case when v_paid then 'lunas' else 'cek' end,
+            case when v_first then v_kode else 0 end);
     out := out || jsonb_build_array(jsonb_build_object(
       'id', oid, 'gid', v_gid, 'po_id', g ->> 'po_id', 'po_date', g ->> 'po_date',
       'total', (g ->> 'food')::integer + (g ->> 'ongkir')::integer, 'fulfil', v_fulfil,
+      'kode', case when v_first then v_kode else 0 end,
       'hours', case when v_fulfil = 'ambil' then v_pick_hours else v_hours end,
       'pickup_loc', case when v_fulfil = 'ambil' then v_pick_loc else '' end,
       'items', g -> 'items'));
+    v_first := false;
   end loop;
 
   return out;

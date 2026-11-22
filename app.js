@@ -45,7 +45,7 @@ const toProductRow = patch => {
 };
 const fromOrder = r => ({ id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
   area:r.area, alamat:r.alamat, fulfil:r.fulfil, pickupLoc:r.pickup_loc, notes:r.notes, method:r.method, items:Array.isArray(r.items) ? r.items : [],
-  ongkir:r.ongkir, total:r.total, groupTotal:r.group_total, groupCount:r.group_count, hours:r.hours, payStatus:r.pay_status, status:r.status });
+  ongkir:r.ongkir, total:r.total, kode:Number(r.kode) || 0, groupTotal:r.group_total, groupCount:r.group_count, hours:r.hours, payStatus:r.pay_status, status:r.status });
 const must = ({ data, error }) => { if (error) throw error; return data; };
 const api = {
   loadProducts: async () => must(await sb.from("products").select("*").order("sort").order("name")).map(fromProduct),
@@ -295,9 +295,15 @@ function go(n){
 $("next").onclick = () => go(2);
 $("back1").onclick = () => go(1);
 
+/* Kode unik 1-999 ditambahkan ke jumlah bayar supaya admin mudah mencocokkan mutasi bank. Tetap sama selama pembeli di halaman ini. */
+let payCode = 0;
+const codeOn = () => settings.uniqueCode !== false;
 function renderCheckout(){
   const gs2 = groups();
-  $("sum2").innerHTML = summaryHTML(gs2); $("pay-total").textContent = rp(grand(gs2));
+  if (!codeOn()) payCode = 0; else if (!payCode) payCode = 1 + Math.floor(Math.random() * 999);
+  $("sum2").innerHTML = summaryHTML(gs2); $("pay-total").textContent = rp(grand(gs2) + payCode);
+  const cn = $("pay-code-note"); cn.hidden = !payCode;
+  if (payCode) cn.textContent = "Sudah termasuk kode unik " + rp(payCode) + " supaya pembayaran Anda mudah dicek. Transfer tepat sesuai angka ini.";
   $("addr-fields").hidden = isPick(); $("pick-box").hidden = !isPick();
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
@@ -361,7 +367,7 @@ async function submitOrder(){
   if (!sb) { toast("Toko belum tersambung ke database."); return; }
   const btn = $("paid"); btn.disabled = true;
   const method = document.querySelector("[name=pay]:checked").value, gs = groups();
-  const customer = { nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : $("area").value, alamat:isPick() ? "" : $("alamat").value.trim(), notes:$("notes").value.trim(), method };
+  const customer = { kode:payCode, nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : $("area").value, alamat:isPick() ? "" : $("alamat").value.trim(), notes:$("notes").value.trim(), method };
   let res;
   try { res = await api.createOrders({ ...customer, groups:gs.map(g => ({ po_id:g.poId, lines:g.items.map(linePayload) })) }); }
   catch (e) { btn.disabled = false; orderFailed(e); return; }
@@ -369,7 +375,8 @@ async function submitOrder(){
   placed = res.map(r => ({ id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, fulfil:r.fulfil, hours:r.hours, pickupLoc:r.pickup_loc, total:r.total, items:r.items, ...customer }));
   recorded = true; trackHp = customer.hp;
   const outGs = res.map(r => ({ poId:r.po_id, date:r.po_date, fulfil:r.fulfil, items:r.items, ongkir:r.total - r.items.reduce((a, i) => a + i.price * i.qty, 0), total:r.total }));
-  const total = grand(outGs), nums = placed.map(o => o.id).join(", ");
+  const kodeSum = res.reduce((a, r) => a + (Number(r.kode) || 0), 0), total = grand(outGs) + kodeSum, nums = placed.map(o => o.id).join(", ");
+  payCode = 0;
   const msg =
 `Halo Lapo Doli, saya sudah bayar.
 
@@ -380,7 +387,7 @@ ${isPick() ? "Ambil sendiri di " + pickLoc() : "Wilayah: " + customer.area + "\n
 ${customer.notes ? "Catatan: " + customer.notes + "\n" : ""}
 ${outGs.map((g, i) => `${placed[i].id} · ${isPick() ? "Ambil" : "Antar"} ${dLong(g.date)}, jam ${placed[i].hours}:\n${g.items.map(x => `- ${x.qty} × ${x.name}${x.option ? " (" + x.option + ")" : ""}${x.note ? "\n  Catatan: " + x.note : ""}`).join("\n")}${isPick() ? "" : "\nOngkir: " + rp(g.ongkir)}`).join("\n\n")}
 
-Total: ${rp(total)}
+Total: ${rp(total)}${kodeSum ? " (termasuk kode unik " + rp(kodeSum) + ")" : ""}
 Bayar via: ${method === "qris" ? "QRIS" : "Transfer " + settings.bankName}
 
 (Bukti bayar saya lampirkan di chat ini)`;
@@ -477,6 +484,7 @@ function orderRow(o){
   const main = o.items.filter(i => !i.addon), adds = o.items.filter(i => i.addon), hasNote = !!o.notes || o.items.some(i => i.note);
   const summary = main.map(i => `${Number(i.qty) || 0}× ${i.name}${i.option ? " (" + i.option + ")" : ""}`).join(" · ") + (adds.length ? ` · +${adds.reduce((a, i) => a + (Number(i.qty) || 0), 0)} tambahan` : "");
   const meta = [pk ? "Ambil sendiri" : "Antar" + (o.area ? " · " + o.area : ""), rp(o.total), o.method === "qris" ? "QRIS" : "Transfer"].concat(grp ? ["Gabungan " + o.groupCount + " tanggal"] : []).join(" · ");
+  const gk = orders.filter(x => x.gid === o.gid).reduce((t, x) => t + (x.kode || 0), 0);
   let sec = "";
   if (o.status !== "batal") {
     if (o.payStatus === "cek") sec += `<button class="btn line" data-act="pay_no" ${dis}>Bayar tidak cocok</button>`;
@@ -499,6 +507,7 @@ function orderRow(o){
       ${o.notes ? `<p class="onote">Catatan: ${esc(o.notes)}</p>` : ""}
       <ul class="itl">${o.items.map(i => `<li><span>${Number(i.qty) || 0} × ${esc(i.name)}${i.option ? " (" + esc(i.option) + ")" : ""}</span><span>${Number(i.price) ? rp((Number(i.price) || 0) * (Number(i.qty) || 0)) : "Gratis"}</span></li>${i.note ? `<li class="inl">Catatan: ${esc(i.note)}</li>` : ""}`).join("")}${o.ongkir ? `<li><span>Ongkir Lalamove</span><span>${rp(o.ongkir)}</span></li>` : ""}</ul>
       <div class="ototal"><span>Total pesanan ini</span><span>${rp(o.total)}</span></div>
+      ${gk ? `<p class="onote">Pelanggan diminta transfer ${rp(Number(o.groupTotal) + gk)}, termasuk kode unik ${rp(gk)}. Cari angka ini di mutasi bank.</p>` : ""}
       ${grp ? `<p class="onote">Bayar gabungan untuk ${o.groupCount} tanggal PO, total ${rp(o.groupTotal)}. Konfirmasi bayar berlaku untuk semuanya.</p>` : ""}
       <div class="acts"><a class="btn line" href="${esc(wa)}" target="_blank" rel="noopener">Chat pelanggan</a>${sec}</div>
     </div>` : ""}</article>`;
@@ -846,6 +855,9 @@ function renderAdminSet(){
     <div class="qrisbox">${s.qrisUrl ? `<img src="${esc(s.qrisUrl)}" alt="QRIS">` : ""}
       <div><div class="fl">QRIS</div><p class="fhint" style="margin:0 0 10px">${s.qrisUrl ? "Pembeli bisa memilih bayar lewat QRIS." : "Belum ada gambar QRIS, jadi pembeli hanya melihat transfer bank."}</p>
       <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti gambar QRIS" : "Unggah gambar QRIS"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Unggah gambar butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus QRIS</button>' : ""}</div></div></div></section>
+    <section class="card setsec"><h3>Kode unik pembayaran</h3>
+      <label class="switch"><input type="checkbox" id="s-uc" data-s="uniqueCode" ${s.uniqueCode !== false ? "checked" : ""}><span class="track"></span><span>${s.uniqueCode !== false ? "Aktif" : "Mati"}</span></label>
+      <p class="fhint">Menambahkan 1 sampai 999 rupiah ke jumlah transfer setiap pesanan, supaya mudah dicocokkan dengan mutasi bank. Kode tidak masuk hitungan penjualan.</p></section>
     <section class="card setsec"><h3>Kontak</h3><div class="fgrid">
       ${f("s-wa", "waNumber", "Nomor WhatsApp admin (format 62...)", s.waNumber, 'inputmode="numeric"')}
     </div></section>`;
@@ -876,7 +888,7 @@ setEl.addEventListener("change", async e => {
     return;
   }
   const k = t.dataset.s; if (!k) return;
-  let v = t.type === "number" ? Math.max(0, Math.round(Number(t.value) || 0)) : t.value.trim();
+  let v = t.type === "checkbox" ? t.checked : t.type === "number" ? Math.max(0, Math.round(Number(t.value) || 0)) : t.value.trim();
   if (k === "waNumber") v = normPhone(v);
   if (k === "poCutoff") { if (!/^\d{1,2}[:.]\d{2}$/.test(v)) { toast("Format jam salah. Contoh: 10:00"); renderAdminSet(); return; } v = v.replace(".", ":").padStart(5, "0"); }
   if (["deliveryHours", "pickupHours", "pickupLocation"].includes(k) && !v) v = DEFAULT_SETTINGS[k];
