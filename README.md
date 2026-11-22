@@ -83,6 +83,21 @@ Pesanan yang belum dibayar lebih dari 3 jam tidak lagi menahan kuota porsi. Pesa
 
 Setiap kali `supabase/schema.sql` berubah, jalankan ulang isinya di SQL Editor (aman diulang).
 
+## Design system
+
+Strukturnya mengikuti dokumentasi publik **Asphalt Aloha** (Gojek), dengan warna dan identitas Lapo Doli. Token ada di bagian akhir `style.css`.
+
+| Bagian | Nilai |
+|---|---|
+| Jarak | kelipatan 4px (`--sp-1` sampai `--sp-10`) |
+| Huruf | Figtree 400, 600, 700, tanpa miring. Skala 12, 14, 16, 20, 26, 34, 44 px (dasar 12 dikali 1,3, tinggi baris kelipatan 4) |
+| Warna | token peran: `--fill-*`, `--border-*`, `--text-*`, `--icon-*`. Latar putih, merek merah ulos `#9a3b2f` |
+| Bayangan | dua tingkat: `--shadow-low` untuk kartu, `--shadow-high` untuk lapisan melayang |
+| Komponen | Button (48 dan 36px), Input Field (48px, admin 40px), Card (garis 1px), Badge, Alert, Toast, Divider |
+| Pemisah | jarak lebih dulu, garis seperlunya |
+
+Yang **tidak** tertulis di dokumentasi publik Asphalt (ukuran tombol, radius sudut, nilai bayangan) adalah keputusan proyek ini. Font Maison Neue milik Gojek berlisensi komersial, jadi dipakai Figtree (OFL) sebagai padanan. Hijau Gojek tidak dipakai. Aksen ulos hanya di header.
+
 ## Jadwal buka PO
 
 Di tab **PO** admin, isi kolom waktu (opsional) saat menambah PO untuk menjadwalkannya. PO terjadwal belum bisa dipesan (server juga menolak sebelum waktunya), dan layar toko menampilkan "PO segera dibuka" dengan tanggal dan jam bukanya serta tombol "Ingatkan saya" lewat WhatsApp. Tombol **Buka sekarang** membukanya lebih awal. Perlu menjalankan ulang `supabase/schema.sql`.
