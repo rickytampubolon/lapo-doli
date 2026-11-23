@@ -104,6 +104,10 @@ alter table public.orders add column if not exists proof_path text not null defa
 alter table public.orders add column if not exists client_ref text;
 -- tautan lokasi Google Maps yang dipilih pembeli (hanya tautan Google, maksimal 300 karakter)
 alter table public.orders add column if not exists maps_url text not null default '';
+-- pembeli yang pesanannya sudah dibatalkan sistem tapi merasa sudah transfer menekan "Saya sudah transfer"
+alter table public.orders add column if not exists claimed_at timestamptz;
+-- pesanan lunas yang dibatalkan: perlu dikembalikan uangnya ('perlu') atau sudah ('selesai')
+alter table public.orders add column if not exists refund text not null default '' check (refund in ('', 'perlu', 'selesai'));
 create index if not exists orders_ref_idx on public.orders (client_ref) where client_ref is not null;
 create index if not exists orders_po_idx on public.orders (po_id);
 create index if not exists orders_gid_idx on public.orders (gid);
@@ -253,12 +257,20 @@ begin
     v_area := ''; v_alamat := ''; v_maps := '';
   end if;
   v_notes := left(btrim(coalesce(payload ->> 'notes', '')), 300);
-  -- Batasi spam: satu nomor HP maksimal 5 kali kirim pesanan dalam 10 menit (admin dikecualikan)
+  -- Batasi spam (admin dikecualikan): satu nomor HP maksimal 3 kali kirim pesanan dalam 10 menit,
+  -- dan maksimal 3 pesanan yang masih menunggu bayar (belum ada bukti, belum 1 jam) pada saat yang sama
   if not as_admin and (
        select count(distinct o.gid) from public.orders o
        where o.created_at > now() - interval '10 minutes' and public.norm_hp(o.hp) = public.norm_hp(v_hp)
-     ) >= 5 then
+     ) >= 3 then
     raise exception 'rate_limited';
+  end if;
+  if not as_admin and (
+       select count(distinct o.gid) from public.orders o
+       where o.status = 'baru' and o.pay_status = 'cek' and o.proof_path = ''
+         and o.created_at > now() - interval '1 hour' and public.norm_hp(o.hp) = public.norm_hp(v_hp)
+     ) >= 3 then
+    raise exception 'too_many_pending';
   end if;
   v_source := case when as_admin then coalesce(nullif(payload ->> 'source', ''), 'wa') else 'web' end;
   v_paid := as_admin and coalesce((payload ->> 'paid')::boolean, false);
@@ -421,11 +433,11 @@ grant execute on function public.create_orders(jsonb, boolean) to anon, authenti
 -- ---------------------------------------------------------------------
 drop function if exists public.track_orders(text[], text);
 create or replace function public.track_orders(ids text[], phone text)
-returns table (id text, po_date date, fulfil text, hours text, pickup_loc text, total integer, pay_status text, status text, has_proof boolean)
+returns table (id text, po_date date, fulfil text, hours text, pickup_loc text, total integer, pay_status text, status text, has_proof boolean, claimed boolean)
 language sql stable security definer
 set search_path = public
 as $$
-  select o.id, o.po_date, o.fulfil, o.hours, o.pickup_loc, o.total, o.pay_status, o.status, (o.proof_path <> '') as has_proof
+  select o.id, o.po_date, o.fulfil, o.hours, o.pickup_loc, o.total, o.pay_status, o.status, (o.proof_path <> '') as has_proof, (o.claimed_at is not null) as claimed
   from public.orders o
   where coalesce(array_length(ids, 1), 0) between 1 and 20
     and o.id = any (ids)
@@ -454,13 +466,35 @@ begin
   -- bukti baru setelah ditolak mengembalikan status ke 'cek' supaya admin memeriksanya lagi
   update public.orders set proof_path = p_path, pay_status = case when pay_status = 'ditolak' then 'cek' else pay_status end
    where gid = p_gid and public.norm_hp(hp) = public.norm_hp(phone)
-     and status <> 'batal' and pay_status <> 'lunas';
+     and (status <> 'batal' or claimed_at is not null) and pay_status <> 'lunas';
   get diagnostics n = row_count;
   return n > 0;
 end;
 $$;
 revoke all on function public.attach_proof(text, text, text) from public;
 grant execute on function public.attach_proof(text, text, text) to anon, authenticated;
+
+-- Pembeli yang pesanannya dibatalkan otomatis (belum bayar dalam 1 jam) tapi sudah transfer:
+-- menandai pesanan supaya admin melihatnya, dan mengizinkan unggah bukti. Hanya dalam 24 jam, sekali saja.
+create or replace function public.claim_paid(p_gid text, phone text)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare n integer;
+begin
+  if p_gid !~ '^[A-Z0-9]{8}$' then return 0; end if;
+  update public.orders set claimed_at = now()
+   where gid = p_gid and public.norm_hp(hp) = public.norm_hp(phone)
+     and status = 'batal' and pay_status = 'cek' and refund = '' and claimed_at is null
+     and created_at > now() - interval '24 hours';
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+revoke all on function public.claim_paid(text, text) from public;
+grant execute on function public.claim_paid(text, text) to anon, authenticated;
 
 -- Pembeli membatalkan pesanannya sendiri selama belum ada bukti bayar dan belum dikonfirmasi.
 -- Dicocokkan dengan kode gabungan (gid) dan nomor HP yang sama. Setelah bukti terkirim, pembatalan lewat admin.
@@ -624,7 +658,7 @@ end $$;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 16 $$;
+returns integer language sql immutable as $$ select 17 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

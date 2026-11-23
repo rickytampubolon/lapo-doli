@@ -107,14 +107,14 @@ begin
   perform t.ck('6 yang sudah lunas tetap menahan kuota (sisa 0)', n = 0, n::text);
   update public.products set quota = null where id = 'teri';
 
-  -- 7. batas spam: 5 pesanan per 10 menit per nomor
+  -- 7. batas spam: 3 pesanan per 10 menit per nomor
   delete from public.orders; delete from public.counters;
-  for n in 1..5 loop
+  for n in 1..3 loop
     perform public.create_orders(t.base('081299990001') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
   end loop;
-  perform t.ck('7 pesanan ke-6 dari nomor sama ditolak', t.err(t.base('0812-9999-0001') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') = 'rate_limited');
+  perform t.ck('7 pesanan ke-4 dari nomor sama ditolak', t.err(t.base('0812-9999-0001') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') = 'rate_limited');
   perform t.ck('7 nomor lain tidak terpengaruh', t.err(t.base('081299990002') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') = 'OK');
-  perform t.ck('7 satu pesanan dua tanggal dihitung satu', (select count(distinct gid) from public.orders where hp = '081299990001') = 5);
+  perform t.ck('7 satu pesanan dua tanggal dihitung satu', (select count(distinct gid) from public.orders where hp = '081299990001') = 3);
 
   -- 8. kode unik tidak kembar di antara yang masih menunggu bayar (total sama)
   delete from public.orders; delete from public.counters;
@@ -244,6 +244,33 @@ begin
   perform t.ck('16 pesanan baru (belum 1 jam) tidak disentuh', (select status from public.orders where hp = '081200000095') = 'baru');
   perform t.ck('16 dijalankan lagi: 0 pesanan', public.auto_cancel_unpaid() = 0);
   perform t.ck('16 tercatat di log aktivitas oleh sistem', (select count(*) from public.activity_log where actor = 'sistem' and action = 'batal_otomatis') = 1);
+
+  -- 17. batas pesanan menunggu bayar, klaim sudah transfer, refund
+  delete from public.orders; delete from public.counters;
+  for n in 1..3 loop
+    perform public.create_orders(t.base('081200000101') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  end loop;
+  update public.orders set created_at = now() - interval '20 minutes' where hp = '081200000101';
+  perform t.ck('17 tiga pesanan menunggu bayar: yang keempat ditolak', t.err(t.base('081200000101') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') = 'too_many_pending');
+  update public.orders set proof_path = 'AAAAAAAA/x1234567.jpg' where id = (select id from public.orders where hp = '081200000101' order by id limit 1);
+  perform t.ck('17 sudah ada bukti pada satu: boleh pesan lagi', t.err(t.base('081200000101') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}') = 'OK');
+  delete from public.orders; delete from public.counters;
+  r := public.create_orders(t.base('081200000102') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform t.ck('17 klaim transfer ditolak selama belum dibatalkan', public.claim_paid(r->0->>'gid', '081200000102') = 0);
+  update public.orders set created_at = now() - interval '2 hours' where hp = '081200000102';
+  perform public.auto_cancel_unpaid();
+  perform t.ck('17 klaim dengan nomor salah ditolak', public.claim_paid(r->0->>'gid', '081200000199') = 0);
+  perform t.ck('17 klaim benar setelah batal otomatis: 1 pesanan', public.claim_paid(r->0->>'gid', '0812-0000-0102') = 1);
+  perform t.ck('17 klaim kedua tidak mengubah apa pun', public.claim_paid(r->0->>'gid', '081200000102') = 0);
+  perform t.ck('17 track_orders: claimed true', (select claimed from public.track_orders(array[r->0->>'id'], '081200000102')) = true);
+  perform t.ck('17 setelah klaim: bukti boleh diunggah ke pesanan batal', public.attach_proof(r->0->>'gid', '081200000102', (r->0->>'gid') || '/abc12345.jpg') = true);
+  perform t.ck('17 pesanan tetap batal sampai admin membuka lagi', (select status from public.orders where hp = '081200000102') = 'batal');
+  delete from public.orders; delete from public.counters;
+  r := public.create_orders(t.base('081200000103') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  update public.orders set status = 'batal' where hp = '081200000103';
+  perform t.ck('17 batal biasa (bukan otomatis, tanpa refund): klaim tetap diizinkan dalam 24 jam', public.claim_paid(r->0->>'gid', '081200000103') = 1);
+  update public.orders set refund = 'perlu', pay_status = 'lunas' where hp = '081200000103';
+  perform t.ck('17 kolom refund menerima perlu dan selesai', (select refund from public.orders where hp = '081200000103') = 'perlu');
 end $$;
 
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;

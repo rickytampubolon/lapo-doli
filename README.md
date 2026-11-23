@@ -183,3 +183,14 @@ Semua ini memakai skema v15: jalankan ulang `supabase/schema.sql`.
 ## Batal otomatis
 
 Pesanan web yang belum dikonfirmasi, belum ada bukti bayar, dan sudah lewat 1 jam dibatalkan sistem (`auto_cancel_unpaid`), dicatat di Aktivitas terbaru sebagai "sistem". Pesanan manual dari WhatsApp tidak disentuh. Penjadwalan tiap 5 menit memakai **pg_cron**: aktifkan di Supabase (Database, Extensions, pg_cron) lalu jalankan ulang `supabase/schema.sql` (v16). Tanpa pg_cron, pakai tombol Batalkan di bar "Lewat batas" di tab Pesanan. Pesanan yang batal karena terlambat bayar bisa dibuka lagi admin lewat "Buka lagi".
+
+## Alur pembayaran dan pengecekan (skema v17)
+
+- **Admin, tab Pesanan:** "Bukti masuk" (sudah ada bukti atau klaim transfer) dipisah dari "Belum bayar". Badge sidebar menghitung bukti masuk. Baris menampilkan jumlah transfer persis (total ditambah kode unik).
+- **Penampil bukti:** tombol Bukti di baris membuka bukti dengan panah sebelumnya dan berikutnya (keyboard juga), serta tombol Konfirmasi bayar dan Tidak cocok langsung dari sana.
+- **Buka lagi** memeriksa kuota dan memberi peringatan (ketuk lagi untuk tetap membuka). **Ubah pesanan lunas** memberi peringatan soal selisih pembayaran.
+- **Pesanan lunas yang dibatalkan** ditandai "Perlu refund" sampai admin menekan Tandai sudah refund.
+- **Pembeli yang terlambat transfer:** setelah pesanan dibatalkan otomatis, layar status menampilkan "Saya sudah transfer" (fungsi `claim_paid`, dalam 24 jam, sekali). Admin melihat chip "Klaim sudah transfer" di Bukti masuk, pembeli boleh unggah bukti, dan admin memutuskan Buka lagi.
+- **Pembatasan penyalahgunaan:** satu nomor HP maksimal 3 pesanan per 10 menit dan 3 pesanan yang masih menunggu bayar sekaligus.
+- **Penjualan:** panel Metode bayar (Transfer dan QRIS) dan kolom metode di CSV.
+- **Menu:** peringatan bila ada menu tanpa kuota.
