@@ -1355,3 +1355,13 @@ img.thumb{background:var(--soft)}
 .pv-stage{grid-template-areas:"prev img next"}
 .pv-nav[data-pv="-1"]{grid-area:prev}.pv-nav[data-pv="1"]{grid-area:next}.pv-img{grid-area:img}
 @media (max-width:640px){.pv-stage{grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"img img" "prev next"}.pv-nav{display:grid;width:100%;border-radius:var(--r-md)}}
+
+/* notifikasi dan perpanjangan */
+.extendbtn{display:block;margin:var(--sp-1) 0 var(--sp-2);min-height:44px;padding:0 var(--sp-3);color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.extendbtn[hidden]{display:none}
+.nkinds{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);margin:var(--sp-3) 0}
+.nk{display:inline-flex;align-items:center;gap:var(--sp-2);font-size:14px;cursor:pointer;min-height:32px}
+.nk input{width:18px;height:18px;accent-color:var(--accent)}
+#nf-sec .acts{margin:var(--sp-3) 0}
+#nf-sec select,#nf-sec input[type=password],#nf-sec input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--border-default);border-radius:var(--r-md);background:#fff;font:inherit;min-height:44px}
+#nf-list{margin-top:var(--sp-3)}

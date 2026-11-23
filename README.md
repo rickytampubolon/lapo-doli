@@ -194,3 +194,10 @@ Pesanan web yang belum dikonfirmasi, belum ada bukti bayar, dan sudah lewat 1 ja
 - **Pembatasan penyalahgunaan:** satu nomor HP maksimal 3 pesanan per 10 menit dan 3 pesanan yang masih menunggu bayar sekaligus.
 - **Penjualan:** panel Metode bayar (Transfer dan QRIS) dan kolom metode di CSV.
 - **Menu:** peringatan bila ada menu tanpa kuota.
+
+## Batas bayar yang bisa diatur dan notifikasi WhatsApp (skema v18)
+
+- **Batas bayar:** diatur di Pengaturan, Batas bayar (15 sampai 240 menit, bawaan 60). Dipakai server untuk batal otomatis dan kuota, dan oleh layar bayar. Pembeli bisa menambah 30 menit satu kali (fungsi `extend_pay`) saat sisa waktu di bawah 20 menit. Tenggat di layar bayar diambil dari server.
+- **Notifikasi WhatsApp ke pembeli** (Pengaturan, Notifikasi WhatsApp ke pembeli): pesanan dicatat, pengingat bayar (15 menit sebelum batas), pembayaran diterima, bayar tidak cocok, sedang diantar, dan batal otomatis. Tiap jenis bisa dimatikan. Pesanan manual dari WhatsApp tidak memicu pesan. Satu pesan per checkout, tidak dobel.
+- **Cara kerjanya:** pemicu di database mengisi antrean `notify_queue`. Pengiriman memakai ekstensi **pg_net** ke penyedia: **Fonnte** (token) atau **Webhook sendiri** (POST JSON `target`, `message`, `kind`, `ref`, opsional token Bearer). Kunci disimpan di `app_secrets` yang tidak bisa dibaca dari browser. Pengingat dan percobaan ulang berjalan tiap 5 menit lewat pg_cron.
+- **Menyalakan:** aktifkan pg_net dan pg_cron di Supabase (Database, Extensions), jalankan ulang `schema.sql`, buka Pengaturan, isi penyedia dan token, tekan Kirim pesan uji, lalu nyalakan saklar. Pesan yang menunggu lebih dari 30 menit dilewati supaya tidak terkirim terlambat.

@@ -37,7 +37,7 @@ const DEFAULT_PRODUCTS = [
   { id:"napinadar", name:"Ayam Napinadar",    desc:"Ayam khas Batak Toba berbumbu andaliman, pedas dan harum.",      price:40000, emoji:"🍗", available:true, sort:4, options:["250ml - Pakai gota=40000", "250ml - Tidak pakai gota=40000", "500ml - Pakai gota=75000", "500ml - Tidak pakai gota=75000"], addons:[NASI], image:"/assets/menu/ayam-napinadar.svg", imageUrl:"/assets/menu/ayam-napinadar.svg" }
 ];
 const DEFAULT_POS = [{ id:"po-20260918", date:"2026-09-18", open:true }, { id:"po-20260925", date:"2026-09-25", open:true }, { id:"po-20261001", date:"2026-10-01", open:true }];
-const DEFAULT_SETTINGS = { waNumber:"6281375205386", bankName:"Seabank", bankNumber:"901912654821", bankHolder:"a.n. Ricky Halomoan", ongkir:10000, qrisPath:"", qrisUrl:"", deliveryHours:"12.00 - 14.00", pickupHours:"12.00 - 14.00", pickupLocation:"Bassura City Mall, Lobi Selatan", poCutoff:"10:00" };
+const DEFAULT_SETTINGS = { waNumber:"6281375205386", bankName:"Seabank", bankNumber:"901912654821", bankHolder:"a.n. Ricky Halomoan", ongkir:10000, qrisPath:"", qrisUrl:"", deliveryHours:"12.00 - 14.00", pickupHours:"12.00 - 14.00", pickupLocation:"Bassura City Mall, Lobi Selatan", poCutoff:"10:00", payWindowMin:60, notifyOn:false, notifyKinds:{} };
 
 let assetsNs = false, isAdmin = false, session = null, authReady = false, dbState = "loading"; // loading | ok | none (belum ada konfigurasi) | error
 /* ================= DATA: Supabase ================= */
@@ -59,7 +59,7 @@ const toProductRow = patch => {
     else if (["name", "price", "emoji", "available", "sort", "addons", "image", "quota"].includes(k)) m[k] = v; }
   return m;
 };
-const fromOrder = r => ({ mapsUrl:r.maps_url || "", claimedAt:r.claimed_at || null, refund:r.refund || "", id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
+const fromOrder = r => ({ extraMin:Number(r.extra_min) || 0, mapsUrl:r.maps_url || "", claimedAt:r.claimed_at || null, refund:r.refund || "", id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
   area:r.area, alamat:r.alamat, fulfil:r.fulfil, pickupLoc:r.pickup_loc, notes:r.notes, method:r.method, items:Array.isArray(r.items) ? r.items : [],
   ongkir:r.ongkir, total:r.total, kode:Number(r.kode) || 0, groupTotal:r.group_total, groupCount:r.group_count, hours:r.hours, payStatus:r.pay_status, status:r.status, proofPath:r.proof_path || "" });
 const must = ({ data, error }) => { if (error) throw error; return data; };
@@ -84,6 +84,11 @@ const api = {
   setPoOpen: async (id, open) => must(await sb.from("pos").update({ open }).eq("id", id)),
   deletePo: async id => must(await sb.from("pos").delete().eq("id", id)),
   saveSettings: async data => must(await sb.from("settings").upsert({ id:"shop", data })),
+  extendPay: async (gid, phone) => must(await sb.rpc("extend_pay", { p_gid:gid, phone })),
+  secretStatus: async () => must(await sb.rpc("secret_status")),
+  setSecret: async (key, value) => must(await sb.rpc("set_secret", { p_key:key, p_value:value })),
+  notifyTest: async hp => must(await sb.rpc("notify_test", { p_hp:hp })),
+  loadNotifyQueue: async () => must(await sb.from("notify_queue").select("*").order("id", { ascending:false }).limit(12)),
   claimPaid: async (gid, phone) => must(await sb.rpc("claim_paid", { p_gid:gid, phone })),
   editItems: async (id, qty) => must(await sb.rpc("admin_edit_items", { p_id:id, p_qty:qty })),
   logAct: async (action, target, detail) => { try { await sb.from("activity_log").insert({ actor:(session && session.user && session.user.email) || "", action, target, detail }); } catch (e) {} },
@@ -361,6 +366,8 @@ function renderStatic(){
   document.querySelectorAll("[data-pickloc]").forEach(x => { x.textContent = pickLoc(); });
   document.querySelectorAll("[data-pickhours]").forEach(x => { x.textContent = pickHours(); });
   document.querySelectorAll("[data-cutoff]").forEach(x => { x.textContent = cutoffLabel(); });
+  document.querySelectorAll("[data-paywin]").forEach(x => { x.textContent = payWinText(); });
+  const hn = $("hp-note"); if (hn) hn.hidden = settings.notifyOn !== true;
   $("help-wa").href = `https://wa.me/${settings.waNumber}?text=${encodeURIComponent("Halo admin Lapo Doli, saya mau tanya soal pesanan.")}`;
   renderClosed();
 }
@@ -467,13 +474,18 @@ function renderCheckout(){
   renderPayInfo();
 }
 let placedClaimed = false, placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false, placedRejected = false, placedAt = 0;
-const PAY_WINDOW_MS = 36e5;   // sama dengan aturan server: belum bayar dan belum ada bukti > 1 jam tidak menahan kuota
+/* batas bayar: diatur admin (menit), sama dengan aturan server */
+const payMin = () => Math.max(15, Math.min(240, Math.round(Number(settings.payWindowMin) || 60)));
+const payWinText = () => { const m = payMin(); return m % 60 === 0 ? m / 60 + " jam" : m + " menit"; };
+const lateAt = o => new Date(o.createdAt).getTime() + (payMin() + (Number(o.extraMin) || 0)) * 6e4;
+let placedDeadline = 0, placedExtended = false;
 function renderTtl(){
   const el = $("d-ttl"), on = payVisible && !placedProof && placedAt > 0;
-  el.hidden = !on; if (!on) return;
-  const ms = placedAt + PAY_WINDOW_MS - Date.now(), s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), d = s % 60;
+  el.hidden = !on; if (!on) { $("ttl-extend").hidden = true; return; }
+  const ms = (placedDeadline > placedAt ? placedDeadline : placedAt + payMin() * 6e4) - Date.now(), s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), d = s % 60;
   el.classList.toggle("late", ms <= 0); el.classList.toggle("urgent", ms > 0 && ms < 10 * 6e4);
-  el.textContent = ms <= 0 ? "Batas 1 jam sudah lewat. Pesanan tanpa bukti dibatalkan otomatis. Unggah bukti sekarang atau hubungi admin." : "Bayar dalam " + (m >= 1 ? m + " menit " + d + " detik" : d + " detik") + " supaya porsimu aman.";
+  $("ttl-extend").hidden = !(ms > 0 && ms < 20 * 6e4 && !placedExtended);
+  el.textContent = ms <= 0 ? "Batas waktu bayar sudah lewat. Pesanan tanpa bukti dibatalkan otomatis. Unggah bukti sekarang atau hubungi admin." : "Bayar dalam " + (m >= 1 ? m + " menit " + d + " detik" : d + " detik") + " supaya porsimu aman.";
 }
 setInterval(() => { if (screen === 3 && !document.hidden && !$("d-ttl").hidden) renderTtl(); }, 1000);
 document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; saveCart(); renderCheckout(); });
@@ -534,6 +546,15 @@ $("claim-btn").onclick = async () => {
     if (n > 0) { placed.forEach(o => { const c = trackConf[o.id] || (trackConf[o.id] = { payStatus:"cek", status:"batal" }); c.claimed = true; }); toast("Admin sudah diberi tahu"); track("klaim_transfer"); renderTracker(); }
     else toast("Belum bisa dikirim. Hubungi admin lewat WhatsApp.");
   } catch (e) { toast("Belum terkirim. Periksa koneksi lalu coba lagi."); }
+  b.disabled = false;
+};
+$("ttl-extend").onclick = async () => {
+  const b = $("ttl-extend"), gid = placed[0] && placed[0].gid; if (!gid || !sb) return; b.disabled = true;
+  try {
+    const n = await api.extendPay(gid, trackHp);
+    if (n > 0) { placedExtended = true; toast("Waktu bayar ditambah 30 menit"); track("perpanjang_waktu"); await pollTrack(); renderTtl(); }
+    else toast("Waktu belum bisa ditambah. Hubungi admin lewat WhatsApp.");
+  } catch (e) { toast("Belum berhasil. Periksa koneksi lalu coba lagi."); }
   b.disabled = false;
 };
 let cancelArmT = null;
@@ -690,7 +711,7 @@ let trackT = null, trackHp = "";
 const unsubTrack = () => { clearInterval(trackT); trackT = null; trackConf = {}; };
 async function pollTrack(){
   if (!placed.length || !sb) return;
-  try { const rows = await api.trackOrders(placed.map(o => o.id), trackHp); rows.forEach(r => { trackConf[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof, claimed:!!r.claimed }; }); Object.assign(lastRows, trackConf); renderLast(); renderTracker(); } catch (e) {}
+  try { const rows = await api.trackOrders(placed.map(o => o.id), trackHp); rows.forEach(r => { trackConf[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof, claimed:!!r.claimed, deadline:r.deadline || null, extended:!!r.extended }; }); Object.assign(lastRows, trackConf); renderLast(); renderTracker(); } catch (e) {}
 }
 function startTrack(){ pollTrack(); trackT = setInterval(() => { if (screen === 3 && !document.hidden) pollTrack(); }, 8000); }
 
@@ -711,12 +732,13 @@ function renderTracker(){
   let title, sub, tone = "warn";
   if (!recorded) { title = "Pesanan dibuat"; sub = "Pesanan belum tercatat. Coba lagi."; }
   else if (allCancel && claimed) { title = "Menunggu admin"; sub = anyProof ? "Bukti diterima. Admin akan mencocokkan dan membuka lagi pesananmu." : "Permintaanmu sudah dikirim ke admin. Unggah bukti bayar supaya cepat dicek."; tone = "warn"; }
-  else if (allCancel) { title = "Pesanan dibatalkan"; sub = canClaim ? "Pesanan yang belum dibayar dalam 1 jam dibatalkan otomatis. Kalau kamu sudah transfer, beri tahu admin." : "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
+  else if (allCancel) { title = "Pesanan dibatalkan"; sub = canClaim ? "Pesanan yang belum dibayar dalam " + payWinText() + " dibatalkan otomatis. Kalau kamu sudah transfer, beri tahu admin." : "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
   else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Unggah bukti yang jelas di bawah."; tone = "bad"; }
   else if (!allPaid && anyProof) { title = "Bukti diterima"; sub = "Admin sedang mengecek pembayaranmu. Statusnya berubah di sini."; }
   else if (!allPaid) { title = "Pesanan dicatat"; sub = "Transfer sesuai jumlah di bawah, lalu kirim bukti bayar."; }
   else if (allDone) { title = "Pesanan selesai"; sub = "Terima kasih, selamat makan!"; tone = "ok"; }
   else { title = "Pesanan terkonfirmasi"; sub = pk ? `Pembayaran diterima. Ambil di ${placed[0].pickupLoc || pickLoc()}, jam ${placed[0].hours || pickHours()}.` : `Pembayaran diterima. Diantar sesuai tanggal PO, jam ${hours()}.`; tone = "ok"; }
+  { const dl = cs.map(c => c.deadline ? Date.parse(c.deadline) : 0).filter(Boolean); if (dl.length) placedDeadline = Math.max(...dl); placedExtended = cs.some(c => c.extended); }
   placedRejected = anyNo; placedClaimed = allCancel && claimed; placedProof = placedProof || cs.some(c => c.proof); $("claim-wrap").hidden = !canClaim; payVisible = !!recorded && !allPaid && !allCancel; renderPay();
   $("d-title").textContent = title; $("d-sub").textContent = sub; $("d-dot").className = "dot " + (tone === "warn" ? "" : tone);
   tr.innerHTML = placed.map((o, i) => {
@@ -744,7 +766,7 @@ function renderLast(){
 }
 async function pollLast(){
   if (!lastData || !sb) return;
-  try { const rows = await api.trackOrders(lastData.placed.map(o => o.id), lastData.placed[0].hp); rows.forEach(r => { lastRows[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof, claimed:!!r.claimed }; }); if (rows.some(r => r.has_proof) && !lastData.proof) { lastData.proof = true; lsSet(LS.last, lastData); } renderLast(); } catch (e) {}
+  try { const rows = await api.trackOrders(lastData.placed.map(o => o.id), lastData.placed[0].hp); rows.forEach(r => { lastRows[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof, claimed:!!r.claimed, deadline:r.deadline || null, extended:!!r.extended }; }); if (rows.some(r => r.has_proof) && !lastData.proof) { lastData.proof = true; lsSet(LS.last, lastData); } renderLast(); } catch (e) {}
 }
 $("lastorder").onclick = () => {
   if (!lastData) return;
@@ -761,11 +783,10 @@ function initLast(){
 /* ================= ADMIN ================= */
 const NEXT = { baru:"diproses", diproses:"diantar", diantar:"selesai" };
 const nextLabel = o => (o.fulfil === "ambil" ? { baru:"Mulai proses", diproses:"Tandai siap diambil", diantar:"Tandai sudah diambil" } : { baru:"Mulai proses", diproses:"Tandai sudah dikirim", diantar:"Tandai sudah sampai" })[o.status];
-const LATE_MS = 36e5;
 const needsCheck = o => o.status !== "batal" && o.payStatus === "cek" && !!o.proofPath;
 const isClaim = o => o.status === "batal" && !!o.claimedAt && o.payStatus === "cek" && !o.refund;
 const payDue = o => Number(o.groupTotal || o.total) + orders.filter(x => x.gid === o.gid).reduce((t, x) => t + (x.kode || 0), 0);
-const isLate = o => o.payStatus === "cek" && !o.proofPath && o.status !== "batal" && o.source !== "wa" && Date.now() - new Date(o.createdAt).getTime() > LATE_MS;
+const isLate = o => o.payStatus === "cek" && !o.proofPath && o.status !== "batal" && o.source !== "wa" && Date.now() > lateAt(o);
 function statusChip(o){
   if (o.status === "batal") return isClaim(o) ? ["Klaim sudah transfer", "warn"] : o.refund === "perlu" ? ["Perlu refund", "bad"] : o.refund === "selesai" ? ["Sudah refund", ""] : ["Dibatalkan", ""];
   if (o.payStatus === "ditolak") return ["Bayar ditolak", "bad"];
@@ -947,7 +968,7 @@ function selBar(){
   return `<div class="selbar" role="region" aria-label="Pilihan"><b>${ids.length} dipilih</b><span class="sp"></span><button class="btn sm" data-bulk="ok" type="button">${ic("check")}Konfirmasi bayar</button><button class="btn line sm" data-bulk="clear" type="button">Batal pilih</button></div>`;
 }
 const quotaOf = (poId, pid) => { const po = (pos || []).find(p => p.id === poId), pr = (products || []).find(p => p.id === pid), q = po && po.quotas && po.quotas[pid] != null && po.quotas[pid] !== "" ? Number(po.quotas[pid]) : (pr && pr.quota != null ? Number(pr.quota) : null); return q == null || isNaN(q) ? null : q; };
-const soldOf = (poId, pid, skip) => orders.filter(x => x.poId === poId && x.id !== skip && x.status !== "batal" && x.payStatus !== "ditolak" && !(x.payStatus === "cek" && !x.proofPath && Date.now() - new Date(x.createdAt).getTime() > LATE_MS))
+const soldOf = (poId, pid, skip) => orders.filter(x => x.poId === poId && x.id !== skip && x.status !== "batal" && x.payStatus !== "ditolak" && !(x.payStatus === "cek" && !x.proofPath && Date.now() > lateAt(x)))
   .reduce((t, x) => t + x.items.filter(i => i.pid === pid && !i.addon).reduce((s, i) => s + (Number(i.qty) || 0), 0), 0);
 function reopenWarn(o){
   const need = {}; o.items.filter(i => !i.addon).forEach(i => { need[i.pid] = (need[i.pid] || 0) + (Number(i.qty) || 0); });
@@ -957,7 +978,7 @@ function reopenWarn(o){
 const lateOrders = () => orders.filter(o => (poFilter === "semua" || o.poId === poFilter) && isLate(o));
 function lateBar(base, cur){
   const n = base.filter(isLate).length; if (!n || (cur !== "belum" && cur !== "semua")) return "";
-  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam dan porsinya tidak ditahan.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
+  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar ${payWinText()} dan porsinya tidak ditahan.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
 }
 function renderAdminOrders(){
   const el = $("a-orders");
@@ -1424,6 +1445,20 @@ function renderAdminSet(){
     <div class="qrisbox">${s.qrisUrl ? `<img src="${esc(s.qrisUrl)}" alt="QRIS">` : ""}
       <div><div class="fl">QRIS</div>${s.qrisUrl ? "" : '<p class="fhint" style="margin:0 0 8px">Belum ada gambar.</p>'}
       <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti" : "Unggah"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus QRIS</button>' : ""}</div></div></div></section>
+    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("clock")}</span><div><h3>Batas bayar</h3></div></div><div class="fgrid">
+      ${f("s-pw", "payWindowMin", "Batas bayar (menit, 15 sampai 240)", payMin(), 'number min="15" max="240" step="5" inputmode="numeric"')}</div>
+      <p class="fhint">Pesanan tanpa bukti bayar dibatalkan setelah batas ini. Pembeli bisa menambah 30 menit sekali dari layar bayar.</p></section>
+    <section class="card setsec" id="nf-sec"><div class="gc-h"><span class="gc-ic">${ic("chat")}</span><div><h3>Notifikasi WhatsApp ke pembeli</h3></div></div>
+      <label class="switch"><input type="checkbox" id="nf-on" data-s="notifyOn" ${s.notifyOn ? "checked" : ""}><span class="track"></span><span>${s.notifyOn ? "Aktif" : "Mati"}</span></label>
+      <div class="nkinds">${NKINDS.map(([k, l]) => `<label class="nk"><input type="checkbox" data-nk="${k}" ${(s.notifyKinds || {})[k] === false ? "" : "checked"}><span>${l}</span></label>`).join("")}</div>
+      <div class="fgrid"><div><label class="fl" for="nf-prov">Penyedia</label><select id="nf-prov"><option value="fonnte">Fonnte</option><option value="webhook">Webhook sendiri</option></select></div>
+        <div><label class="fl" for="nf-tok">Token (tidak ditampilkan lagi setelah disimpan)</label><input type="password" id="nf-tok" autocomplete="off" placeholder="Token"></div>
+        <div class="full" id="nf-urlw" hidden><label class="fl" for="nf-url">URL webhook (menerima POST JSON target, message, kind, ref)</label><input type="text" id="nf-url" autocomplete="off" placeholder="https://..."></div></div>
+      <div class="acts"><button class="btn sm" id="nf-save" type="button">Simpan penyedia</button></div>
+      <div class="fgrid"><div><label class="fl" for="nf-hp">Kirim pesan uji ke nomor</label><input type="text" id="nf-hp" inputmode="tel" value="${esc(s.waNumber || "")}"></div></div>
+      <div class="acts"><button class="btn line sm" id="nf-test" type="button">${ic("chat")}Kirim pesan uji</button></div>
+      <p class="fhint" id="nf-state">Memuat status...</p>
+      <ul class="loglist" id="nf-list"></ul></section>
     <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("check")}</span><div><h3>Kode unik</h3></div></div>
       <label class="switch"><input type="checkbox" id="s-uc" data-s="uniqueCode" ${s.uniqueCode !== false ? "checked" : ""}><span class="track"></span><span>${s.uniqueCode !== false ? "Aktif" : "Mati"}</span></label>
       <p class="fhint">Tambah Rp 1 sampai 100 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
@@ -1432,9 +1467,44 @@ function renderAdminSet(){
     </div></section>
     <section class="card setsec"><details id="log-d" ${logOpen ? "open" : ""}><summary>${ic("history")}Aktivitas terbaru</summary><ul class="loglist" id="log-list"><li class="note">Memuat...</li></ul></details></section>`;
   if (logOpen) fillLog();
+  fillNotify();
 }
-let logOpen = false;
-const LOGL = { refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (belum bayar 1 jam)", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
+const NKINDS = [["dicatat", "Pesanan dicatat"], ["pengingat", "Pengingat bayar"], ["lunas", "Pembayaran diterima"], ["ditolak", "Bayar tidak cocok"], ["diantar", "Sedang diantar"], ["batal_otomatis", "Batal otomatis"]];
+let logOpen = false, nfStatus = null;
+async function fillNotify(){
+  const st = $("nf-state"); if (!st) return;
+  try { nfStatus = await api.secretStatus(); } catch (e) { nfStatus = null; }
+  if (!$("nf-state")) return;
+  if (!nfStatus) { $("nf-state").textContent = "Belum tersedia. Jalankan ulang schema.sql terbaru."; return; }
+  const prov = $("nf-prov"); if (prov && document.activeElement !== prov) prov.value = nfStatus.provider || "fonnte";
+  $("nf-urlw").hidden = (prov ? prov.value : "fonnte") !== "webhook";
+  const tok = $("nf-tok"); if (tok) tok.placeholder = nfStatus.hasToken ? "Sudah tersimpan (isi untuk mengganti)" : "Token";
+  const ready = nfStatus.provider === "fonnte" ? nfStatus.hasToken : nfStatus.provider === "webhook" ? nfStatus.hasUrl : false;
+  $("nf-state").textContent = (ready ? "Penyedia terhubung." : "Penyedia belum diisi.") + (nfStatus.hasNet ? "" : " Ekstensi pg_net belum aktif di Supabase (Database, Extensions), pesan belum bisa dikirim.");
+  try {
+    const rows = await api.loadNotifyQueue(), ul = $("nf-list"); if (!ul) return;
+    const lbl = Object.fromEntries(NKINDS.concat([["uji", "Pesan uji"]]));
+    ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.created_at))}</span><span><b>${esc(lbl[r.kind] || r.kind)}</b> ke ${esc(r.hp)} <span class="chip st ${r.status === "dikirim" ? "ok" : r.status === "gagal" ? "bad" : ""}">${esc(r.status)}</span>${r.error ? ` <small>${esc(r.error)}</small>` : ""}</span></li>`).join("") : '<li class="note">Belum ada pesan.</li>';
+  } catch (e) {}
+}
+$("a-set").addEventListener("click", async e => {
+  if (e.target.closest("#nf-save")) {
+    const prov = $("nf-prov").value, tok = $("nf-tok").value.trim(), url = $("nf-url").value.trim();
+    if (prov === "webhook" && !url && !(nfStatus && nfStatus.hasUrl)) { toast("Isi URL webhook."); return; }
+    try { await api.setSecret("wa_provider", prov); if (tok) await api.setSecret("wa_token", tok); if (prov === "webhook" && url) await api.setSecret("wa_url", url); $("nf-tok").value = ""; logAct("penyedia_wa", prov); toast("Penyedia disimpan"); fillNotify(); }
+    catch (err) { toast("Belum tersimpan. Jalankan ulang schema.sql terbaru."); }
+    return;
+  }
+  if (e.target.closest("#nf-test")) {
+    const hp = $("nf-hp").value.trim(); if (!hp) { toast("Isi nomor tujuan."); return; }
+    try { const r = await api.notifyTest(hp); toast("Hasil uji: " + r); fillNotify(); } catch (err) { toast("Uji gagal. Cek penyedia dan skema."); }
+  }
+});
+$("a-set").addEventListener("change", e => {
+  if (e.target.id === "nf-prov") { $("nf-urlw").hidden = e.target.value !== "webhook"; return; }
+  if (e.target.matches("[data-nk]")) { const o = {}; $("a-set").querySelectorAll("[data-nk]").forEach(c => { o[c.dataset.nk] = c.checked; }); saveSetting({ notifyKinds:o }); }
+});
+const LOGL = { refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (lewat batas bayar)", penyedia_wa:"mengatur penyedia WhatsApp", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
 async function fillLog(){
   const ul = $("log-list"); if (!ul) return;
   try { const rows = await api.loadLog(); ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.at))}</span><span><b>${esc(String(r.actor || "").split("@")[0] || "admin")}</b> ${esc(LOGL[r.action] || r.action)} <span class="mono">${esc(r.target)}</span></span></li>`).join("") : '<li class="note">Belum ada aktivitas.</li>'; }
@@ -1445,7 +1515,7 @@ setEl.addEventListener("toggle", e => { if (e.target.id === "log-d") { logOpen =
 let setDirty = false;
 function renderSetSafe(){
   const a = document.activeElement;
-  if (a && setEl.contains(a) && a.matches("input[type=text],input[type=number]")) { setDirty = true; return; }
+  if (a && setEl.contains(a) && a.matches("input[type=text],input[type=number],input[type=password]")) { setDirty = true; return; }
   setDirty = false; renderAdminSet();
 }
 setEl.addEventListener("focusout", () => setTimeout(() => { if (setDirty) renderSetSafe(); }, 50));
@@ -1469,6 +1539,7 @@ setEl.addEventListener("change", async e => {
   const k = t.dataset.s; if (!k) return;
   let v = t.type === "checkbox" ? t.checked : t.type === "number" ? Math.max(0, Math.round(Number(t.value) || 0)) : t.value.trim();
   if (k === "waNumber") v = normPhone(v);
+  if (k === "payWindowMin") v = Math.max(15, Math.min(240, v || 60));
   if (k === "poCutoff") { if (!/^\d{1,2}[:.]\d{2}$/.test(v)) { toast("Format jam salah. Contoh: 10:00"); renderAdminSet(); return; } v = v.replace(".", ":").padStart(5, "0"); }
   if (["deliveryHours", "pickupHours", "pickupLocation"].includes(k) && !v) v = DEFAULT_SETTINGS[k];
   await saveSetting({ [k]:v });
@@ -1847,7 +1918,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 17;
+const SCHEMA_VERSION = 18;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
