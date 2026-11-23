@@ -746,6 +746,11 @@ create or replace function public.pay_minutes() returns integer language sql sta
   select (extract(epoch from public.pay_window()) / 60)::integer;
 $$;
 
+-- Nama pembeli di teks WhatsApp: hanya huruf, angka, spasi, apostrof, strip (tanpa titik supaya tidak jadi tautan otomatis); maksimal 30 karakter (tanpa tautan atau baris baru)
+create or replace function public.safe_name(t text) returns text language sql immutable as $$
+  select coalesce(nullif(left(btrim(regexp_replace(regexp_replace(regexp_replace(coalesce(t, ''), '[\r\n\t]+', ' ', 'g'), '[^[:alnum:] ''-]', '', 'g'), '\s+', ' ', 'g')), 30), ''), 'pembeli');
+$$;
+
 create or replace function public.enqueue_notify(p_kind text, p_hp text, p_nama text, p_ref text, p_msg text)
 returns void
 language plpgsql
@@ -756,7 +761,9 @@ declare s jsonb := public.shop_settings();
 begin
   if coalesce(s ->> 'notifyOn', 'false') <> 'true' then return; end if;
   if coalesce(s -> 'notifyKinds' ->> p_kind, 'true') = 'false' then return; end if;
-  insert into public.notify_queue (hp, nama, kind, ref, message) values (public.norm_hp(p_hp), coalesce(p_nama, ''), p_kind, p_ref, p_msg)
+  -- batas harian: satu nomor maksimal 6 pesan otomatis per 24 jam, supaya fitur ini tidak bisa dipakai membanjiri nomor orang lain
+  if p_kind <> 'uji' and (select count(*) from public.notify_queue q where q.hp = public.norm_hp(p_hp) and q.kind <> 'uji' and q.created_at > now() - interval '24 hours') >= 6 then return; end if;
+  insert into public.notify_queue (hp, nama, kind, ref, message) values (public.norm_hp(p_hp), left(coalesce(p_nama, ''), 80), p_kind, p_ref, p_msg)
   on conflict (kind, ref) do nothing;
 end;
 $$;
@@ -803,7 +810,7 @@ begin
   if NEW.source <> 'web' then return NEW; end if;
   s := public.shop_settings();
   perform public.enqueue_notify('dicatat', NEW.hp, NEW.nama, NEW.gid,
-    'Halo kak ' || NEW.nama || ', pesananmu ' || NEW.id || case when NEW.group_count > 1 then ' (gabungan beberapa tanggal)' else '' end ||
+    'Halo kak ' || public.safe_name(NEW.nama) || ', pesananmu ' || NEW.id || case when NEW.group_count > 1 then ' (gabungan beberapa tanggal)' else '' end ||
     ' sudah dicatat. Transfer ' || public.rp_text(NEW.group_total + NEW.kode) || ' ke ' || coalesce(s ->> 'bankName', '') || ' ' || coalesce(s ->> 'bankNumber', '') || ' ' || coalesce(s ->> 'bankHolder', '') ||
     ' dalam ' || public.pay_minutes() || ' menit, lalu unggah bukti di ' || public.site_url() || '/?cek=' || NEW.id || '. Terima kasih!');
   begin perform public.send_notifications(5); exception when others then null; end;
@@ -817,19 +824,19 @@ begin
   link := public.site_url() || '/?cek=' || NEW.id;
   if NEW.pay_status = 'lunas' and OLD.pay_status <> 'lunas' then
     perform public.enqueue_notify('lunas', NEW.hp, NEW.nama, NEW.gid || ':lunas',
-      'Halo kak ' || NEW.nama || ', pembayaran pesananmu ' || NEW.id || ' sudah kami terima. ' || case when NEW.fulfil = 'ambil' then 'Pesanan siap diambil' else 'Pesanan diantar' end ||
+      'Halo kak ' || public.safe_name(NEW.nama) || ', pembayaran pesananmu ' || NEW.id || ' sudah kami terima. ' || case when NEW.fulfil = 'ambil' then 'Pesanan siap diambil' else 'Pesanan diantar' end ||
       ' ' || to_char(NEW.po_date, 'DD-MM-YYYY') || ', jam ' || NEW.hours || '. Terima kasih!');
   elsif NEW.pay_status = 'ditolak' and OLD.pay_status <> 'ditolak' then
     perform public.enqueue_notify('ditolak', NEW.hp, NEW.nama, NEW.gid || ':ditolak',
-      'Halo kak ' || NEW.nama || ', pembayaran pesananmu ' || NEW.id || ' belum cocok. Unggah bukti transfer yang jelas di ' || link || ' atau hubungi admin.');
+      'Halo kak ' || public.safe_name(NEW.nama) || ', pembayaran pesananmu ' || NEW.id || ' belum cocok. Unggah bukti transfer yang jelas di ' || link || ' atau hubungi admin.');
   end if;
   if NEW.status = 'diantar' and OLD.status <> 'diantar' and NEW.pay_status = 'lunas' then
     perform public.enqueue_notify('diantar', NEW.hp, NEW.nama, NEW.id || ':diantar',
-      'Halo kak ' || NEW.nama || ', pesananmu ' || NEW.id || case when NEW.fulfil = 'ambil' then ' sudah siap diambil.' else ' sedang diantar. Mohon ditunggu ya.' end);
+      'Halo kak ' || public.safe_name(NEW.nama) || ', pesananmu ' || NEW.id || case when NEW.fulfil = 'ambil' then ' sudah siap diambil.' else ' sedang diantar. Mohon ditunggu ya.' end);
   end if;
   if NEW.status = 'batal' and OLD.status <> 'batal' and coalesce(current_setting('app.cancel_by', true), '') = 'sistem' then
     perform public.enqueue_notify('batal_otomatis', NEW.hp, NEW.nama, NEW.gid || ':batal',
-      'Halo kak ' || NEW.nama || ', pesananmu ' || NEW.id || ' dibatalkan otomatis karena belum dibayar dalam ' || public.pay_minutes() || ' menit. Sudah transfer? Buka ' || link || ' lalu ketuk Saya sudah transfer.');
+      'Halo kak ' || public.safe_name(NEW.nama) || ', pesananmu ' || NEW.id || ' dibatalkan otomatis karena belum dibayar dalam ' || public.pay_minutes() || ' menit. Sudah transfer? Buka ' || link || ' lalu ketuk Saya sudah transfer.');
   end if;
   begin perform public.send_notifications(5); exception when others then null; end;
   return NEW;
@@ -857,7 +864,7 @@ begin
      order by o.gid, o.id
   loop
     perform public.enqueue_notify('pengingat', r.hp, r.nama, r.gid,
-      'Halo kak ' || r.nama || ', pesananmu ' || r.id || ' belum dibayar. Sisa waktu sekitar ' ||
+      'Halo kak ' || public.safe_name(r.nama) || ', pesananmu ' || r.id || ' belum dibayar. Sisa waktu sekitar ' ||
       greatest(1, ceil(extract(epoch from (public.order_deadline(r.created_at, r.extra_min) - now())) / 60))::integer || ' menit. Transfer ' ||
       public.rp_text(r.group_total + coalesce((select sum(kode) from public.orders where gid = r.gid), 0)) || ' lalu unggah bukti di ' || public.site_url() || '/?cek=' || r.id ||
       '. Kamu bisa menambah waktu 30 menit sekali di halaman itu.');
@@ -920,9 +927,35 @@ exception when others then
   raise notice 'Jadwal notifikasi atau pg_net belum terpasang: %', sqlerrm;
 end $$;
 
+-- ---------------------------------------------------------------------
+-- 6h. Kunci akses fungsi: fungsi internal tidak boleh dipanggil dari browser (anon atau pengguna biasa).
+--     Yang tetap terbuka hanya fungsi untuk pembeli (pesan, cek status, bukti, batal, klaim, perpanjang),
+--     is_admin, po_remaining, dan schema_version. Fungsi admin hanya untuk pengguna login (dan tetap memeriksa is_admin).
+-- ---------------------------------------------------------------------
+do $$
+declare r record;
+begin
+  for r in
+    select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = any (array[
+       'enqueue_notify', 'safe_name', 'shop_settings', 'site_url', 'pay_minutes', 'rp_text', 'pay_window', 'order_deadline',
+       'trg_order_insert', 'trg_order_update', 'touch_updated_at', 'fmt_seq',
+       'send_notifications', 'enqueue_reminders', 'auto_cancel_unpaid'])
+  loop
+    execute format('revoke all on function %s from public, anon, authenticated', r.sig);
+  end loop;
+  for r in
+    select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = any (array['set_secret', 'secret_status', 'notify_test', 'admin_edit_items'])
+  loop
+    execute format('revoke all on function %s from public, anon', r.sig);
+    execute format('grant execute on function %s to authenticated', r.sig);
+  end loop;
+end $$;
+
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 19 $$;
+returns integer language sql immutable as $$ select 20 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

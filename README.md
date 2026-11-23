@@ -211,3 +211,12 @@ Pesanan web yang belum dikonfirmasi, belum ada bukti bayar, dan sudah lewat 1 ja
   - Sign In / Providers, Email: matikan **Allow new users to sign up**, dan biarkan **Confirm email** aktif.
   - URL Configuration: isi **Site URL** dengan alamat toko dan batasi **Redirect URLs** hanya ke alamat toko.
   - Matikan penyedia login yang tidak dipakai (misalnya password, Google) kalau tidak perlu.
+
+## Pemeriksaan celah (skema v20)
+
+- **Fungsi database internal dikunci.** Fungsi seperti `enqueue_notify`, `send_notifications`, `auto_cancel_unpaid`, dan pembantu lain tidak bisa dipanggil dari browser (anon atau pengguna biasa). Sebelumnya `enqueue_notify` terbuka, yang memungkinkan orang asing menyuruh sistem mengirim WhatsApp ke nomor mana pun. Yang tetap terbuka hanya fungsi untuk pembeli (pesan, cek status, bukti, batal, klaim, tambah waktu), `is_admin`, `po_remaining`, dan `schema_version`. Fungsi admin hanya untuk pengguna login dan tetap memeriksa `is_admin()`.
+- **Notifikasi tidak bisa jadi alat spam:** nama pembeli di teks WhatsApp disaring (tanpa tautan, simbol, atau baris baru, maksimal 30 karakter) dan satu nomor maksimal 6 pesan otomatis per 24 jam.
+- **Tautan peta** dari database disaring di klien: hanya https ke Google.
+- **Header:** HSTS, COOP, dan `object-src 'none'` ditambahkan ke `vercel.json`.
+- **Sudah diuji:** teks berisi HTML atau skrip di nama, alamat, catatan, nama menu, pengaturan, log, dan antrean tidak menyuntikkan apa pun di halaman pembeli maupun tujuh tab admin.
+- **Batas yang masih ada:** pesanan palsu dengan banyak nomor HP berbeda tetap bisa menahan kuota selama batas bayar (perlu captcha), dan fungsi cek status belum dibatasi lajunya per nomor.

@@ -387,6 +387,33 @@ begin
   begin perform public.set_secret('wa_token', 'x'); perform t.ck('19 orang lain tidak bisa mengatur rahasia', false); exception when others then perform t.ck('19 orang lain tidak bisa mengatur rahasia', sqlerrm = 'forbidden'); end;
   begin perform public.create_orders(t.base('081200000131') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}', true); perform t.ck('19 orang lain tidak bisa membuat pesanan sebagai admin', false); exception when others then perform t.ck('19 orang lain tidak bisa membuat pesanan sebagai admin', sqlerrm = 'forbidden'); end;
   perform set_config('request.jwt.claims', '', false);
+
+  -- 20. kunci akses fungsi dan perlindungan notifikasi
+  perform t.ck('20 fungsi internal tidak bisa dipanggil anon', not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')
+      and p.proname = any (array['enqueue_notify','safe_name','shop_settings','site_url','pay_minutes','rp_text','pay_window','order_deadline','trg_order_insert','trg_order_update','touch_updated_at','fmt_seq','send_notifications','enqueue_reminders','auto_cancel_unpaid','set_secret','secret_status','notify_test','admin_edit_items'])));
+  perform t.ck('20 fungsi admin tetap bisa dipanggil pengguna login', has_function_privilege('authenticated', 'public.set_secret(text,text)', 'execute') and has_function_privilege('authenticated', 'public.admin_edit_items(text,integer[])', 'execute'));
+  perform t.ck('20 fungsi pembeli tetap terbuka untuk anon', has_function_privilege('anon', 'public.track_orders(text[],text)', 'execute') and has_function_privilege('anon', 'public.create_orders(jsonb,boolean)', 'execute') and has_function_privilege('anon', 'public.cancel_orders(text,text)', 'execute') and has_function_privilege('anon', 'public.is_admin()', 'execute'));
+  begin
+    set local role anon; perform public.enqueue_notify('dicatat', '081200000141', 'X', 'ref-anon', 'spam');
+    reset role; perform t.ck('20 anon memanggil enqueue_notify ditolak', false);
+  exception when others then reset role; perform t.ck('20 anon memanggil enqueue_notify ditolak', sqlerrm like 'permission denied%', sqlerrm);
+  end;
+  perform t.ck('20 safe_name membuang tautan dan simbol', public.safe_name('Budi http://evil.example/x?y=1 <b>') = 'Budi httpevilexamplexy1 b');
+  perform t.ck('20 safe_name membatasi 30 karakter', char_length(public.safe_name(repeat('a', 100))) = 30);
+  perform t.ck('20 safe_name kosong jadi pembeli', public.safe_name('@@@###') = 'pembeli' and public.safe_name(null) = 'pembeli');
+  perform t.ck('20 safe_name membuang baris baru', public.safe_name(E'Ani\nBudi') = 'Ani Budi');
+  delete from public.orders; delete from public.counters; delete from public.notify_queue;
+  update public.settings set data = data || '{"notifyOn": true}'::jsonb where id = 'shop';
+  for n in 1..9 loop perform public.enqueue_notify('lunas', '081200000142', 'Tes', 'ref-' || n, 'pesan ' || n); end loop;
+  perform t.ck('20 satu nomor maksimal 6 pesan otomatis per hari', (select count(*) from public.notify_queue where hp = '6281200000142') = 6);
+  perform public.enqueue_notify('uji', '081200000142', 'Tes', 'ref-uji', 'uji');
+  perform t.ck('20 pesan uji tidak dihitung batas harian', (select count(*) from public.notify_queue where hp = '6281200000142' and kind = 'uji') = 1);
+  delete from public.notify_queue;
+  r := public.create_orders(jsonb_build_object('nama', 'Evil http://phish.example/login', 'hp', '081200000143', 'fulfil', 'antar', 'area', 'Jakarta Timur', 'alamat', 'Jl. Contoh Raya 12 Jakarta', 'notes', '', 'method', 'transfer', 'groups', jsonb_build_array(jsonb_build_object('po_id', 'po-a', 'lines', jsonb_build_array(jsonb_build_object('pid', 'teri', 'opt', 0, 'qty', 1))))));
+  perform t.ck('20 nama berisi tautan: pesan WhatsApp tidak memuat tautan dari pembeli', (select message not like '%phish.example%' and message like 'Halo kak Evil httpphishexamplelogin,%' from public.notify_queue where kind = 'dicatat'), (select message from public.notify_queue where kind = 'dicatat' limit 1));
+  update public.settings set data = data - 'notifyOn' where id = 'shop';
 end $$;
 
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;
