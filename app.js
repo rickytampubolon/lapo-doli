@@ -434,6 +434,8 @@ function checkClosings(){
   if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesananmu"); if (screen === 2) { if (qtyTotal()) renderCheckout(); else go(1); } }
 }
 function updateSteps(n){
+  const bk = $("back1");
+  if (n === 2) { bk.setAttribute("role", "button"); bk.setAttribute("tabindex", "0"); bk.setAttribute("aria-label", "Kembali ke menu"); } else { bk.removeAttribute("role"); bk.removeAttribute("tabindex"); bk.removeAttribute("aria-label"); }
   document.querySelectorAll("#steps li").forEach((li, i) => { const k = i + 1; li.className = k < n ? "done" : k === n ? "now" : ""; li.querySelector("i").innerHTML = k < n ? ic("check") : String(k); li.setAttribute("aria-current", k === n ? "step" : "false"); });
 }
 function go(n){
@@ -446,7 +448,10 @@ function go(n){
   window.scrollTo({ top:0 });
 }
 $("next").onclick = () => { track("mulai_checkout", { porsi:qtyTotal() }); go(2); };
-$("back1").onclick = $("addmore").onclick = () => go(1);
+$("addmore").onclick = () => go(1);
+/* di layar Data, langkah "Menu" di atas menjadi tombol kembali */
+$("back1").onclick = () => { if (screen === 2) go(1); };
+$("back1").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && screen === 2) { e.preventDefault(); go(1); } });
 
 const lineKey = (poId, l) => l.addon ? addonKey(poId, l.pid, l.addonId) : l.optIdx != null ? `${poId}::${l.pid}::${l.optIdx}` : `${poId}::${l.pid}`;
 function itemsHTML(gs){
@@ -908,7 +913,7 @@ function orderRow(o){
       <span class="how">${pk ? "Ambil sendiri" : "Antar" + (o.area ? ", " + esc(o.area) : "")}${grp ? ", gabungan " + o.groupCount + " tanggal" : ""}</span>
       <span class="amt">${(o.payStatus === "cek" && o.status !== "batal") || isClaim(o) ? `<b>${rp(payDue(o))}</b><small>${Number(o.groupCount) > 1 ? "transfer gabungan" : "transfer"}</small>` : o.status === "batal" && o.refund === "perlu" ? `<b>${rp(payDue(o))}</b><small>kembalikan</small>` : rp(o.total)}</span>
       <span class="chip st ${sc}">${sl}</span>
-      <div class="oside">${o.payStatus === "cek" && o.status !== "batal" ? `<label class="selbox"><input type="checkbox" data-sel aria-label="Pilih ${esc(o.id)}" ${sel.has(o.id) ? "checked" : ""}></label>` : ""}${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
+      <div class="oside">${bulkKey(o) ? `<label class="selbox"><input type="checkbox" data-sel aria-label="Pilih ${esc(o.id)}" ${sel.has(o.id) ? "checked" : ""}></label>` : ""}${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
     </div>
     ${open && editing === o.id ? editHTML(o) : ""}
     ${open && editing !== o.id ? `<div class="odetail">
@@ -927,7 +932,7 @@ function orderRow(o){
       ${isClaim(o) ? `<p class="onote full warn">Pembeli mengaku sudah transfer setelah pesanan dibatalkan otomatis. Cek mutasi dan bukti, lalu Buka lagi dan Konfirmasi bayar.</p>` : ""}
       ${gk ? `<p class="onote full">Transfer tepat ${rp(Number(o.groupTotal) + gk)} (kode unik ${rp(gk)}).</p>` : ""}
       ${grp ? `<p class="onote full">Bayar gabungan ${o.groupCount} tanggal, total ${rp(o.groupTotal)}. Konfirmasi berlaku untuk semuanya.</p>` : ""}
-      <div class="acts full">${o.proofPath ? `<button class="btn line sm" data-proof="${esc(o.proofPath)}" type="button">${ic("image")}Lihat bukti</button>` : ""}<a class="btn line sm" href="${esc(wa)}" target="_blank" rel="noopener">${ic("chat")}Chat pelanggan</a><button class="btn line sm" data-edit type="button">${ic("edit")}Ubah</button><button class="btn line sm" data-nota type="button">${ic("print")}Cetak nota</button>${sec}</div>
+      <div class="acts full"><button class="btn line sm" data-edit type="button">${ic("edit")}Ubah</button><button class="btn line sm" data-nota type="button">${ic("print")}Cetak nota</button>${sec}</div>
       ${waTemplates(o).length ? `<div class="wachips full" aria-label="Pesan WhatsApp siap kirim"><span>Kirim pesan</span>${waTemplates(o).map(([l, t]) => `<a class="wachip" href="https://wa.me/${normPhone(o.hp)}?text=${encodeURIComponent(t)}" target="_blank" rel="noopener">${esc(l)}</a>`).join("")}</div>` : ""}
     </div>` : ""}</article>`;
 }
@@ -963,10 +968,13 @@ async function saveEdit(o, box){
   }
   busy.delete(o.id); renderAdminOrders();
 }
+/* tindakan utama yang bisa dilakukan sekaligus: konfirmasi bayar, atau pindah ke status berikutnya */
+const bulkKey = o => { const pa = primaryAct(o); return !pa ? "" : pa[0] === "pay_ok" ? "pay_ok" : pa[0] === "next" ? "next:" + NEXT[o.status] : ""; };
 function selBar(){
-  const ids = [...sel].filter(id => { const o = orders.find(x => x.id === id); return o && o.payStatus === "cek" && o.status !== "batal"; });
-  if (!ids.length) { sel.clear(); return ""; }
-  return `<div class="selbar" role="region" aria-label="Pilihan"><b>${ids.length} dipilih</b><span class="sp"></span><button class="btn sm" data-bulk="ok" type="button">${ic("check")}Konfirmasi bayar</button><button class="btn line sm" data-bulk="clear" type="button">Batal pilih</button></div>`;
+  const groups = {};
+  [...sel].forEach(id => { const o = orders.find(x => x.id === id), k = o && bulkKey(o); if (!k) { sel.delete(id); return; } (groups[k] = groups[k] || []).push(o); });
+  const keys = Object.keys(groups); if (!keys.length) return "";
+  return `<div class="selbar" role="region" aria-label="Pilihan"><b>${sel.size} dipilih</b><span class="sp"></span>${keys.map(k => `<button class="btn sm" data-bulk="${k}" type="button">${ic("check")}${k === "pay_ok" ? "Konfirmasi bayar" : esc(nextLabel(groups[k][0]))} (${groups[k].length})</button>`).join("")}<button class="btn line sm" data-bulk="clear" type="button">Batal pilih</button></div>`;
 }
 const quotaOf = (poId, pid) => { const po = (pos || []).find(p => p.id === poId), pr = (products || []).find(p => p.id === pid), q = po && po.quotas && po.quotas[pid] != null && po.quotas[pid] !== "" ? Number(po.quotas[pid]) : (pr && pr.quota != null ? Number(pr.quota) : null); return q == null || isNaN(q) ? null : q; };
 const soldOf = (poId, pid, skip) => orders.filter(x => x.poId === poId && x.id !== skip && x.status !== "batal" && x.payStatus !== "ditolak" && !(x.payStatus === "cek" && !x.proofPath && Date.now() > lateAt(x)))
@@ -1007,7 +1015,8 @@ function renderAdminOrders(){
     ${lateBar(base, cur)}
     ${dates.length ? dates.map(d => { const os = byPo[d], por = os.reduce((a, o) => a + o.items.filter(i => !i.addon).reduce((s, i) => s + (Number(i.qty) || 0), 0), 0);
       const sum = os.filter(o => o.status !== "batal" && o.payStatus !== "ditolak").reduce((t, o) => t + o.total, 0);
-      return `<div class="group"><span>${d === "-" ? "Tanggal PO tidak tercatat" : esc(dLong(d))}</span><span>${os.length} pesanan, ${por} porsi, <b>${rp(sum)}</b></span></div><div class="olist">${os.map(orderRow).join("")}</div>`; }).join("")
+      const sids = os.filter(bulkKey).map(o => o.id);
+      return `<div class="group"><span>${d === "-" ? "Tanggal PO tidak tercatat" : esc(dLong(d))}${sids.length > 1 ? ` <button class="linkbtn selall" data-selall="${esc(sids.join(","))}" type="button">Pilih semua</button>` : ""}</span><span>${os.length} pesanan, ${por} porsi, <b>${rp(sum)}</b></span></div><div class="olist">${os.map(orderRow).join("")}</div>`; }).join("")
       : `<div class="empty" style="margin-top:16px">${EMPTY[cur] || EMPTY.semua}</div>`}`;
   setCek(cekAll);
 }
@@ -1060,11 +1069,19 @@ $("a-orders").addEventListener("click", async e => {
   if (e.target.closest("[data-newopen]")) { openNew(); return; }
   const fb = e.target.closest("[data-filter]");
   if (fb) { filter = fb.dataset.filter; armCancel = null; armLate = false; renderAdminOrders(); return; }
+  const sa = e.target.closest("[data-selall]");
+  if (sa) { sa.dataset.selall.split(",").forEach(id => sel.add(id)); renderAdminOrders(); return; }
   const bk = e.target.closest("[data-bulk]");
   if (bk) {
     if (bk.dataset.bulk === "clear") { sel.clear(); renderAdminOrders(); return; }
-    const ids = new Set(); [...sel].forEach(id => { const o = orders.find(x => x.id === id); if (o) (o.gid ? orders.filter(x => x.gid === o.gid) : [o]).filter(x => x.status !== "batal").forEach(x => ids.add(x.id)); });
-    const ts = orders.filter(x => ids.has(x.id)); sel.clear(); if (ts.length) await applyOrders(ts, { pay_status:"lunas" }, ts.length + " pesanan dikonfirmasi", "konfirmasi_massal"); else renderAdminOrders(); return;
+    const key = bk.dataset.bulk, sels = [...sel].map(id => orders.find(x => x.id === id)).filter(o => o && bulkKey(o) === key);
+    sels.forEach(o => sel.delete(o.id));
+    if (!sels.length) { renderAdminOrders(); return; }
+    if (key === "pay_ok") {
+      const ids = new Set(); sels.forEach(o => (o.gid ? orders.filter(x => x.gid === o.gid) : [o]).filter(x => x.status !== "batal").forEach(x => ids.add(x.id)));
+      const ts = orders.filter(x => ids.has(x.id)); await applyOrders(ts, { pay_status:"lunas" }, ts.length + " pesanan dikonfirmasi", "konfirmasi_massal");
+    } else await applyOrders(sels, { status:key.slice(5) }, sels.length + " pesanan diperbarui", "status_massal");
+    return;
   }
   if (e.target.closest("[data-snd]")) { try { localStorage.setItem("ld_snd", sndOn() ? "0" : "1"); } catch (er) {} ensureAudio(); if (sndOn()) beep(); renderAdminOrders(); return; }
   if (e.target.closest("[data-late]")) {
@@ -1520,7 +1537,7 @@ $("a-set").addEventListener("change", e => {
   if (e.target.id === "nf-prov") { $("nf-urlw").hidden = e.target.value !== "webhook"; return; }
   if (e.target.matches("[data-nk]")) { const o = {}; $("a-set").querySelectorAll("[data-nk]").forEach(c => { o[c.dataset.nk] = c.checked; }); saveSetting({ notifyKinds:o }); }
 });
-const LOGL = { refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (lewat batas bayar)", penyedia_wa:"mengatur penyedia WhatsApp", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
+const LOGL = { status_massal:"mengubah status beberapa pesanan", refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (lewat batas bayar)", penyedia_wa:"mengatur penyedia WhatsApp", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
 async function fillLog(){
   const ul = $("log-list"); if (!ul) return;
   try { const rows = await api.loadLog(); ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.at))}</span><span><b>${esc(String(r.actor || "").split("@")[0] || "admin")}</b> ${esc(LOGL[r.action] || r.action)} <span class="mono">${esc(r.target)}</span></span></li>`).join("") : '<li class="note">Belum ada aktivitas.</li>'; }
@@ -1843,7 +1860,7 @@ function setView(v){
 window.addEventListener("hashchange", () => { const v = location.hash === "#admin" ? "admin" : (view === "admin" ? "shop" : view); if (v !== view) setView(v); });
 $("to-admin").onclick = () => setView("admin");
 $("to-shop").onclick = $("to-shop-top").onclick = () => setView("shop");
-document.querySelectorAll("[data-help]").forEach(b => { b.onclick = () => { setView("help"); const u = lsGet(LS.cust); if (u && u.hp && !$("ck-hp").value) $("ck-hp").value = u.hp; }; });
+document.querySelectorAll("[data-help]").forEach(b => { b.onclick = () => { setView("help"); if (lastData && lastData.placed && !$("ck-id").value) $("ck-id").value = lastData.placed.map(o => o.id).join(", "); const u = lsGet(LS.cust); if (u && u.hp && !$("ck-hp").value) $("ck-hp").value = u.hp; }; });
 $("help-back").onclick = () => setView("shop");
 document.querySelectorAll("[data-home]").forEach(l => { l.onclick = e => { e.preventDefault(); closeSheets(); setView("shop"); go(1); }; });
 

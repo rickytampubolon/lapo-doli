@@ -1387,3 +1387,15 @@ img.thumb{background:var(--soft)}
 .pv-img.zoom{overflow:auto;place-items:start;-webkit-overflow-scrolling:touch}
 .pv-img.zoom img{width:auto;height:auto;max-width:none;max-height:none;cursor:zoom-out}
 .pv-hint{flex-basis:100%;text-align:center;font-size:12px;color:var(--text-secondary)}
+
+/* penyederhanaan: langkah Menu sebagai tombol kembali, rincian dan catatan dilipat */
+#steps li#back1.done{cursor:pointer}
+#steps li#back1[role=button]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:999px}
+#s2{padding-top:var(--sp-3)}
+.rincian,.notes-d{margin-top:var(--sp-3)}
+.rincian > summary,.notes-d > summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:14px;min-height:44px;display:flex;align-items:center}
+.rincian[open] > summary{margin-bottom:var(--sp-2)}
+.rincian .sum{margin-top:0}
+.notes-d textarea{margin-top:var(--sp-2)}
+.selall{margin-left:var(--sp-3);font-size:13px}
+.selbar{flex-wrap:wrap}
