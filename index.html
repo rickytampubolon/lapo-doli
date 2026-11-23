@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261122zk">
+<link rel="stylesheet" href="/style.css?v=20261122zm">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -53,7 +53,7 @@
           <div><b id="sc-cut">-</b><small>PO tutup</small></div>
           <div><b>Jakarta saja</b><small>Area antar</small></div>
         </div>
-        <p class="howto">Pilih menu, isi data, lalu transfer dan unggah bukti dalam <b data-paywin>1 jam</b>.</p>
+        <p class="howto">Transfer dan unggah bukti dalam <b data-paywin>1 jam</b> setelah memesan.</p>
       </div>
       <div class="closed" id="closed" hidden>
         <span class="logo emptylogo" role="img" aria-label="Logo Lapo Doli"></span>
@@ -79,7 +79,12 @@
       <div class="pagehead"><button class="roundback" id="back1" type="button" aria-label="Kembali ke menu"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button><h1>Pesananmu</h1></div>
 
       <div class="gcard">
-        <div class="gc-h"><span class="gc-ic"><svg class="ic" aria-hidden="true"><use href="#i-truck"/></svg></span><div><h2>Cara terima</h2><p id="gc-sub">Pilih antar atau ambil sendiri</p></div></div>
+        <div class="gc-h"><span class="gc-ic red"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg></span><div><h2>Pesanan</h2></div><button class="pillbtn" id="addmore" type="button"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Tambah menu</button></div>
+        <div id="sum-items"></div>
+      </div>
+
+      <div class="gcard">
+        <div class="gc-h"><span class="gc-ic"><svg class="ic" aria-hidden="true"><use href="#i-truck"/></svg></span><div><h2>Cara terima</h2></div></div>
         <div class="opts" id="fulfil">
           <label class="opt"><input type="radio" name="fulfil" value="antar" checked><span class="opt-t"><b>Antar</b><small>Jakarta, lewat Lalamove</small></span><span class="opt-p" data-ongkir></span><i class="dot" aria-hidden="true"></i></label>
           <label class="opt"><input type="radio" name="fulfil" value="ambil"><span class="opt-t"><b>Ambil sendiri</b><small id="pick-line">Tanpa ongkir</small></span><span class="opt-p">Gratis</span><i class="dot" aria-hidden="true"></i></label>
@@ -116,11 +121,6 @@
       </div>
 
       <div class="gcard">
-        <div class="gc-h"><span class="gc-ic red"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg></span><div><h2>Pesanan</h2></div><button class="pillbtn" id="addmore" type="button"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Tambah</button></div>
-        <div id="sum-items"></div>
-      </div>
-
-      <div class="gcard">
         <div class="gc-h"><div><h2>Ringkasan pembayaran</h2></div></div>
         <div class="sum" id="sum2"></div>
       </div>
@@ -134,7 +134,6 @@
       </div>
 
       <div class="checkout-bar"><button class="cartpill" id="paid" type="button"><span class="cp-l"><b id="paid-t">Pesan dan lanjut bayar</b><small id="cb-count">0 porsi</small></span><span class="cp-r"><b id="cb-total">Rp 0</b><svg class="ic" aria-hidden="true"><use href="#i-bag"/></svg></span></button></div>
-      <p class="note" style="text-align:center;margin:8px 0 0">Nomor rekening muncul di langkah berikutnya.</p>
     </section>
 
     <section id="s3">
@@ -160,13 +159,13 @@
       <ul class="dlv" id="track" style="margin-top:18px"></ul>
       <button class="textbtn" id="copy-status" type="button">Salin link status pesanan</button>
       <div class="sum" id="sum3" style="margin-top:18px"></div>
-      <div class="sharecard"><span>Ajak teman pesan</span><button class="pillbtn" type="button" data-share><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg>Bagikan</button></div>
+      <div class="sharecard" id="s3-share" hidden><span>Ajak teman pesan</span><button class="pillbtn" type="button" data-share><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg>Bagikan</button></div>
       <div class="actions"><button class="btn line" id="again" type="button">Pesan lagi</button></div>
     </section>
 
     <p class="note" style="margin-top:40px;text-align:center"><span id="foot" hidden><button class="textbtn" id="to-admin" type="button">Halaman admin</button></span></p>
   </main>
-  <div class="bar" id="bar" hidden><button class="cartpill" id="next" type="button" disabled><span class="cp-l"><b id="count">0 porsi</b><small>Lapo Doli</small></span><span class="cp-r"><b id="subtotal">Rp 0</b><svg class="ic" aria-hidden="true"><use href="#i-bag"/></svg></span></button></div>
+  <div class="bar" id="bar" hidden><button class="cartpill" id="next" type="button" disabled><span class="cp-l"><b id="count">0 porsi</b><small>Lanjut isi data</small></span><span class="cp-r"><b id="subtotal">Rp 0</b><svg class="ic" aria-hidden="true"><use href="#i-bag"/></svg></span></button></div>
   <div class="scrim" id="scrim" hidden></div>
 </div>
 
@@ -188,7 +187,7 @@
     </div>
     <div class="label">Pertanyaan umum</div>
     <div class="faq">
-      <details><summary>Apa itu PO?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Boleh pesan beberapa tanggal sekaligus dan bayar sekali. PO tutup pukul <span data-cutoff></span> di hari itu.</p></details>
+      <details><summary>Apa itu PO (pre-order)?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Boleh pesan beberapa tanggal sekaligus dan bayar sekali. PO tutup pukul <span data-cutoff></span> di hari itu.</p></details>
       <details><summary>Antar atau ambil sendiri?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Antar ke Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir <span data-ongkir></span> per tanggal. Ambil sendiri di <span data-pickloc></span>, jam <span data-pickhours></span>, tanpa ongkir.</p></details>
       <details><summary>Nasi dan sop tambahan<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Muncul setelah menu utama dipilih. Jumlahnya maksimal sama dengan menu utama.</p></details>
       <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah kamu transfer dan mengunggah bukti bayar di halaman pesanan, admin mengecek lalu mengubah statusnya. Transfer paling lambat <span data-paywin>1 jam</span> setelah memesan. Pesanan yang belum dibayar dalam <span data-paywin>1 jam</span> dibatalkan otomatis.</p></details>
@@ -223,7 +222,7 @@
     </aside>
     <div class="side-scrim" id="side-scrim" hidden></div>
     <main class="content" id="admin-body">
-    <div class="schemawarn" id="schema-warn" role="alert" hidden><svg class="ic" aria-hidden="true"><use href="#i-ban"/></svg><span><b>Database belum diperbarui.</b> Jalankan ulang <code>supabase/schema.sql</code> di Supabase SQL Editor. Sebelum itu, kode unik, kuota, dan bukti bayar belum bekerja.</span></div>
+    <div class="schemawarn" id="schema-warn" role="alert" hidden><svg class="ic" aria-hidden="true"><use href="#i-ban"/></svg><span><b>Database belum diperbarui.</b> Jalankan ulang <code>supabase/schema.sql</code> di Supabase SQL Editor. Sebelum itu, fitur terbaru (kuota per PO, klaim transfer, notifikasi, batas bayar) belum bekerja.</span></div>
     <div id="a-orders"></div>
     <div id="a-new" hidden></div>
     <div id="a-sales" hidden></div>
@@ -244,7 +243,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261122zk"></script>
+<script defer src="/app.js?v=20261122zm"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
