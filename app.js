@@ -1029,7 +1029,8 @@ async function openProofViewer(startId){
     box.querySelector("#pv-s").textContent = (o.payStatus === "lunas" ? "Lunas, " : o.status === "batal" ? "Dibatalkan, " : "Menunggu cek, ") + "transfer " + rp(payDue(o));
     const act = box.querySelector("#pv-act"), ok = o.status !== "batal" && o.payStatus === "cek";
     act.innerHTML = ok ? `<button class="btn" data-pvok type="button">${ic("check")}Konfirmasi bayar</button><button class="btn line" data-pvno type="button">${ic("xcircle")}Tidak cocok</button>` : `<span class="pv-note">${o.payStatus === "lunas" ? "Sudah dikonfirmasi" : "Tidak perlu dicek"}</span>`;
-    const im = box.querySelector("#pv-img"); im.innerHTML = '<p class="pv-load">Memuat bukti...</p>';
+    act.insertAdjacentHTML("afterbegin", '<span class="pv-hint">Ketuk gambar untuk memperbesar</span>');
+    const im = box.querySelector("#pv-img"); im.classList.remove("zoom"); im.innerHTML = '<p class="pv-load">Memuat bukti...</p>';
     try { const url = await api.proofUrl(o.proofPath); if (my === seq) im.innerHTML = `<img src="${esc(url)}" alt="Foto bukti bayar ${esc(o.id)}">`; }
     catch (e) { if (my === seq) im.innerHTML = '<p class="pv-load">Bukti belum bisa dibuka. Coba lagi.</p>'; }
   }
@@ -1037,6 +1038,7 @@ async function openProofViewer(startId){
   box.addEventListener("click", async ev => {
     if (ev.target === box || ev.target.closest(".lb-x")) { close(); return; }
     const nv = ev.target.closest("[data-pv]"); if (nv) { go(Number(nv.dataset.pv)); return; }
+    if (ev.target.closest("#pv-img img")) { box.querySelector("#pv-img").classList.toggle("zoom"); return; }
     const o = cur(); if (!o) return;
     const ts = (o.gid ? orders.filter(x => x.gid === o.gid) : [o]).filter(x => x.status !== "batal");
     if (ev.target.closest("[data-pvok]")) { await applyOrders(ts, { pay_status:"lunas" }, ACT_MSG.pay_ok, "pay_ok"); if (i < ids.length - 1) go(1); else show(); }

@@ -1379,3 +1379,11 @@ img.thumb{background:var(--soft)}
 .newpo2 .seg button{justify-content:center;min-height:44px}
 .newpo2 > .btn{margin-top:var(--sp-3);width:100%}
 #admin .newpo2 .seg{border:0;background:none;padding:0;box-shadow:none}
+
+/* penampil bukti: gambar mengisi ruang, ketuk untuk ukuran asli */
+.pv-stage{height:100%}
+.pv-img{width:100%;height:100%;min-height:0;overflow:hidden}
+.pv-img img{width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;cursor:zoom-in}
+.pv-img.zoom{overflow:auto;place-items:start;-webkit-overflow-scrolling:touch}
+.pv-img.zoom img{width:auto;height:auto;max-width:none;max-height:none;cursor:zoom-out}
+.pv-hint{flex-basis:100%;text-align:center;font-size:12px;color:var(--text-secondary)}
