@@ -59,7 +59,9 @@ const toProductRow = patch => {
     else if (["name", "price", "emoji", "available", "sort", "addons", "image", "quota"].includes(k)) m[k] = v; }
   return m;
 };
-const fromOrder = r => ({ extraMin:Number(r.extra_min) || 0, mapsUrl:r.maps_url || "", claimedAt:r.claimed_at || null, refund:r.refund || "", id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
+/* tautan peta hanya boleh https ke Google (jaga-jaga terhadap data yang diubah langsung di database) */
+const mapsSafe = u => /^https:\/\/(www\.google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl)([/?]|$)/.test(u || "") && String(u).length <= 300;
+const fromOrder = r => ({ extraMin:Number(r.extra_min) || 0, mapsUrl:mapsSafe(r.maps_url) ? r.maps_url : "", claimedAt:r.claimed_at || null, refund:r.refund || "", id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
   area:r.area, alamat:r.alamat, fulfil:r.fulfil, pickupLoc:r.pickup_loc, notes:r.notes, method:r.method, items:Array.isArray(r.items) ? r.items : [],
   ongkir:r.ongkir, total:r.total, kode:Number(r.kode) || 0, groupTotal:r.group_total, groupCount:r.group_count, hours:r.hours, payStatus:r.pay_status, status:r.status, proofPath:r.proof_path || "" });
 const must = ({ data, error }) => { if (error) throw error; return data; };
@@ -334,7 +336,7 @@ function restoreState(){
   if (c && c.cart) { Object.assign(cart, c.cart); Object.assign(itemNotes, c.notes || {}); if (c.po && Object.keys(c.cart).length) { activePo = c.po; activeChosen = true; }
     if (c.fulfil === "ambil") { fulfil = "ambil"; const r = document.querySelector("[name=fulfil][value=ambil]"); if (r) r.checked = true; } }
   const u = lsGet(LS.cust);
-  if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); if (u.area) $("area").value = u.area; if (u.maps && u.q) { mapsUrl = u.maps; $("addr-q").value = u.q; showAddrHint(true); } }
+  if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); if (u.area) $("area").value = u.area; if (mapsSafe(u.maps) && u.q) { mapsUrl = u.maps; $("addr-q").value = u.q; showAddrHint(true); } }
   stateReady = true;
 }
 /* sisa waktu sebelum PO tutup; hanya ditampilkan di bawah 24 jam */
@@ -906,7 +908,7 @@ function orderRow(o){
     if (o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")) sec += `<button class="btn line sm" data-act="pay_undo" ${dis}>${ic("undo")}Batalkan konfirmasi</button>`;
     if (o.status !== "selesai") sec += armCancel === o.id ? `<button class="btn danger sm cancel" data-act="cancel" ${dis}>Yakin batalkan?</button>` : `<button class="btn line sm cancel" data-act="arm_cancel" ${dis}>${ic("ban")}Batalkan pesanan</button>`;
   }
-  return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${isLate(o) ? "late" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
+  return `<article class="orow ${needsCheck(o) || isClaim(o) ? "attn" : ""} ${isLate(o) ? "late" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
       <span class="num">${esc(o.id)}</span>
       <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.proofPath ? `<button class="proofchip" data-proofrow type="button" aria-label="Lihat bukti ${esc(o.id)}">${ic("image")}Bukti</button>` : ""}${o.source === "wa" ? '<span class="otag">WA</span>' : ""}</div><div class="o3">${esc(summary)}</div></div>
@@ -1960,7 +1962,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 19;
+const SCHEMA_VERSION = 20;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }

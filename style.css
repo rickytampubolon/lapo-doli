@@ -1399,3 +1399,6 @@ img.thumb{background:var(--soft)}
 .notes-d textarea{margin-top:var(--sp-2)}
 .selall{margin-left:var(--sp-3);font-size:13px}
 .selbar{flex-wrap:wrap}
+
+/* ikon kartu: lembut, tidak tebal */
+.gc-ic.red{background:var(--soft);color:var(--accent)}
