@@ -1365,3 +1365,6 @@ img.thumb{background:var(--soft)}
 #nf-sec .acts{margin:var(--sp-3) 0}
 #nf-sec select,#nf-sec input[type=password],#nf-sec input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--border-default);border-radius:var(--r-md);background:#fff;font:inherit;min-height:44px}
 #nf-list{margin-top:var(--sp-3)}
+
+/* header pembeli: krem yang sama dengan sidebar admin */
+.top{background:var(--side-bg)}
