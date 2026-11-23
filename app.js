@@ -472,7 +472,7 @@ function renderTtl(){
   el.hidden = !on; if (!on) return;
   const ms = placedAt + PAY_WINDOW_MS - Date.now(), s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), d = s % 60;
   el.classList.toggle("late", ms <= 0);
-  el.textContent = ms <= 0 ? "Batas 1 jam sudah lewat, porsimu bisa sudah terpakai orang lain. Unggah bukti, admin akan memeriksa." : "Bayar dalam " + (m >= 1 ? m + " menit " + d + " detik" : d + " detik") + " supaya porsimu aman.";
+  el.textContent = ms <= 0 ? "Batas 1 jam sudah lewat. Pesanan tanpa bukti dibatalkan otomatis. Unggah bukti sekarang atau hubungi admin." : "Bayar dalam " + (m >= 1 ? m + " menit " + d + " detik" : d + " detik") + " supaya porsimu aman.";
 }
 setInterval(() => { if (screen === 3 && !document.hidden && !$("d-ttl").hidden) renderTtl(); }, 1000);
 document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; saveCart(); renderCheckout(); });
@@ -698,7 +698,7 @@ function renderTracker(){
   const pk = placed[0] && placed[0].fulfil === "ambil", anyProof = placedProof || cs.some(c => c.proof);
   let title, sub, tone = "warn";
   if (!recorded) { title = "Pesanan dibuat"; sub = "Pesanan belum tercatat. Coba lagi."; }
-  else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
+  else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Pesanan yang belum dibayar dalam 1 jam dibatalkan otomatis. Hubungi admin kalau ini keliru."; tone = "bad"; }
   else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Unggah bukti yang jelas di bawah."; tone = "bad"; }
   else if (!allPaid && anyProof) { title = "Bukti diterima"; sub = "Admin sedang mengecek pembayaranmu. Statusnya berubah di sini."; }
   else if (!allPaid) { title = "Pesanan dicatat"; sub = "Transfer sesuai jumlah di bawah, lalu kirim bukti bayar."; }
@@ -928,7 +928,7 @@ function selBar(){
 const lateOrders = () => orders.filter(o => (poFilter === "semua" || o.poId === poFilter) && isLate(o));
 function lateBar(base, cur){
   const n = base.filter(isLate).length; if (!n || (cur !== "cek" && cur !== "semua")) return "";
-  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam. Porsinya sudah tidak ditahan.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
+  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam. Porsinya tidak ditahan dan akan dibatalkan otomatis.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
 }
 function renderAdminOrders(){
   const el = $("a-orders");
@@ -1365,7 +1365,7 @@ function renderAdminSet(){
   if (logOpen) fillLog();
 }
 let logOpen = false;
-const LOGL = { pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
+const LOGL = { pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (belum bayar 1 jam)", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
 async function fillLog(){
   const ul = $("log-list"); if (!ul) return;
   try { const rows = await api.loadLog(); ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.at))}</span><span><b>${esc(String(r.actor || "").split("@")[0] || "admin")}</b> ${esc(LOGL[r.action] || r.action)} <span class="mono">${esc(r.target)}</span></span></li>`).join("") : '<li class="note">Belum ada aktivitas.</li>'; }
@@ -1777,7 +1777,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 15;
+const SCHEMA_VERSION = 16;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }

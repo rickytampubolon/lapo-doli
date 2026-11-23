@@ -224,6 +224,26 @@ begin
   r := public.create_orders(t.base('081200000085') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]},{"po_id":"po-b","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
   begin perform public.admin_edit_items(r->0->>'id', array[2]); perform t.ck('15 pesanan gabungan tidak bisa diedit jumlahnya', false); exception when others then perform t.ck('15 pesanan gabungan tidak bisa diedit jumlahnya', sqlerrm = 'group_order', sqlerrm); end;
   perform set_config('request.jwt.claims', '', false);
+
+  -- 16. batal otomatis
+  delete from public.orders; delete from public.counters;
+  perform public.create_orders(t.base('081200000091') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform public.create_orders(t.base('081200000092') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform public.create_orders(t.base('081200000093') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform public.create_orders(t.base('081200000094') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  perform public.create_orders(t.base('081200000095') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}');
+  update public.orders set created_at = now() - interval '2 hours' where hp in ('081200000091','081200000092','081200000093','081200000094');
+  update public.orders set proof_path = 'AAAAAAAA/x1234567.jpg' where hp = '081200000092';
+  update public.orders set pay_status = 'lunas' where hp = '081200000093';
+  update public.orders set source = 'wa' where hp = '081200000094';
+  perform t.ck('16 batal otomatis: hanya 1 pesanan (web, belum bukti, belum lunas, lewat 1 jam)', public.auto_cancel_unpaid() = 1);
+  perform t.ck('16 yang dibatalkan: pesanan 091', (select status from public.orders where hp = '081200000091') = 'batal');
+  perform t.ck('16 sudah ada bukti tidak disentuh', (select status from public.orders where hp = '081200000092') = 'baru');
+  perform t.ck('16 sudah lunas tidak disentuh', (select status from public.orders where hp = '081200000093') = 'baru');
+  perform t.ck('16 pesanan manual WA tidak disentuh', (select status from public.orders where hp = '081200000094') = 'baru');
+  perform t.ck('16 pesanan baru (belum 1 jam) tidak disentuh', (select status from public.orders where hp = '081200000095') = 'baru');
+  perform t.ck('16 dijalankan lagi: 0 pesanan', public.auto_cancel_unpaid() = 0);
+  perform t.ck('16 tercatat di log aktivitas oleh sistem', (select count(*) from public.activity_log where actor = 'sistem' and action = 'batal_otomatis') = 1);
 end $$;
 
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;
