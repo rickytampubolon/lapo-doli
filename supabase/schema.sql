@@ -19,9 +19,14 @@ returns boolean
 language sql stable security definer
 set search_path = public
 as $$
+  -- admin = email terdaftar di tabel admins DAN akun login dengan email itu sudah terverifikasi
   select exists (
     select 1 from public.admins a
     where lower(a.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      and exists (
+        select 1 from auth.users u
+        where u.id = auth.uid() and lower(u.email) = lower(a.email) and u.email_confirmed_at is not null
+      )
   );
 $$;
 
@@ -917,7 +922,7 @@ end $$;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 18 $$;
+returns integer language sql immutable as $$ select 19 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

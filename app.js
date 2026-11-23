@@ -1862,13 +1862,22 @@ function renderGate(){
   $("gate-send").onclick = sendMagic;
   $("gate-email").addEventListener("keydown", e => { if (e.key === "Enter") sendMagic(); });
 }
+let magicNext = 0;
 async function sendMagic(){
-  const email = $("gate-email").value.trim();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $("gate-err").textContent = "Email tidak valid."; return; }
-  $("gate-err").textContent = ""; $("gate-send").disabled = true;
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo:location.origin + "/?admin=1" } });
-  if (error) { $("gate-send").disabled = false; $("gate-err").textContent = "Link belum terkirim. Coba lagi sebentar lagi."; return; }
-  $("admin-gate").innerHTML = `<div class="card"><h3>Cek email Anda</h3><p class="fhint" style="margin:0">Link masuk dikirim ke ${esc(email)}. Cek juga folder spam.</p></div>`;
+  const email = $("gate-email").value.trim(), err = $("gate-err");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Email tidak valid."; return; }
+  if (Date.now() < magicNext) { err.textContent = "Tunggu " + Math.ceil((magicNext - Date.now()) / 1000) + " detik sebelum meminta link lagi."; return; }
+  err.textContent = ""; $("gate-send").disabled = true;
+  /* hanya akun yang sudah ada yang boleh dikirimi link: orang asing tidak bisa membuat akun baru lewat form ini */
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false, emailRedirectTo:location.origin + "/?admin=1" } });
+  const m = ((error && (error.code || "")) + " " + (error && error.message || "")).toLowerCase();
+  if (error && (error.status === 429 || /rate|too many|over_email/.test(m))) { $("gate-send").disabled = false; magicNext = Date.now() + 60000; err.textContent = "Terlalu sering meminta link. Coba lagi beberapa menit lagi."; return; }
+  const unknown = error && /otp_disabled|signups? not allowed|not found|user_not_found/.test(m);
+  if (error && !unknown) { $("gate-send").disabled = false; err.textContent = "Link belum terkirim. Periksa koneksi lalu coba lagi."; return; }
+  magicNext = Date.now() + 60000;
+  /* pesan sama untuk email yang dikenal maupun tidak, supaya daftar admin tidak bisa ditebak */
+  $("admin-gate").innerHTML = `<div class="card"><h3>Cek email Anda</h3><p class="fhint" style="margin:0">Kalau ${esc(email)} terdaftar sebagai admin, link masuk sudah dikirim. Cek juga folder spam.</p><button class="btn line sm" id="gate-back" type="button" style="margin-top:12px">Pakai email lain</button></div>`;
+  $("gate-back").onclick = renderGate;
 }
 async function signOut(){ try { await sb.auth.signOut(); } catch (e) {} await applySession(null); }
 $("logout").onclick = signOut;
@@ -1934,7 +1943,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 18;
+const SCHEMA_VERSION = 19;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
