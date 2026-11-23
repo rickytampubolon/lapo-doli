@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261122ze">
+<link rel="stylesheet" href="/style.css?v=20261122zh">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -53,6 +53,7 @@
           <div><b id="sc-cut">-</b><small>PO tutup</small></div>
           <div><b>Jakarta saja</b><small>Area antar</small></div>
         </div>
+        <p class="howto">Pilih menu, isi data, lalu transfer dan unggah bukti dalam <b>1 jam</b>.</p>
       </div>
       <div class="closed" id="closed" hidden>
         <span class="logo emptylogo" role="img" aria-label="Logo Lapo Doli"></span>
@@ -131,7 +132,7 @@
         </div></div>
       </div>
 
-      <div class="checkout-bar"><button class="cartpill" id="paid" type="button"><span class="cp-l"><b id="paid-t">Pesan sekarang</b><small id="cb-count">0 porsi</small></span><span class="cp-r"><b id="cb-total">Rp 0</b><svg class="ic" aria-hidden="true"><use href="#i-bag"/></svg></span></button></div>
+      <div class="checkout-bar"><button class="cartpill" id="paid" type="button"><span class="cp-l"><b id="paid-t">Pesan dan lanjut bayar</b><small id="cb-count">0 porsi</small></span><span class="cp-r"><b id="cb-total">Rp 0</b><svg class="ic" aria-hidden="true"><use href="#i-bag"/></svg></span></button></div>
       <p class="note" style="text-align:center;margin:8px 0 0">Nomor rekening muncul di langkah berikutnya.</p>
     </section>
 
@@ -151,6 +152,7 @@
       <div class="actions" id="d-proofwrap">
         <label class="btn filebtn" id="d-up"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg><span id="d-up-t">Unggah bukti bayar</span><input type="file" accept="image/*" id="d-file" aria-label="Unggah foto bukti bayar"></label>
       </div>
+      <div class="claimbox" id="claim-wrap" hidden><p>Sudah transfer sebelum pesanan dibatalkan? Beri tahu admin, lalu unggah buktinya.</p><button class="btn" id="claim-btn" type="button">Saya sudah transfer</button></div>
       <p class="proofok" id="d-proofok" hidden><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>Bukti terkirim. Kami cek secepatnya.</span></p>
       <button class="textbtn cancelbtn" id="cancel-order" type="button" hidden>Batalkan pesanan</button>
       <ul class="dlv" id="track" style="margin-top:18px"></ul>
@@ -240,7 +242,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261122ze"></script>
+<script defer src="/app.js?v=20261122zh"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

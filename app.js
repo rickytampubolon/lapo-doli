@@ -59,7 +59,7 @@ const toProductRow = patch => {
     else if (["name", "price", "emoji", "available", "sort", "addons", "image", "quota"].includes(k)) m[k] = v; }
   return m;
 };
-const fromOrder = r => ({ mapsUrl:r.maps_url || "", id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
+const fromOrder = r => ({ mapsUrl:r.maps_url || "", claimedAt:r.claimed_at || null, refund:r.refund || "", id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, createdAt:r.created_at, source:r.source, nama:r.nama, hp:r.hp,
   area:r.area, alamat:r.alamat, fulfil:r.fulfil, pickupLoc:r.pickup_loc, notes:r.notes, method:r.method, items:Array.isArray(r.items) ? r.items : [],
   ongkir:r.ongkir, total:r.total, kode:Number(r.kode) || 0, groupTotal:r.group_total, groupCount:r.group_count, hours:r.hours, payStatus:r.pay_status, status:r.status, proofPath:r.proof_path || "" });
 const must = ({ data, error }) => { if (error) throw error; return data; };
@@ -84,6 +84,7 @@ const api = {
   setPoOpen: async (id, open) => must(await sb.from("pos").update({ open }).eq("id", id)),
   deletePo: async id => must(await sb.from("pos").delete().eq("id", id)),
   saveSettings: async data => must(await sb.from("settings").upsert({ id:"shop", data })),
+  claimPaid: async (gid, phone) => must(await sb.rpc("claim_paid", { p_gid:gid, phone })),
   editItems: async (id, qty) => must(await sb.rpc("admin_edit_items", { p_id:id, p_qty:qty })),
   logAct: async (action, target, detail) => { try { await sb.from("activity_log").insert({ actor:(session && session.user && session.user.email) || "", action, target, detail }); } catch (e) {} },
   loadNotes: async () => must(await sb.from("customer_notes").select("*")),
@@ -465,13 +466,13 @@ function renderCheckout(){
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
 }
-let placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false, placedRejected = false, placedAt = 0;
+let placedClaimed = false, placedPay = { total:0, kode:0, method:"transfer" }, payVisible = false, placedProof = false, placedRejected = false, placedAt = 0;
 const PAY_WINDOW_MS = 36e5;   // sama dengan aturan server: belum bayar dan belum ada bukti > 1 jam tidak menahan kuota
 function renderTtl(){
   const el = $("d-ttl"), on = payVisible && !placedProof && placedAt > 0;
   el.hidden = !on; if (!on) return;
   const ms = placedAt + PAY_WINDOW_MS - Date.now(), s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), d = s % 60;
-  el.classList.toggle("late", ms <= 0);
+  el.classList.toggle("late", ms <= 0); el.classList.toggle("urgent", ms > 0 && ms < 10 * 6e4);
   el.textContent = ms <= 0 ? "Batas 1 jam sudah lewat. Pesanan tanpa bukti dibatalkan otomatis. Unggah bukti sekarang atau hubungi admin." : "Bayar dalam " + (m >= 1 ? m + " menit " + d + " detik" : d + " detik") + " supaya porsimu aman.";
 }
 setInterval(() => { if (screen === 3 && !document.hidden && !$("d-ttl").hidden) renderTtl(); }, 1000);
@@ -484,8 +485,8 @@ function renderPayInfo(){
 }
 /* Kotak bayar di layar setelah pesan: jumlah tepat (dengan kode unik) dan tujuan transfer */
 function renderPay(){
-  const need = payVisible && (!placedProof || placedRejected);
-  $("d-proofwrap").hidden = !need; $("d-proofok").hidden = !(payVisible && placedProof && !placedRejected);
+  const need = (payVisible && (!placedProof || placedRejected)) || (placedClaimed && !placedProof);
+  $("d-proofwrap").hidden = !need; $("d-proofok").hidden = !((payVisible || placedClaimed) && placedProof && !placedRejected);
   $("d-up-t").textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar";
   $("cancel-order").hidden = !(payVisible && !placedProof); if ($("cancel-order").hidden) resetCancel();
   renderTtl();
@@ -524,6 +525,16 @@ $("d-file").onchange = async e => {
     toast("Bukti terkirim"); renderTracker(); track("bukti_terkirim");
   } catch (err) { toast("Bukti belum terkirim. Periksa koneksi lalu coba lagi."); }
   finally { lab.classList.remove("busy"); t.textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar"; }
+};
+$("claim-btn").onclick = async () => {
+  const b = $("claim-btn"), gid = placed[0] && placed[0].gid; if (!gid || !sb) return;
+  b.disabled = true;
+  try {
+    const n = await api.claimPaid(gid, trackHp);
+    if (n > 0) { placed.forEach(o => { const c = trackConf[o.id] || (trackConf[o.id] = { payStatus:"cek", status:"batal" }); c.claimed = true; }); toast("Admin sudah diberi tahu"); track("klaim_transfer"); renderTracker(); }
+    else toast("Belum bisa dikirim. Hubungi admin lewat WhatsApp.");
+  } catch (e) { toast("Belum terkirim. Periksa koneksi lalu coba lagi."); }
+  b.disabled = false;
 };
 let cancelArmT = null;
 function resetCancel(){ clearTimeout(cancelArmT); const b = $("cancel-order"); b.classList.remove("arm"); b.textContent = "Batalkan pesanan"; }
@@ -565,7 +576,8 @@ function orderFailed(e){
   if (sold) { toast("Porsi tidak cukup. Sisa " + sold[2] + " untuk menu ini. Kurangi jumlahnya lalu coba lagi."); refreshRemaining(); return; }
   if (/po_not_open/.test(m)) { toast("PO ini belum dibuka."); refreshPos(); return; }
   if (/menu_unavailable/.test(m)) { toast("Ada menu yang sudah habis. Muat ulang halaman lalu pilih lagi."); refreshProducts(); return; }
-  if (/rate_limited/.test(m)) { toast("Terlalu banyak pesanan dari nomor ini. Tunggu 10 menit lalu coba lagi."); return; }
+  if (/too_many_pending/.test(m)) { toast("Kamu masih punya 3 pesanan yang belum dibayar. Bayar atau batalkan dulu, lalu pesan lagi."); return; }
+  if (/rate_limited/.test(m)) { toast("Terlalu banyak pesanan dari nomor ini dalam waktu singkat. Tunggu 10 menit lalu coba lagi."); return; }
   if (/invalid_hp/.test(m)) { toast("Nomor HP tidak valid."); return; }
   if (/invalid_(area|alamat)/.test(m)) { toast("Wilayah atau alamat belum benar."); return; }
   if (/invalid_nama/.test(m)) { toast("Nama belum benar."); return; }
@@ -593,8 +605,8 @@ async function submitOrder(){
   if (!pendingRef || sig !== pendingSig) { pendingRef = newRef(); pendingSig = sig; }
   let res;
   try { res = await api.createOrders({ ...payload, ref:pendingRef }); }
-  catch (e) { btn.disabled = false; $("paid-t").textContent = "Pesan sekarang"; orderFailed(e); return; }
-  btn.disabled = false; $("paid-t").textContent = "Pesan sekarang"; pendingRef = null;
+  catch (e) { btn.disabled = false; $("paid-t").textContent = "Pesan dan lanjut bayar"; orderFailed(e); return; }
+  btn.disabled = false; $("paid-t").textContent = "Pesan dan lanjut bayar"; pendingRef = null;
   placed = res.map(r => ({ id:r.id, gid:r.gid, poId:r.po_id, poDate:r.po_date, fulfil:r.fulfil, hours:r.hours, pickupLoc:r.pickup_loc, total:r.total, items:r.items, ...customer }));
   recorded = true; trackHp = customer.hp;
   const outGs = res.map(r => ({ poId:r.po_id, date:r.po_date, fulfil:r.fulfil, items:r.items, ongkir:r.total - r.items.reduce((a, i) => a + i.price * i.qty, 0), total:r.total }));
@@ -678,14 +690,14 @@ let trackT = null, trackHp = "";
 const unsubTrack = () => { clearInterval(trackT); trackT = null; trackConf = {}; };
 async function pollTrack(){
   if (!placed.length || !sb) return;
-  try { const rows = await api.trackOrders(placed.map(o => o.id), trackHp); rows.forEach(r => { trackConf[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof }; }); Object.assign(lastRows, trackConf); renderLast(); renderTracker(); } catch (e) {}
+  try { const rows = await api.trackOrders(placed.map(o => o.id), trackHp); rows.forEach(r => { trackConf[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof, claimed:!!r.claimed }; }); Object.assign(lastRows, trackConf); renderLast(); renderTracker(); } catch (e) {}
 }
 function startTrack(){ pollTrack(); trackT = setInterval(() => { if (screen === 3 && !document.hidden) pollTrack(); }, 8000); }
 
 const DLV = { baru:["Terkonfirmasi", "ok"], diproses:["Sedang diproses", "info"], diantar:["Dalam pengiriman", "info"], selesai:["Terkirim", "ok"] };
 const DLV_PICK = { baru:["Terkonfirmasi", "ok"], diproses:["Sedang diproses", "info"], diantar:["Siap diambil", "info"], selesai:["Sudah diambil", "ok"] };
 function statusLabel(o){
-  if (o.status === "batal") return ["Dibatalkan", ""];
+  if (o.status === "batal") return o.claimed ? ["Menunggu admin", "info"] : ["Dibatalkan", ""];
   if (o.payStatus === "ditolak") return ["Bayar ditolak", "bad"];
   if (o.payStatus !== "lunas") return o.proof ? ["Bukti dicek admin", "info"] : ["Menunggu bayar", "warn"];
   return (o.fulfil === "ambil" ? DLV_PICK : DLV)[o.status] || DLV.baru;
@@ -695,16 +707,17 @@ function renderTracker(){
   const cs = placed.map(o => trackConf[o.id] || { payStatus:"cek", status:"baru" });
   const allCancel = cs.length && cs.every(c => c.status === "batal"), anyNo = cs.some(c => c.payStatus === "ditolak");
   const allPaid = cs.every(c => c.payStatus === "lunas"), allDone = cs.every(c => c.status === "selesai" || c.status === "batal");
-  const pk = placed[0] && placed[0].fulfil === "ambil", anyProof = placedProof || cs.some(c => c.proof);
+  const pk = placed[0] && placed[0].fulfil === "ambil", anyProof = placedProof || cs.some(c => c.proof), claimed = cs.some(c => c.claimed), canClaim = allCancel && !claimed && cs.every(c => c.payStatus !== "lunas");
   let title, sub, tone = "warn";
   if (!recorded) { title = "Pesanan dibuat"; sub = "Pesanan belum tercatat. Coba lagi."; }
-  else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Pesanan yang belum dibayar dalam 1 jam dibatalkan otomatis. Hubungi admin kalau ini keliru."; tone = "bad"; }
+  else if (allCancel && claimed) { title = "Menunggu admin"; sub = anyProof ? "Bukti diterima. Admin akan mencocokkan dan membuka lagi pesananmu." : "Permintaanmu sudah dikirim ke admin. Unggah bukti bayar supaya cepat dicek."; tone = "warn"; }
+  else if (allCancel) { title = "Pesanan dibatalkan"; sub = canClaim ? "Pesanan yang belum dibayar dalam 1 jam dibatalkan otomatis. Kalau kamu sudah transfer, beri tahu admin." : "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
   else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Unggah bukti yang jelas di bawah."; tone = "bad"; }
   else if (!allPaid && anyProof) { title = "Bukti diterima"; sub = "Admin sedang mengecek pembayaranmu. Statusnya berubah di sini."; }
   else if (!allPaid) { title = "Pesanan dicatat"; sub = "Transfer sesuai jumlah di bawah, lalu kirim bukti bayar."; }
   else if (allDone) { title = "Pesanan selesai"; sub = "Terima kasih, selamat makan!"; tone = "ok"; }
   else { title = "Pesanan terkonfirmasi"; sub = pk ? `Pembayaran diterima. Ambil di ${placed[0].pickupLoc || pickLoc()}, jam ${placed[0].hours || pickHours()}.` : `Pembayaran diterima. Diantar sesuai tanggal PO, jam ${hours()}.`; tone = "ok"; }
-  placedRejected = anyNo; placedProof = placedProof || cs.some(c => c.proof); payVisible = !!recorded && !allPaid && !allCancel; renderPay();
+  placedRejected = anyNo; placedClaimed = allCancel && claimed; placedProof = placedProof || cs.some(c => c.proof); $("claim-wrap").hidden = !canClaim; payVisible = !!recorded && !allPaid && !allCancel; renderPay();
   $("d-title").textContent = title; $("d-sub").textContent = sub; $("d-dot").className = "dot " + (tone === "warn" ? "" : tone);
   tr.innerHTML = placed.map((o, i) => {
     const c = cs[i], [lb, cl] = statusLabel({ fulfil:o.fulfil, payStatus:c.payStatus, status:c.status, proof:c.proof || placedProof });
@@ -723,14 +736,15 @@ function renderLast(){
   const el = $("lastorder");
   if (!lastData) { el.hidden = true; syncQuick(); return; }
   const cs = lastData.placed.map(o => lastRows[o.id] || { payStatus:"cek", status:"baru" });
-  if (cs.every(c => c.status === "selesai" || c.status === "batal")) { lsSet(LS.last, null); lastData = null; el.hidden = true; syncQuick(); return; }
-  const i = Math.max(0, cs.findIndex(c => c.payStatus !== "lunas")), [lb, cl] = statusLabel({ fulfil:lastData.placed[i].fulfil, payStatus:cs[i].payStatus, status:cs[i].status, proof:cs[i].proof || lastData.proof });
+  const keep = cs.every(c => c.status === "batal") && cs.some(c => c.payStatus !== "lunas") && Date.now() - (lastData.at || 0) < 864e5;
+  if (!keep && cs.every(c => c.status === "selesai" || c.status === "batal")) { lsSet(LS.last, null); lastData = null; el.hidden = true; syncQuick(); return; }
+  const i = Math.max(0, cs.findIndex(c => c.payStatus !== "lunas")), [lb, cl] = statusLabel({ fulfil:lastData.placed[i].fulfil, payStatus:cs[i].payStatus, status:cs[i].status, proof:cs[i].proof || lastData.proof, claimed:cs[i].claimed });
   $("lc-id").textContent = lastData.placed.map(o => o.id).join(", ");
   $("lc-chip").className = "chip " + cl; $("lc-chip").textContent = lb; el.hidden = false; syncQuick();
 }
 async function pollLast(){
   if (!lastData || !sb) return;
-  try { const rows = await api.trackOrders(lastData.placed.map(o => o.id), lastData.placed[0].hp); rows.forEach(r => { lastRows[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof }; }); if (rows.some(r => r.has_proof) && !lastData.proof) { lastData.proof = true; lsSet(LS.last, lastData); } renderLast(); } catch (e) {}
+  try { const rows = await api.trackOrders(lastData.placed.map(o => o.id), lastData.placed[0].hp); rows.forEach(r => { lastRows[r.id] = { payStatus:r.pay_status, status:r.status, proof:!!r.has_proof, claimed:!!r.claimed }; }); if (rows.some(r => r.has_proof) && !lastData.proof) { lastData.proof = true; lsSet(LS.last, lastData); } renderLast(); } catch (e) {}
 }
 $("lastorder").onclick = () => {
   if (!lastData) return;
@@ -748,22 +762,25 @@ function initLast(){
 const NEXT = { baru:"diproses", diproses:"diantar", diantar:"selesai" };
 const nextLabel = o => (o.fulfil === "ambil" ? { baru:"Mulai proses", diproses:"Tandai siap diambil", diantar:"Tandai sudah diambil" } : { baru:"Mulai proses", diproses:"Tandai sudah dikirim", diantar:"Tandai sudah sampai" })[o.status];
 const LATE_MS = 36e5;
+const needsCheck = o => o.status !== "batal" && o.payStatus === "cek" && !!o.proofPath;
+const isClaim = o => o.status === "batal" && !!o.claimedAt && o.payStatus === "cek" && !o.refund;
+const payDue = o => Number(o.groupTotal || o.total) + orders.filter(x => x.gid === o.gid).reduce((t, x) => t + (x.kode || 0), 0);
 const isLate = o => o.payStatus === "cek" && !o.proofPath && o.status !== "batal" && o.source !== "wa" && Date.now() - new Date(o.createdAt).getTime() > LATE_MS;
 function statusChip(o){
-  if (o.status === "batal") return ["Dibatalkan", ""];
+  if (o.status === "batal") return isClaim(o) ? ["Klaim sudah transfer", "warn"] : o.refund === "perlu" ? ["Perlu refund", "bad"] : o.refund === "selesai" ? ["Sudah refund", ""] : ["Dibatalkan", ""];
   if (o.payStatus === "ditolak") return ["Bayar ditolak", "bad"];
   if (o.payStatus !== "lunas") return isLate(o) ? ["Lewat batas", "bad"] : o.proofPath ? ["Cek bukti", "warn"] : ["Belum bayar", "warn"];
   const pk = o.fulfil === "ambil";
   return ({ baru:["Siap diproses", "info"], diproses:["Sedang diproses", "info"], diantar:[pk ? "Siap diambil" : "Dalam pengiriman", "info"], selesai:[pk ? "Sudah diambil" : "Terkirim", "ok"] })[o.status] || ["Siap diproses", "info"];
 }
 function primaryAct(o){
-  if (o.status === "batal") return ["reopen", "Buka lagi", "line"];
+  if (o.status === "batal") return o.refund === "perlu" ? ["refund_done", "Tandai sudah refund", ""] : ["reopen", armReopen === o.id ? "Tetap buka lagi" : "Buka lagi", "line"];
   if (o.payStatus !== "lunas") return ["pay_ok", "Konfirmasi bayar", ""];
   if (NEXT[o.status]) return ["next", nextLabel(o), ""];
   return null;
 }
 let orders = [], ordersState = "loading", filter = null, poFilter = "semua", tab = "orders";
-const busy = new Set(), expanded = new Set(); let armCancel = null, armDel = null, armPoDel = null, armLate = false;
+const busy = new Set(), expanded = new Set(); let armCancel = null, armDel = null, armPoDel = null, armLate = false, armReopen = null;
 
 /* ----- bunyi dan judul tab untuk pesanan baru ----- */
 let seenInit = false, actx = null, lastCek = 0;
@@ -796,16 +813,16 @@ const logAct = (action, target, detail = "") => { if (sb && isAdmin) api.logAct(
 const dg = s => String(s || "").replace(/\D/g, "").replace(/^(62|0)/, "");
 const oMatch = (o, q) => { const n = q.trim().toLowerCase(); if (!n) return true; const d = dg(n); return o.id.toLowerCase().includes(n) || String(o.nama || "").toLowerCase().includes(n) || (d.length >= 3 && dg(o.hp).includes(d)); };
 let oq = "", editing = null; const sel = new Set();
-const ACT_MSG = { pay_ok:"Pembayaran dikonfirmasi", pay_no:"Ditandai tidak cocok", pay_undo:"Konfirmasi dibatalkan", next:"Status diperbarui", cancel:"Pesanan dibatalkan", reopen:"Pesanan dibuka lagi" };
+const ACT_MSG = { pay_ok:"Pembayaran dikonfirmasi", pay_no:"Ditandai tidak cocok", pay_undo:"Konfirmasi dibatalkan", next:"Status diperbarui", cancel:"Pesanan dibatalkan", reopen:"Pesanan dibuka lagi", refund_done:"Ditandai sudah dikembalikan" };
 /* satu pintu untuk ubah status: tandai sibuk, simpan, catat, dan beri tombol Urungkan */
 async function applyOrders(targets, patch, msg, act){
-  const prev = targets.map(x => ({ id:x.id, pay_status:x.payStatus, status:x.status }));
+  const prev = targets.map(x => ({ id:x.id, pay_status:x.payStatus, status:x.status, refund:x.refund || "", claimed:x.claimedAt || null })), hasRefund = "refund" in patch, hasClaim = "claimed_at" in patch;
   targets.forEach(x => busy.add(x.id)); renderAdminOrders();
   try {
     await api.updateOrders(targets.map(x => x.id), patch); await refreshOrders(); logAct(act, targets.map(x => x.id).join(", "), JSON.stringify(patch));
     toastUndo(msg, async () => {
-      const by = {}; prev.forEach(p => { (by[p.pay_status + "|" + p.status] = by[p.pay_status + "|" + p.status] || []).push(p); });
-      for (const k in by) await api.updateOrders(by[k].map(p => p.id), { pay_status:by[k][0].pay_status, status:by[k][0].status });
+      const by = {}; prev.forEach(p => { const k = [p.pay_status, p.status, p.refund, p.claimed].join("|"); (by[k] = by[k] || []).push(p); });
+      for (const k in by) { const f = by[k][0]; await api.updateOrders(by[k].map(p => p.id), { pay_status:f.pay_status, status:f.status, ...(hasRefund ? { refund:f.refund } : {}), ...(hasClaim ? { claimed_at:f.claimed } : {}) }); }
       logAct("urungkan", prev.map(p => p.id).join(", ")); await refreshOrders();
     });
   } catch (err) { toast("Gagal menyimpan. Coba lagi."); }
@@ -838,14 +855,15 @@ function printNota(o){
   window.addEventListener("afterprint", done); window.print();
 }
 const FILTERS = [
-  ["cek", "Dicek", o => o.payStatus === "cek" && o.status !== "batal"],
+  ["bukti", "Bukti masuk", o => needsCheck(o) || isClaim(o)],
+  ["belum", "Belum bayar", o => o.payStatus === "cek" && o.status !== "batal" && !o.proofPath],
   ["siap", "Proses", o => o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")],
   ["kirim", "Kirim", o => o.payStatus === "lunas" && o.status === "diantar"],
   ["selesai", "Selesai", o => o.status === "selesai"],
-  ["batal", "Batal", o => o.status === "batal" || o.payStatus === "ditolak"],
+  ["batal", "Batal", o => (o.status === "batal" && !isClaim(o)) || o.payStatus === "ditolak"],
   ["semua", "Semua", () => true]
 ];
-const EMPTY = { cek:"Semua pembayaran sudah dicek.", siap:"Tidak ada pesanan yang menunggu diproses.", kirim:"Tidak ada pesanan yang sedang dikirim atau siap diambil.", selesai:"Belum ada pesanan selesai.", batal:"Tidak ada pesanan batal atau ditolak.", semua:"Belum ada pesanan. Pesanan baru muncul di sini otomatis." };
+const EMPTY = { bukti:"Tidak ada bukti bayar yang menunggu dicek.", belum:"Tidak ada pesanan yang menunggu pembayaran.", siap:"Tidak ada pesanan yang menunggu diproses.", kirim:"Tidak ada pesanan yang sedang dikirim atau siap diambil.", selesai:"Belum ada pesanan selesai.", batal:"Tidak ada pesanan batal atau ditolak.", semua:"Belum ada pesanan. Pesanan baru muncul di sini otomatis." };
 const fmtTime = iso => { const d = new Date(iso); return isNaN(d) ? "" : new Intl.DateTimeFormat("id-ID", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }).format(d); };
 
 function orderRow(o){
@@ -855,7 +873,7 @@ function orderRow(o){
   const main = o.items.filter(i => !i.addon), adds = o.items.filter(i => i.addon), hasNote = !!o.notes || o.items.some(i => i.note);
   const summary = main.map(i => `${Number(i.qty) || 0}× ${i.name}${i.option ? " (" + i.option + ")" : ""}`).join(" · ") + (adds.length ? ` · +${adds.reduce((a, i) => a + (Number(i.qty) || 0), 0)} tambahan` : "");
   const gk = orders.filter(x => x.gid === o.gid).reduce((t, x) => t + (x.kode || 0), 0);
-  let sec = "";
+  let sec = o.status === "batal" && o.refund === "perlu" ? `<button class="btn line sm" data-act="reopen" ${dis}>${ic("undo")}Buka lagi</button>` : "";
   if (o.status !== "batal") {
     if (o.payStatus === "cek") sec += `<button class="btn line sm" data-act="pay_no" ${dis}>${ic("xcircle")}Bayar tidak cocok</button>`;
     if (o.payStatus === "lunas" && (o.status === "baru" || o.status === "diproses")) sec += `<button class="btn line sm" data-act="pay_undo" ${dis}>${ic("undo")}Batalkan konfirmasi</button>`;
@@ -864,9 +882,9 @@ function orderRow(o){
   return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${isLate(o) ? "late" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
       <span class="num">${esc(o.id)}</span>
-      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}</div><div class="o3">${esc(summary)}</div></div>
+      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.proofPath ? `<button class="proofchip" data-proofrow type="button" aria-label="Lihat bukti ${esc(o.id)}">${ic("image")}Bukti</button>` : ""}${o.source === "wa" ? '<span class="otag">WA</span>' : ""}</div><div class="o3">${esc(summary)}</div></div>
       <span class="how">${pk ? "Ambil sendiri" : "Antar" + (o.area ? ", " + esc(o.area) : "")}${grp ? ", gabungan " + o.groupCount + " tanggal" : ""}</span>
-      <span class="amt">${rp(o.total)}</span>
+      <span class="amt">${(o.payStatus === "cek" && o.status !== "batal") || isClaim(o) ? `<b>${rp(payDue(o))}</b><small>${Number(o.groupCount) > 1 ? "transfer gabungan" : "transfer"}</small>` : o.status === "batal" && o.refund === "perlu" ? `<b>${rp(payDue(o))}</b><small>kembalikan</small>` : rp(o.total)}</span>
       <span class="chip st ${sc}">${sl}</span>
       <div class="oside">${o.payStatus === "cek" && o.status !== "batal" ? `<label class="selbox"><input type="checkbox" data-sel aria-label="Pilih ${esc(o.id)}" ${sel.has(o.id) ? "checked" : ""}></label>` : ""}${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
     </div>
@@ -883,6 +901,8 @@ function orderRow(o){
         <div class="ototal"><span>Total</span><span>${rp(o.total)}</span></div>
       </div>
       ${o.notes ? `<p class="onote full">${esc(o.notes)}</p>` : ""}
+      ${o.refund === "perlu" ? `<p class="onote full warn">Pesanan lunas dibatalkan. Kembalikan ${rp(payDue(o))} ke ${esc(o.nama)} (${esc(o.hp)}), lalu tekan Tandai sudah refund.</p>` : ""}
+      ${isClaim(o) ? `<p class="onote full warn">Pembeli mengaku sudah transfer setelah pesanan dibatalkan otomatis. Cek mutasi dan bukti, lalu Buka lagi dan Konfirmasi bayar.</p>` : ""}
       ${gk ? `<p class="onote full">Transfer tepat ${rp(Number(o.groupTotal) + gk)} (kode unik ${rp(gk)}).</p>` : ""}
       ${grp ? `<p class="onote full">Bayar gabungan ${o.groupCount} tanggal, total ${rp(o.groupTotal)}. Konfirmasi berlaku untuk semuanya.</p>` : ""}
       <div class="acts full">${o.proofPath ? `<button class="btn line sm" data-proof="${esc(o.proofPath)}" type="button">${ic("image")}Lihat bukti</button>` : ""}<a class="btn line sm" href="${esc(wa)}" target="_blank" rel="noopener">${ic("chat")}Chat pelanggan</a><button class="btn line sm" data-edit type="button">${ic("edit")}Ubah</button><button class="btn line sm" data-nota type="button">${ic("print")}Cetak nota</button>${sec}</div>
@@ -893,6 +913,7 @@ function editHTML(o){
   const pk = o.fulfil === "ambil", one = Number(o.groupCount) <= 1;
   return `<div class="odetail editbox" data-editbox>
     <div class="full eh"><b>Ubah pesanan ${esc(o.id)}</b></div>
+    ${o.payStatus === "lunas" ? `<p class="onote full warn">Pesanan ini sudah lunas. Mengubah jumlah mengubah total, tapi pembayaran pembeli tidak ikut berubah. Hitung selisihnya dan hubungi pembeli.</p>` : ""}
     <label class="ef">Nama<input data-ef="nama" value="${esc(o.nama)}"></label>
     <label class="ef">No. HP<input data-ef="hp" value="${esc(o.hp)}" inputmode="tel"></label>
     ${pk ? "" : `<label class="ef">Wilayah<select data-ef="area">${AREAS.map(a => `<option ${a === o.area ? "selected" : ""}>${esc(a)}</option>`).join("")}</select></label>
@@ -913,7 +934,7 @@ async function saveEdit(o, box){
   try {
     if (qChanged) await api.editItems(o.id, qs);
     await api.updateOrders([o.id], patch); await refreshOrders(); logAct("ubah_pesanan", o.id, JSON.stringify({ ...patch, jumlah:qChanged ? qs : undefined }));
-    editing = null; toast("Perubahan disimpan");
+    editing = null; toast(o.payStatus === "lunas" && qChanged ? "Tersimpan. Total berubah, hubungi pembeli soal selisih." : "Perubahan disimpan");
   } catch (e) {
     const m = String(e && e.message || "");
     toast(/empty_order/.test(m) ? "Minimal satu menu utama harus ada." : /addon_exceeds/.test(m) ? "Tambahan tidak boleh melebihi menu utama." : /group_order/.test(m) ? "Pesanan gabungan tidak bisa diubah jumlahnya." : /not_admin|forbidden/.test(m) ? "Belum diizinkan. Jalankan ulang schema.sql terbaru." : "Gagal menyimpan. Coba lagi.");
@@ -925,9 +946,17 @@ function selBar(){
   if (!ids.length) { sel.clear(); return ""; }
   return `<div class="selbar" role="region" aria-label="Pilihan"><b>${ids.length} dipilih</b><span class="sp"></span><button class="btn sm" data-bulk="ok" type="button">${ic("check")}Konfirmasi bayar</button><button class="btn line sm" data-bulk="clear" type="button">Batal pilih</button></div>`;
 }
+const quotaOf = (poId, pid) => { const po = (pos || []).find(p => p.id === poId), pr = (products || []).find(p => p.id === pid), q = po && po.quotas && po.quotas[pid] != null && po.quotas[pid] !== "" ? Number(po.quotas[pid]) : (pr && pr.quota != null ? Number(pr.quota) : null); return q == null || isNaN(q) ? null : q; };
+const soldOf = (poId, pid, skip) => orders.filter(x => x.poId === poId && x.id !== skip && x.status !== "batal" && x.payStatus !== "ditolak" && !(x.payStatus === "cek" && !x.proofPath && Date.now() - new Date(x.createdAt).getTime() > LATE_MS))
+  .reduce((t, x) => t + x.items.filter(i => i.pid === pid && !i.addon).reduce((s, i) => s + (Number(i.qty) || 0), 0), 0);
+function reopenWarn(o){
+  const need = {}; o.items.filter(i => !i.addon).forEach(i => { need[i.pid] = (need[i.pid] || 0) + (Number(i.qty) || 0); });
+  for (const pid in need) { const q = quotaOf(o.poId, pid); if (q == null) continue; const sold = soldOf(o.poId, pid, o.id); if (sold + need[pid] > q) { const nm = (o.items.find(i => i.pid === pid) || {}).name || pid; return nm + " sisa " + Math.max(0, q - sold) + ", pesanan ini " + need[pid]; } }
+  return "";
+}
 const lateOrders = () => orders.filter(o => (poFilter === "semua" || o.poId === poFilter) && isLate(o));
 function lateBar(base, cur){
-  const n = base.filter(isLate).length; if (!n || (cur !== "cek" && cur !== "semua")) return "";
+  const n = base.filter(isLate).length; if (!n || (cur !== "belum" && cur !== "semua")) return "";
   return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam dan porsinya tidak ditahan.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
 }
 function renderAdminOrders(){
@@ -938,15 +967,15 @@ function renderAdminOrders(){
   if (poFilter !== "semua" && !(pos || []).some(p => p.id === poFilter)) poFilter = "semua";
   const base = orders.filter(o => (poFilter === "semua" || o.poId === poFilter) && oMatch(o, oq));
   const cnt = k => base.filter(FILTERS.find(f => f[0] === k)[2]).length;
-  if (filter === null && orders.length) filter = ["cek", "siap", "kirim"].find(k => cnt(k) > 0) || "semua";
-  const cur = oq.trim() ? "semua" : (filter || "semua"), f = FILTERS.find(x => x[0] === cur) || FILTERS[5];
-  const list = base.filter(f[2]);
+  if (filter === null && orders.length) filter = ["bukti", "belum", "siap", "kirim"].find(k => cnt(k) > 0) || "semua";
+  const cur = oq.trim() ? "semua" : (filter || "semua"), f = FILTERS.find(x => x[0] === cur) || FILTERS[6];
+  const list = base.filter(f[2]); shownList = list;
   const poOpts = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const byPo = {}; list.forEach(o => { const k = o.poDate || "-"; (byPo[k] = byPo[k] || []).push(o); });
   const dates = Object.keys(byPo).sort((a, b) => a === "-" ? 1 : b === "-" ? -1 : a.localeCompare(b));
   el.innerHTML = `
     <div class="toolbar">
-      <div class="stabs" role="group" aria-label="Filter status">${FILTERS.map(x => { const n = cnt(x[0]); return `<button type="button" data-filter="${x[0]}" aria-pressed="${x[0] === cur}">${x[1]}<span class="c ${x[0] === "cek" && n ? "hot" : ""}">${n}</span></button>`; }).join("")}</div>
+      <div class="stabs" role="group" aria-label="Filter status">${FILTERS.map(x => { const n = cnt(x[0]); return `<button type="button" data-filter="${x[0]}" aria-pressed="${x[0] === cur}">${x[1]}<span class="c ${(x[0] === "bukti" && n) || (x[0] === "batal" && base.some(o => o.refund === "perlu")) ? "hot" : ""}">${n}</span></button>`; }).join("")}</div>
       <label class="osearch">${ic("search")}<input id="o-q" type="search" placeholder="Cari nomor, nama, atau HP" value="${esc(oq)}" aria-label="Cari pesanan" autocomplete="off"></label>
       <button class="btn line sm iconbtn" data-snd type="button" aria-pressed="${sndOn()}" aria-label="Bunyi pesanan baru" title="${sndOn() ? "Bunyi aktif" : "Bunyi mati"}">${ic(sndOn() ? "bell" : "bell-off")}</button>
       <select id="f-po" class="sel" aria-label="Filter tanggal PO"><option value="semua">Semua tanggal</option>${poOpts.map(p => `<option value="${esc(p.id)}" ${p.id === poFilter ? "selected" : ""}>${esc(dShort(p.date))}</option>`).join("")}</select>
@@ -961,6 +990,38 @@ function renderAdminOrders(){
   setCek(cekAll);
 }
 $("a-orders").addEventListener("change", e => { if (e.target.id === "f-po") { poFilter = e.target.value; renderAdminOrders(); } });
+let shownList = [];
+async function openProofViewer(startId){
+  const ids = shownList.filter(o => o.proofPath).map(o => o.id); if (!ids.includes(startId)) ids.unshift(startId);
+  let i = ids.indexOf(startId), seq = 0;
+  const box = document.createElement("div"); box.className = "lightbox pv"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-label", "Bukti bayar");
+  box.innerHTML = `<div class="pv-bar"><div class="pv-who"><b id="pv-t"></b><span id="pv-s"></span></div><span class="pv-n" id="pv-n"></span><button type="button" class="lb-x" aria-label="Tutup">${ic("x")}</button></div>
+    <div class="pv-stage"><button type="button" class="pv-nav" data-pv="-1" aria-label="Bukti sebelumnya">${ic("up")}</button><div class="pv-img" id="pv-img"></div><button type="button" class="pv-nav" data-pv="1" aria-label="Bukti berikutnya">${ic("down")}</button></div>
+    <div class="pv-act" id="pv-act"></div>`;
+  const cur = () => orders.find(o => o.id === ids[i]);
+  const close = () => { box.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = ev => { if (ev.key === "Escape") close(); else if (ev.key === "ArrowRight" || ev.key === "ArrowDown") go(1); else if (ev.key === "ArrowLeft" || ev.key === "ArrowUp") go(-1); };
+  async function show(){
+    const o = cur(); if (!o) { close(); return; } const my = ++seq;
+    box.querySelector("#pv-t").textContent = o.id + " " + (o.nama || ""); box.querySelector("#pv-n").textContent = (i + 1) + " dari " + ids.length;
+    box.querySelector("#pv-s").textContent = (o.payStatus === "lunas" ? "Lunas, " : o.status === "batal" ? "Dibatalkan, " : "Menunggu cek, ") + "transfer " + rp(payDue(o));
+    const act = box.querySelector("#pv-act"), ok = o.status !== "batal" && o.payStatus === "cek";
+    act.innerHTML = ok ? `<button class="btn" data-pvok type="button">${ic("check")}Konfirmasi bayar</button><button class="btn line" data-pvno type="button">${ic("xcircle")}Tidak cocok</button>` : `<span class="pv-note">${o.payStatus === "lunas" ? "Sudah dikonfirmasi" : "Tidak perlu dicek"}</span>`;
+    const im = box.querySelector("#pv-img"); im.innerHTML = '<p class="pv-load">Memuat bukti...</p>';
+    try { const url = await api.proofUrl(o.proofPath); if (my === seq) im.innerHTML = `<img src="${esc(url)}" alt="Foto bukti bayar ${esc(o.id)}">`; }
+    catch (e) { if (my === seq) im.innerHTML = '<p class="pv-load">Bukti belum bisa dibuka. Coba lagi.</p>'; }
+  }
+  const go = d => { const n = i + d; if (n < 0 || n >= ids.length) return; i = n; show(); };
+  box.addEventListener("click", async ev => {
+    if (ev.target === box || ev.target.closest(".lb-x")) { close(); return; }
+    const nv = ev.target.closest("[data-pv]"); if (nv) { go(Number(nv.dataset.pv)); return; }
+    const o = cur(); if (!o) return;
+    const ts = (o.gid ? orders.filter(x => x.gid === o.gid) : [o]).filter(x => x.status !== "batal");
+    if (ev.target.closest("[data-pvok]")) { await applyOrders(ts, { pay_status:"lunas" }, ACT_MSG.pay_ok, "pay_ok"); if (i < ids.length - 1) go(1); else show(); }
+    else if (ev.target.closest("[data-pvno]")) { await applyOrders(ts, { pay_status:"ditolak" }, ACT_MSG.pay_no, "pay_no"); if (i < ids.length - 1) go(1); else show(); }
+  });
+  document.addEventListener("keydown", onKey); document.body.appendChild(box); box.querySelector(".lb-x").focus(); show();
+}
 function openLightbox(url){
   const box = document.createElement("div"); box.className = "lightbox"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Bukti bayar");
   box.innerHTML = `<button type="button" class="lb-x" aria-label="Tutup">${ic("x")}</button><img src="${esc(url)}" alt="Foto bukti bayar">`;
@@ -970,7 +1031,8 @@ function openLightbox(url){
 }
 $("a-orders").addEventListener("click", async e => {
   const pb = e.target.closest("[data-proof]");
-  if (pb) { try { openLightbox(await api.proofUrl(pb.dataset.proof)); } catch (err) { toast("Bukti belum bisa dibuka. Coba lagi."); } return; }
+  if (pb) { const r0 = pb.closest("[data-oid]"); if (r0) openProofViewer(r0.dataset.oid); return; }
+  const pr = e.target.closest("[data-proofrow]"); if (pr) { openProofViewer(pr.closest("[data-oid]").dataset.oid); return; }
   if (e.target.closest("[data-newopen]")) { openNew(); return; }
   const fb = e.target.closest("[data-filter]");
   if (fb) { filter = fb.dataset.filter; armCancel = null; armLate = false; renderAdminOrders(); return; }
@@ -1003,8 +1065,13 @@ $("a-orders").addEventListener("click", async e => {
   else if (act === "pay_undo") { targets = group(); patch = { pay_status:"cek" }; }
   else if (act === "pay_no") { targets = group(); patch = { pay_status:"ditolak" }; }
   else if (act === "next") patch = { status:NEXT[o.status] };
-  else if (act === "cancel") patch = { status:"batal" };
-  else if (act === "reopen") patch = { status:"baru", pay_status:o.payStatus === "ditolak" ? "cek" : o.payStatus };
+  else if (act === "cancel") patch = o.payStatus === "lunas" ? { status:"batal", refund:"perlu" } : { status:"batal" };
+  else if (act === "refund_done") patch = { refund:"selesai" };
+  else if (act === "reopen") {
+    const w = reopenWarn(o);
+    if (w && armReopen !== id) { armReopen = id; toast("Kuota terlampaui: " + w + ". Ketuk lagi untuk tetap membuka."); renderAdminOrders(); return; }
+    armReopen = null; patch = { status:"baru", pay_status:o.payStatus === "ditolak" ? "cek" : o.payStatus, ...(o.claimedAt ? { claimed_at:null } : {}), ...(o.refund === "perlu" ? { refund:"" } : {}) };
+  }
   else return;
   armCancel = null; await applyOrders(targets, patch, ACT_MSG[act] || "Tersimpan", act);
 });
@@ -1256,7 +1323,9 @@ function renderAdminMenu(){
           <span class="pmove"><button class="textbtn iconbtn-t" data-move="up" type="button" aria-label="Naikkan ${esc(p.name)}" title="Naikkan" ${products.indexOf(p) === 0 ? "disabled" : ""}>${ic("up")}</button><button class="textbtn iconbtn-t" data-move="down" type="button" aria-label="Turunkan ${esc(p.name)}" title="Turunkan" ${products.indexOf(p) === products.length - 1 ? "disabled" : ""}>${ic("down")}</button></span>
           <button class="textbtn ${armDel === p.id ? "dangerbtn" : ""}" data-del type="button">${armDel === p.id ? "Yakin hapus menu ini?" : ic("trash") + "Hapus"}</button></div>
       </div></div>`).join("");
+  const noQuota = products.filter(p => p.available !== false && (p.quota == null));
   el.innerHTML = `
+    ${noQuota.length ? `<div class="latebar warnq" role="note">${ic("ban")}<span>${noQuota.length} menu belum punya kuota (${noQuota.map(p => esc(p.name)).join(", ")}). Pesanan tidak dibatasi, jadi bisa melebihi kapasitas dapur.</span></div>` : ""}
     <div class="toolbar"><span class="note" style="margin:0">${assetsNs ? "Ketuk foto untuk mengganti. Dipotong persegi dari tengah." : ""}</span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
     ${rows || `<div class="empty">Belum ada menu.<br><button class="btn sm" style="display:inline-block;margin-top:12px" data-seed>Isi menu awal</button></div>`}`;
 }
@@ -1365,7 +1434,7 @@ function renderAdminSet(){
   if (logOpen) fillLog();
 }
 let logOpen = false;
-const LOGL = { pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (belum bayar 1 jam)", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
+const LOGL = { refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (belum bayar 1 jam)", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
 async function fillLog(){
   const ul = $("log-list"); if (!ul) return;
   try { const rows = await api.loadLog(); ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.at))}</span><span><b>${esc(String(r.actor || "").split("@")[0] || "admin")}</b> ${esc(LOGL[r.action] || r.action)} <span class="mono">${esc(r.target)}</span></span></li>`).join("") : '<li class="note">Belum ada aktivitas.</li>'; }
@@ -1429,8 +1498,8 @@ function hbars(rows){
 function exportSales(){
   const live = orders.filter(o => o.status !== "batal" && o.payStatus !== "ditolak"), rows = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date))).map(p => {
     const os = live.filter(o => o.poId === p.id), paid = os.filter(o => o.payStatus === "lunas");
-    return [p.date, os.length, os.reduce((t, o) => t + portionsOf(o), 0), paid.reduce((t, o) => t + foodOf(o), 0), paid.reduce((t, o) => t + o.ongkir, 0), os.filter(o => o.payStatus === "cek").reduce((t, o) => t + o.total, 0)]; });
-  downloadCsv("penjualan-lapo-doli-" + dayStart() + ".csv", ["Tanggal PO", "Pesanan", "Porsi", "Penjualan lunas", "Ongkir lunas", "Belum dicek bayar"], rows); toast("File CSV diunduh");
+    return [p.date, os.length, os.reduce((t, o) => t + portionsOf(o), 0), paid.reduce((t, o) => t + foodOf(o), 0), paid.reduce((t, o) => t + o.ongkir, 0), os.filter(o => o.payStatus === "cek").reduce((t, o) => t + o.total, 0), paid.filter(o => o.method !== "qris").reduce((t, o) => t + o.total, 0), paid.filter(o => o.method === "qris").reduce((t, o) => t + o.total, 0)]; });
+  downloadCsv("penjualan-lapo-doli-" + dayStart() + ".csv", ["Tanggal PO", "Pesanan", "Porsi", "Penjualan lunas", "Ongkir lunas", "Belum dicek bayar", "Transfer lunas", "QRIS lunas"], rows); toast("File CSV diunduh");
 }
 function renderSales(){
   const el = $("a-sales");
@@ -1482,6 +1551,7 @@ function renderSales(){
       <div class="panel wide"><h3>Penjualan per tanggal PO</h3>${items.length ? colChart(items) : '<p class="note">Belum ada PO.</p>'}</div>
       <div class="panel"><h3>Menu terlaris</h3>${menuRows.length ? hbars(menuRows) : '<p class="note">Belum ada data.</p>'}</div>
       <div class="panel"><h3>Antar atau ambil sendiri</h3>${base.length ? `<div class="stack">${seg("a", nAntar, "Antar")}${seg("b", nAmbil, "Ambil sendiri")}</div><div class="legend"><span><i class="sw a"></i>Antar <b>${nAntar}</b></span><span><i class="sw b"></i>Ambil sendiri <b>${nAmbil}</b></span></div>` : '<p class="note">Belum ada data.</p>'}</div>
+      <div class="panel"><h3>Metode bayar</h3>${base.length ? (() => { const m = {}; base.forEach(o => { const k = o.method === "qris" ? "QRIS" : "Transfer"; const r = m[k] || (m[k] = { n:0, s:0 }); r.n++; r.s += o.total; }); return hbars(Object.keys(m).map(k => ({ label:k, value:m[k].n, a:m[k].n + " pesanan", c:rp(m[k].s) })).sort((x, y) => y.value - x.value)); })() : '<p class="note">Belum ada data.</p>'}</div>
       <div class="panel"><h3>Wilayah pengantaran</h3>${areaRows.length ? hbars(areaRows) : '<p class="note">Belum ada pesanan antar.</p>'}</div>
       <div class="panel"><h3>Nasi dan sop</h3>${Object.keys(add).length ? hbars(Object.keys(add).map(n => ({ label:n, value:add[n].qty, a:add[n].qty + " porsi", c:add[n].rev ? rp(add[n].rev) : "Gratis" })).sort((a, b) => b.value - a.value)) : '<p class="note">Belum ada tambahan.</p>'}</div>
     </div>
@@ -1777,7 +1847,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 16;
+const SCHEMA_VERSION = 17;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
