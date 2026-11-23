@@ -928,7 +928,7 @@ function selBar(){
 const lateOrders = () => orders.filter(o => (poFilter === "semua" || o.poId === poFilter) && isLate(o));
 function lateBar(base, cur){
   const n = base.filter(isLate).length; if (!n || (cur !== "cek" && cur !== "semua")) return "";
-  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam. Porsinya tidak ditahan dan akan dibatalkan otomatis.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
+  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam dan porsinya tidak ditahan.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
 }
 function renderAdminOrders(){
   const el = $("a-orders");
