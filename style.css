@@ -1300,3 +1300,19 @@ img.thumb{background:var(--soft)}
   #a-menu .fgrid .full{grid-column:1/-1}
   #a-menu .prow{gap:var(--sp-3)}
 }
+
+/* penyajian data: angka sejajar dan mudah dipindai */
+#admin{font-variant-numeric:tabular-nums}
+.dt{table-layout:fixed;width:100%}
+.dt th:nth-last-child(1),.dt td:nth-last-child(1){width:132px;white-space:nowrap}
+.dt th:nth-last-child(2),.dt td:nth-last-child(2){width:84px}
+.dt th:nth-last-child(3),.dt td:nth-last-child(3){width:84px}
+.dt tr th:first-child{width:auto}
+.dt .r{text-align:right;white-space:nowrap}
+.dt td:first-child{overflow:hidden;text-overflow:ellipsis}
+@media (min-width:900px){#admin .orow .amt{text-align:right;white-space:nowrap;justify-self:end}}
+#admin .orow .amt{white-space:nowrap}
+.cstat b.muted{font-weight:500;color:var(--text-secondary);font-size:14px}
+.tile small{font-size:12px;line-height:16px;color:var(--text-secondary)}
+@media (max-width:640px){.dt th:nth-last-child(1),.dt td:nth-last-child(1){width:112px}.dt th:nth-last-child(2),.dt td:nth-last-child(2),.dt th:nth-last-child(3),.dt td:nth-last-child(3){width:58px}}
+#admin .orow .o3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;overflow:hidden}
