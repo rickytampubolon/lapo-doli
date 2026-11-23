@@ -1275,3 +1275,28 @@ img.thumb{background:var(--soft)}
 #a-orders .toolbar .osearch{flex:1 1 240px;max-width:none}
 #admin #a-orders .toolbar .stabs:has(button:nth-child(3)){flex:1 1 100%;min-width:100%}
 @media (min-width:900px){#admin .orow-h{grid-template-columns:72px minmax(130px,1.5fr) minmax(110px,1fr) 92px 112px minmax(268px,auto)}}
+
+/* rapikan admin: baris pesanan, form ubah, toolbar ponsel, PO, menu */
+#admin .orow .o3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ef input,.ef select,.ef textarea{width:100%;padding:10px 12px;border:1px solid var(--border-default);border-radius:var(--r-md);background:#fff;font:inherit;color:var(--text-primary);min-height:40px}
+.ef input:focus,.ef select:focus,.ef textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(166,74,61,.22)}
+.eqrow input{width:84px}
+.po-adv{margin-top:var(--sp-2);padding-top:0;border-top:0}
+.po-adv > summary{min-height:28px;font-weight:600;color:var(--accent)}
+.pqrow input{width:120px}
+.pimg small{display:none}
+@media (max-width:640px){
+  #a-orders .toolbar .osearch{flex:1 1 100%;order:1}
+  #a-orders .toolbar .stabs{order:0}
+  #a-orders .toolbar [data-snd]{order:2}
+  #a-orders .toolbar .sel{order:3;flex:1 1 0;min-width:0}
+  #a-orders .toolbar .add{order:4;margin-left:0;flex:none}
+  #admin .po-h{flex-wrap:wrap}
+  #admin .po-h > div{flex:1 1 100%;margin-right:0}
+  #admin .newpo{flex-wrap:wrap}
+  #admin .newpo input{flex:1 1 150px;min-width:0}
+  #admin .newpo .btn{flex:1 1 100%}
+  #a-menu .fgrid{grid-template-columns:1fr 1fr}
+  #a-menu .fgrid .full{grid-column:1/-1}
+  #a-menu .prow{gap:var(--sp-3)}
+}
