@@ -472,7 +472,7 @@ function renderTtl(){
   el.hidden = !on; if (!on) return;
   const ms = placedAt + PAY_WINDOW_MS - Date.now(), s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), d = s % 60;
   el.classList.toggle("late", ms <= 0);
-  el.textContent = ms <= 0 ? "Batas 1 jam sudah lewat, porsimu bisa sudah terpakai orang lain. Unggah bukti, admin akan memeriksa." : "Bayar dalam " + (m >= 1 ? m + " menit " + d + " detik" : d + " detik") + " supaya porsimu aman.";
+  el.textContent = ms <= 0 ? "Batas 1 jam sudah lewat. Pesanan tanpa bukti dibatalkan otomatis. Unggah bukti sekarang atau hubungi admin." : "Bayar dalam " + (m >= 1 ? m + " menit " + d + " detik" : d + " detik") + " supaya porsimu aman.";
 }
 setInterval(() => { if (screen === 3 && !document.hidden && !$("d-ttl").hidden) renderTtl(); }, 1000);
 document.querySelectorAll("[name=fulfil]").forEach(r => r.onchange = () => { fulfil = document.querySelector("[name=fulfil]:checked").value; saveCart(); renderCheckout(); });
@@ -698,7 +698,7 @@ function renderTracker(){
   const pk = placed[0] && placed[0].fulfil === "ambil", anyProof = placedProof || cs.some(c => c.proof);
   let title, sub, tone = "warn";
   if (!recorded) { title = "Pesanan dibuat"; sub = "Pesanan belum tercatat. Coba lagi."; }
-  else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Hubungi admin lewat WhatsApp kalau ini keliru."; tone = "bad"; }
+  else if (allCancel) { title = "Pesanan dibatalkan"; sub = "Pesanan yang belum dibayar dalam 1 jam dibatalkan otomatis. Hubungi admin kalau ini keliru."; tone = "bad"; }
   else if (anyNo) { title = "Pembayaran belum cocok"; sub = "Pembayaran belum ditemukan. Unggah bukti yang jelas di bawah."; tone = "bad"; }
   else if (!allPaid && anyProof) { title = "Bukti diterima"; sub = "Admin sedang mengecek pembayaranmu. Statusnya berubah di sini."; }
   else if (!allPaid) { title = "Pesanan dicatat"; sub = "Transfer sesuai jumlah di bawah, lalu kirim bukti bayar."; }
@@ -864,7 +864,7 @@ function orderRow(o){
   return `<article class="orow ${o.payStatus === "cek" && o.status !== "batal" ? "attn" : ""} ${isLate(o) ? "late" : ""} ${open ? "open" : ""}" data-oid="${esc(o.id)}">
     <div class="orow-h">
       <span class="num">${esc(o.id)}</span>
-      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}${hasNote ? '<span class="otag">Ada catatan</span>' : ""}</div><div class="o3">${esc(summary)}</div></div>
+      <div class="who"><div class="o1"><span class="oname">${esc(o.nama || "Tanpa nama")}</span>${o.source === "wa" ? '<span class="otag">WA</span>' : ""}</div><div class="o3">${esc(summary)}</div></div>
       <span class="how">${pk ? "Ambil sendiri" : "Antar" + (o.area ? ", " + esc(o.area) : "")}${grp ? ", gabungan " + o.groupCount + " tanggal" : ""}</span>
       <span class="amt">${rp(o.total)}</span>
       <span class="chip st ${sc}">${sl}</span>
@@ -928,7 +928,7 @@ function selBar(){
 const lateOrders = () => orders.filter(o => (poFilter === "semua" || o.poId === poFilter) && isLate(o));
 function lateBar(base, cur){
   const n = base.filter(isLate).length; if (!n || (cur !== "cek" && cur !== "semua")) return "";
-  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam. Porsinya sudah tidak ditahan.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
+  return `<div class="latebar">${ic("clock")}<span>${n} pesanan lewat batas bayar 1 jam. Porsinya tidak ditahan dan akan dibatalkan otomatis.</span><button class="btn sm ${armLate ? "danger" : "line"}" data-late type="button">${armLate ? "Yakin batalkan " + n + "?" : "Batalkan " + n}</button></div>`;
 }
 function renderAdminOrders(){
   const el = $("a-orders");
@@ -1158,7 +1158,7 @@ function renderAdminPo(){
       <div class="full"><div class="fl">Kuota khusus PO ini</div><div class="pq">${(products || []).map(p => `<label class="pqrow"><span>${esc(p.name)}</span><input type="number" min="0" data-poquota="${esc(p.id)}" placeholder="${p.quota == null ? "Tanpa batas" : "Ikut " + p.quota}" value="${po.quotas && po.quotas[p.id] != null ? po.quotas[p.id] : ""}" aria-label="Kuota ${esc(p.name)}"></label>`).join("")}</div></div></div>
       <div class="acts"><button class="btn line sm" data-podup type="button">${ic("copy")}Gandakan ke minggu berikutnya</button></div></details>`;
     return `<div class="porow ${on ? "" : "off"}" data-po="${esc(po.id)}">
-      <div class="po-h"><div><h3>${esc(dLong(po.date))}</h3><span class="note">${sched ? `Buka ${esc(fmtWhen(po.opens_at))}` : `${os.length} pesanan${os.length ? ` · ${lunas} lunas` : ""}`}</span></div>
+      <div class="po-h"><div><h3>${esc(dLong(po.date))}</h3><span class="note">${sched ? `Buka ${esc(fmtWhen(po.opens_at))}` : `${os.length} pesanan${os.length ? `, ${lunas} lunas` : ""}`}</span></div>
         <label class="switch"><input type="checkbox" id="po-open-${esc(po.id)}" data-poopen ${on ? "checked" : ""} ${auto ? "disabled" : ""}><span class="track"></span><span>${sched ? "Terjadwal" : on ? "Buka" : auto ? "Tutup otomatis" : "Tutup"}</span></label>
         ${sched ? `<button class="textbtn opennow" data-popennow type="button">${ic("check")}Buka sekarang</button>` : ""}
         <button class="textbtn iconbtn-t ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button" aria-label="Hapus PO" title="Hapus PO">${armPoDel === po.id ? "Yakin hapus?" : ic("trash")}</button></div>${adv}</div>`;
@@ -1238,10 +1238,10 @@ function renderAdminMenu(){
   if (products === null) { el.innerHTML = '<p class="note">Memuat menu...</p>'; return; }
   const rows = products.map(p => `
     <div class="prow ${p.available === false ? "off" : ""}" data-pid="${esc(p.id)}">
-      <label class="pimg" title="Ganti foto">${thumbAdmin(p)}${assetsNs ? "<small>Ganti foto</small>" : ""}${assetsNs ? `<input type="file" accept="image/*" data-up id="up-${esc(p.id)}" aria-label="Foto ${esc(p.name)}">` : ""}</label>
+      <label class="pimg" title="Ganti foto">${thumbAdmin(p)}${assetsNs ? `<input type="file" accept="image/*" data-up id="up-${esc(p.id)}" aria-label="Foto ${esc(p.name)}">` : ""}</label>
       <div class="pmain">
         <div class="fgrid">
-          <div><label class="fl" for="n-${esc(p.id)}">Nama</label><input type="text" id="n-${esc(p.id)}" data-f="name" value="${esc(p.name)}"></div>
+          <div class="full"><label class="fl" for="n-${esc(p.id)}">Nama</label><input type="text" id="n-${esc(p.id)}" data-f="name" value="${esc(p.name)}"></div>
           <div><label class="fl" for="pr-${esc(p.id)}">Harga (Rp)</label><input type="text" id="pr-${esc(p.id)}" data-f="price" value="${(Number(p.price) || 0).toLocaleString("id-ID")}" inputmode="numeric" autocomplete="off"></div>
           <div><label class="fl" for="q-${esc(p.id)}">Kuota per PO</label><input type="number" id="q-${esc(p.id)}" data-f="quota" value="${p.quota == null ? "" : p.quota}" min="0" step="1" inputmode="numeric" placeholder="Tanpa batas"></div>
           <div class="full"><label class="fl" for="d-${esc(p.id)}">Deskripsi</label><input type="text" id="d-${esc(p.id)}" data-f="desc" value="${esc(p.desc)}"></div>
@@ -1257,7 +1257,7 @@ function renderAdminMenu(){
           <button class="textbtn ${armDel === p.id ? "dangerbtn" : ""}" data-del type="button">${armDel === p.id ? "Yakin hapus menu ini?" : ic("trash") + "Hapus"}</button></div>
       </div></div>`).join("");
   el.innerHTML = `
-    <div class="toolbar"><span class="note" style="margin:0">${assetsNs ? "Ketuk gambar untuk ganti foto. Foto dipotong persegi dari tengah, paling bagus terang dan dari atas." : ""}</span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
+    <div class="toolbar"><span class="note" style="margin:0">${assetsNs ? "Ketuk foto untuk mengganti. Dipotong persegi dari tengah." : ""}</span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
     ${rows || `<div class="empty">Belum ada menu.<br><button class="btn sm" style="display:inline-block;margin-top:12px" data-seed>Isi menu awal</button></div>`}`;
 }
 const menuEl = $("a-menu");
@@ -1365,7 +1365,7 @@ function renderAdminSet(){
   if (logOpen) fillLog();
 }
 let logOpen = false;
-const LOGL = { pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
+const LOGL = { pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (belum bayar 1 jam)", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
 async function fillLog(){
   const ul = $("log-list"); if (!ul) return;
   try { const rows = await api.loadLog(); ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.at))}</span><span><b>${esc(String(r.actor || "").split("@")[0] || "admin")}</b> ${esc(LOGL[r.action] || r.action)} <span class="mono">${esc(r.target)}</span></span></li>`).join("") : '<li class="note">Belum ada aktivitas.</li>'; }
@@ -1450,7 +1450,7 @@ function renderSales(){
 
   const poVal = po => live.filter(o => o.poId === po.id && inBasis(o)).reduce((t, o) => t + foodOf(o), 0);
   const refPo = salesPo !== "semua" ? poSorted.find(p => p.id === salesPo) : withOrders[withOrders.length - 1], refIdx = refPo ? withOrders.findIndex(p => p.id === refPo.id) : -1, prevPo = refIdx > 0 ? withOrders[refIdx - 1] : null;
-  const cmpTile = prevPo && poVal(prevPo) > 0 ? (() => { const d = Math.round((poVal(refPo) - poVal(prevPo)) / poVal(prevPo) * 100); return `<div class="tile"><span>Dibanding PO sebelumnya</span><b class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : ""}${d}%</b><small>${esc(dShort(refPo.date))} vs ${esc(dShort(prevPo.date))}</small></div>`; })() : `<div class="tile"><span>Dibanding PO sebelumnya</span><b>-</b><small>Belum ada pembanding</small></div>`;
+  const cmpTile = prevPo && poVal(prevPo) > 0 ? (() => { const d = Math.round((poVal(refPo) - poVal(prevPo)) / poVal(prevPo) * 100); return `<div class="tile"><span>Dibanding PO sebelumnya</span><b class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : ""}${d}%</b><small>${rp(poVal(refPo))} vs ${rp(poVal(prevPo))} (${esc(dShort(prevPo.date))})</small></div>`; })() : `<div class="tile"><span>Dibanding PO sebelumnya</span><b>-</b><small>Belum ada pembanding</small></div>`;
   const items = poSorted.filter(po => rangeIds.has(po.id)).map(po => { const os = live.filter(o => o.poId === po.id && inBasis(o));
     return { id:po.id, label:dShort(po.date).replace(/^\S+,?\s*/, ""), full:dLong(po.date), value:os.reduce((a, o) => a + foodOf(o), 0), count:os.length, dim:salesPo !== "semua" && salesPo !== po.id }; });
 
@@ -1485,9 +1485,9 @@ function renderSales(){
       <div class="panel"><h3>Wilayah pengantaran</h3>${areaRows.length ? hbars(areaRows) : '<p class="note">Belum ada pesanan antar.</p>'}</div>
       <div class="panel"><h3>Nasi dan sop</h3>${Object.keys(add).length ? hbars(Object.keys(add).map(n => ({ label:n, value:add[n].qty, a:add[n].qty + " porsi", c:add[n].rev ? rp(add[n].rev) : "Gratis" })).sort((a, b) => b.value - a.value)) : '<p class="note">Belum ada tambahan.</p>'}</div>
     </div>
-    <details class="tview panel"><summary>Lihat sebagai tabel</summary><div class="tw"><table><thead><tr><th>Tanggal PO</th><th class="r">Pesanan</th><th class="r">Porsi</th><th class="r">Penjualan</th></tr></thead><tbody>${poSorted.map(po => { const os = live.filter(o => o.poId === po.id && inBasis(o));
-      return `<tr><td>${esc(dLong(po.date))}</td><td class="r">${os.length}</td><td class="r">${os.reduce((a, o) => a + portionsOf(o), 0)}</td><td class="r">${rp(os.reduce((a, o) => a + foodOf(o), 0))}</td></tr>`; }).join("")}</tbody></table></div>
-      <div class="tw"><table><thead><tr><th>Menu (sesuai filter)</th><th class="r">Porsi</th><th class="r">Penjualan</th></tr></thead><tbody>${Object.keys(menu).map(n => `<tr><td>${esc(n)}</td><td class="r">${menu[n].qty}</td><td class="r">${rp(menu[n].rev)}</td></tr>`).join("") || '<tr><td colspan="3">Belum ada data.</td></tr>'}</tbody></table></div></details>
+    <details class="tview panel"><summary>Lihat sebagai tabel</summary><div class="tw"><table class="dt"><thead><tr><th>Tanggal PO</th><th class="r">Pesanan</th><th class="r">Porsi</th><th class="r">Penjualan</th></tr></thead><tbody>${poSorted.map(po => { const os = live.filter(o => o.poId === po.id && inBasis(o));
+      return `<tr><td>${esc(dShort(po.date))}</td><td class="r">${os.length}</td><td class="r">${os.reduce((a, o) => a + portionsOf(o), 0)}</td><td class="r">${rp(os.reduce((a, o) => a + foodOf(o), 0))}</td></tr>`; }).join("")}</tbody></table></div>
+      <div class="tw"><table class="dt"><thead><tr><th>Menu</th><th class="r"></th><th class="r">Porsi</th><th class="r">Penjualan</th></tr></thead><tbody>${Object.keys(menu).map(n => `<tr><td>${esc(n)}</td><td class="r"></td><td class="r">${menu[n].qty}</td><td class="r">${rp(menu[n].rev)}</td></tr>`).join("") || '<tr><td colspan="3">Belum ada data.</td></tr>'}</tbody></table></div></details>
   </div>`;
 }
 const tipEl = $("tip");
@@ -1613,7 +1613,7 @@ function renderCust(){
   const rows = list.map(c => { const open = custOpen.has(c.key), note = custNotes[c.key] || "";
     return `<article class="crow ${open ? "open" : ""}" data-ck="${esc(c.key)}">
       <div class="crow-h"><div class="cwho"><b>${esc(c.nama || "Tanpa nama")}</b>${c.n > 1 ? '<span class="otag">Langganan</span>' : ""}${note ? '<span class="otag">Ada catatan</span>' : ""}<small>${esc(c.hp)}</small></div>
-        <div class="cstat"><b>${rp(c.spent)}</b><small>${c.n} pesanan, terakhir ${esc(fmtTime(c.last))}</small></div>
+        <div class="cstat">${c.spent ? `<b>${rp(c.spent)}</b>` : `<b class="muted">Belum bayar</b>`}<small>${c.n} pesanan, terakhir ${esc(fmtTime(c.last))}</small></div>
         <button class="btn line sm iconbtn" data-ctoggle type="button" aria-expanded="${open}" aria-label="${open ? "Tutup" : "Buka"} detail ${esc(c.nama || "")}">${ic("chevron", open ? "flip" : "")}</button></div>
       ${open ? `<div class="cdetail"><label class="ef full">Catatan pelanggan<textarea data-cnote placeholder="Mis. tidak makan babi, alamat kantor di lantai 9" maxlength="500">${esc(note)}</textarea></label>
         <ul class="chist">${c.os.slice().reverse().slice(0, 12).map(o => { const [sl, sc] = statusChip(o); return `<li><button class="linkbtn mono" data-cgo="${esc(o.id)}" type="button">${esc(o.id)}</button><span>${o.poDate ? esc(dShort(o.poDate)) : ""}</span><span>${rp(o.total)}</span><span class="chip st ${sc}">${sl}</span></li>`; }).join("")}</ul>
@@ -1777,7 +1777,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 15;
+const SCHEMA_VERSION = 16;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }

@@ -579,9 +579,52 @@ create policy customer_notes_admin on public.customer_notes for all to authentic
   using (public.is_admin()) with check (public.is_admin());
 revoke all on public.customer_notes from anon;
 
+-- ---------------------------------------------------------------------
+-- 6f. Batal otomatis: pesanan web yang belum dikonfirmasi, belum ada bukti bayar, dan sudah lewat 1 jam
+--     dibatalkan oleh sistem (dicatat di log aktivitas). Pesanan manual (WhatsApp) tidak disentuh.
+--     Dijadwalkan tiap 5 menit lewat pg_cron kalau ekstensinya tersedia (aktifkan di Supabase:
+--     Database, Extensions, pg_cron). Tanpa pg_cron, admin tetap bisa membatalkan lewat tombol "Batalkan" di bar Lewat batas.
+-- ---------------------------------------------------------------------
+create or replace function public.auto_cancel_unpaid()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare n integer; ids text;
+begin
+  with c as (
+    update public.orders set status = 'batal'
+     where status = 'baru' and pay_status = 'cek' and proof_path = '' and source = 'web'
+       and created_at < now() - interval '1 hour'
+    returning id
+  )
+  select count(*), string_agg(id, ', ' order by id) into n, ids from c;
+  if n > 0 then
+    insert into public.activity_log (actor, action, target, detail) values ('sistem', 'batal_otomatis', left(ids, 200), 'belum bayar lebih dari 1 jam');
+  end if;
+  return n;
+end;
+$$;
+revoke all on function public.auto_cancel_unpaid() from public;
+revoke all on function public.auto_cancel_unpaid() from anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
+    create extension if not exists pg_cron;
+    perform cron.unschedule(jobid) from cron.job where jobname = 'lapo-auto-cancel';
+    perform cron.schedule('lapo-auto-cancel', '*/5 * * * *', 'select public.auto_cancel_unpaid()');
+  else
+    raise notice 'pg_cron belum tersedia: batal otomatis belum terjadwal.';
+  end if;
+exception when others then
+  raise notice 'Jadwal batal otomatis belum terpasang: %', sqlerrm;
+end $$;
+
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 15 $$;
+returns integer language sql immutable as $$ select 16 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

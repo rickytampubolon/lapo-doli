@@ -179,3 +179,7 @@ Tanpa kunci, kolom pencarian tersembunyi dan pembeli mengetik alamat seperti bia
 - **Pengaturan**: Aktivitas terbaru (log siapa mengubah apa).
 
 Semua ini memakai skema v15: jalankan ulang `supabase/schema.sql`.
+
+## Batal otomatis
+
+Pesanan web yang belum dikonfirmasi, belum ada bukti bayar, dan sudah lewat 1 jam dibatalkan sistem (`auto_cancel_unpaid`), dicatat di Aktivitas terbaru sebagai "sistem". Pesanan manual dari WhatsApp tidak disentuh. Penjadwalan tiap 5 menit memakai **pg_cron**: aktifkan di Supabase (Database, Extensions, pg_cron) lalu jalankan ulang `supabase/schema.sql` (v16). Tanpa pg_cron, pakai tombol Batalkan di bar "Lewat batas" di tab Pesanan. Pesanan yang batal karena terlambat bayar bisa dibuka lagi admin lewat "Buka lagi".
