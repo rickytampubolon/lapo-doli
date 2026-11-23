@@ -214,7 +214,7 @@ function renderMenu(){
     const opts = optsOf(p), adds = addonsOf(p), k = act.id + "::" + p.id, img = imgSrc(p), rem = remainOf(act.id, p.id), off = p.available === false || rem === 0, showP = opts.some(o => o.custom);
     const thumb = img ? `<img class="thumb" src="${esc(img)}" alt="${esc(p.name)}" width="96" height="96" loading="${i < 2 ? "eager" : "lazy"}" decoding="async" data-fallback="${esc(p.emoji || "🍽️")}">` : `<div class="thumb tile" aria-hidden="true">${esc(p.emoji || "🍽️")}</div>`;
     const custom = !off && (opts.length > 0 || adds.length > 0);
-    const ctl = off ? '<span class="soldout">Habis</span>' : custom ? '<button type="button" class="addbtn" data-pick aria-haspopup="dialog" aria-expanded="false">Tambah</button>' : stepper(k, p.name);
+    const ctl = off ? '' : custom ? '<button type="button" class="addbtn" data-pick aria-haspopup="dialog" aria-expanded="false">Tambah</button>' : stepper(k, p.name);
     const addsHTML = !off && adds.length ? `<div class="subs adds" data-po="${esc(act.id)}" data-pid="${esc(p.id)}" hidden><div class="subs-title">Tambahan</div>${adds.map(a => { const ak = addonKey(act.id, p.id, a.id);
       return `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${stepper(ak, a.name + " untuk " + p.name, (cart[ak] || 0) >= mainQty(act.id, p.id))}</div>`; }).join("")}</div>` : "";
     const note = off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note value="${esc(itemNotes[k] || "")}" maxlength="120" placeholder="Catatan, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}"></div>`;
@@ -230,7 +230,7 @@ function renderMenu(){
         <div class="sheet-f"><button type="button" class="btn" data-close>Selesai<span data-sub></span></button></div>
       </div>` : "";
     return `<div class="item ${off ? "off" : ""}" data-pid="${esc(p.id)}" data-po="${esc(act.id)}" style="--i:${i}">
-      <div class="ihead"><div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="irow2"><span class="price">${priceTxt}</span>${rem != null && rem > 0 && rem <= 10 ? `<span class="left">sisa ${rem}</span>` : ""}</div></div>${thumb}</div>
+      <div class="ihead"><div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="irow2"><span class="price">${priceTxt}</span>${off ? '<span class="left sold">Habis</span>' : rem != null && rem > 0 && rem <= 10 ? `<span class="left">sisa ${rem}</span>` : ""}</div></div>${thumb}</div>
       <div class="ifoot">${custom ? `<span class="cust">${ic("settings")}Bisa disesuaikan</span>` : "<span></span>"}${ctl}</div>
       ${sheet}${custom ? "" : note}</div>`;
   }).join("");
@@ -411,7 +411,7 @@ function updateBar(){
 }
 function summaryHTML(gs, kode = 0){
   const h = gs.map(g => `<div class="gh">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}, ${esc(hoursFor(g.fulfil))}</div>` +
-    g.items.map(l => `<div><span>${l.qty} × ${esc(l.name)}${l.option ? " (" + esc(l.option) + ")" : ""}</span><span>${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>${l.note ? `<div class="lnote">Catatan: ${esc(l.note)}</div>` : ""}`).join("") +
+    g.items.filter(l => Number(l.qty) > 0).map(l => `<div><span>${l.qty} × ${esc(l.name)}${l.option ? " (" + esc(l.option) + ")" : ""}</span><span>${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>${l.note ? `<div class="lnote">Catatan: ${esc(l.note)}</div>` : ""}`).join("") +
     (g.ongkir ? `<div><span>Ongkir Lalamove</span><span>${rp(g.ongkir)}</span></div>` : g.fulfil === "ambil" ? "<div><span>Ambil sendiri</span><span>Tanpa ongkir</span></div>" : "")).join("");
   return h + (kode ? `<div><span>Kode unik</span><span>${rp(kode)}</span></div>` : "") + `<div class="total"><span>Total</span><span>${rp(grand(gs) + kode)}</span></div>`;
 }
@@ -498,6 +498,7 @@ function renderPayInfo(){
 /* Kotak bayar di layar setelah pesan: jumlah tepat (dengan kode unik) dan tujuan transfer */
 function renderPay(){
   const need = (payVisible && (!placedProof || placedRejected)) || (placedClaimed && !placedProof);
+  $("s3-share").hidden = !placedProof;
   $("d-proofwrap").hidden = !need; $("d-proofok").hidden = !((payVisible || placedClaimed) && placedProof && !placedRejected);
   $("d-up-t").textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar";
   $("cancel-order").hidden = !(payVisible && !placedProof); if ($("cancel-order").hidden) resetCancel();
@@ -617,7 +618,7 @@ async function submitOrder(){
   chk("nama", val.nama($("nama").value)); chk("hp", val.hp($("hp").value));
   if (isPick()) { chk("area", ""); chk("alamat", ""); } else { chk("area", val.area($("area").value)); chk("alamat", val.alamat($("alamat").value)); }
   if (!ok) { const f = [...document.querySelectorAll("#s2 .err")].find(x => x.textContent && !x.closest("[hidden]")); if (f) f.scrollIntoView({ behavior:"smooth", block:"center" }); return; }
-  if (!sb) { toast("Toko belum tersambung ke database."); return; }
+  if (!sb) { toast("Toko belum siap dipakai. Coba lagi nanti."); return; }
   const btn = $("paid"); btn.disabled = true; $("paid-t").textContent = "Memproses...";
   const method = document.querySelector("[name=pay]:checked").value, gs = groups();
   const customer = { nama:$("nama").value.trim(), hp:$("hp").value.trim(), fulfil, area:isPick() ? "" : $("area").value, alamat:isPick() ? "" : $("alamat").value.trim(), maps:isPick() ? "" : mapsUrl, notes:$("notes").value.trim(), method };
@@ -846,7 +847,7 @@ async function applyOrders(targets, patch, msg, act){
       for (const k in by) { const f = by[k][0]; await api.updateOrders(by[k].map(p => p.id), { pay_status:f.pay_status, status:f.status, ...(hasRefund ? { refund:f.refund } : {}), ...(hasClaim ? { claimed_at:f.claimed } : {}) }); }
       logAct("urungkan", prev.map(p => p.id).join(", ")); await refreshOrders();
     });
-  } catch (err) { toast("Gagal menyimpan. Coba lagi."); }
+  } catch (err) { toast("Belum tersimpan. Coba lagi."); }
   targets.forEach(x => busy.delete(x.id)); renderAdminOrders();
 }
 /* pesan WhatsApp siap kirim */
@@ -958,7 +959,7 @@ async function saveEdit(o, box){
     editing = null; toast(o.payStatus === "lunas" && qChanged ? "Tersimpan. Total berubah, hubungi pembeli soal selisih." : "Perubahan disimpan");
   } catch (e) {
     const m = String(e && e.message || "");
-    toast(/empty_order/.test(m) ? "Minimal satu menu utama harus ada." : /addon_exceeds/.test(m) ? "Tambahan tidak boleh melebihi menu utama." : /group_order/.test(m) ? "Pesanan gabungan tidak bisa diubah jumlahnya." : /not_admin|forbidden/.test(m) ? "Belum diizinkan. Jalankan ulang schema.sql terbaru." : "Gagal menyimpan. Coba lagi.");
+    toast(/empty_order/.test(m) ? "Minimal satu menu utama harus ada." : /addon_exceeds/.test(m) ? "Tambahan tidak boleh melebihi menu utama." : /group_order/.test(m) ? "Pesanan gabungan tidak bisa diubah jumlahnya." : /not_admin|forbidden/.test(m) ? "Belum diizinkan. Jalankan ulang schema.sql terbaru." : "Belum tersimpan. Coba lagi.");
   }
   busy.delete(o.id); renderAdminOrders();
 }
@@ -1205,7 +1206,7 @@ async function createManual(){
       <div class="acts"><button class="btn" data-ncopy type="button">${ic("copy")}Salin teks</button><a class="btn line" target="_blank" rel="noopener" href="https://wa.me/${normPhone(o.hp)}?text=${encodeURIComponent(txt)}">Buka WhatsApp pelanggan</a></div>
       <div class="acts" style="margin-top:18px"><button class="btn line" data-nagain type="button">Buat pesanan lain</button><button class="btn line" data-nclose type="button">Kembali ke daftar</button></div></div>`;
     window.scrollTo({ top:0 });
-  } catch (e) { toast("Gagal menyimpan. Coba lagi."); btn.disabled = false; }
+  } catch (e) { toast("Belum tersimpan. Coba lagi."); btn.disabled = false; }
 }
 const newEl = $("a-new");
 newEl.addEventListener("click", async e => {
@@ -1278,19 +1279,19 @@ poEl.addEventListener("change", async e => {
   if (t.matches("[data-pocutoff]")) {
     const id = t.closest("[data-po]").dataset.po, raw = t.value.trim(); let v = "";
     if (raw) { if (!/^\d{1,2}[:.]\d{2}$/.test(raw)) { toast("Format jam salah. Contoh: 10.00"); renderAdminPo(); return; } v = raw.replace(".", ":").padStart(5, "0"); if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) { toast("Jam tidak valid."); renderAdminPo(); return; } }
-    try { await api.setPoFields(id, { cutoff:v }); await refreshPos(); logAct("batas_tutup_po", id, v || "ikut pengaturan"); toast(v ? "Tutup pukul " + v.replace(":", ".") : "Ikut jam di Pengaturan"); } catch (err) { toast("Gagal menyimpan. Jalankan ulang schema.sql terbaru."); renderAdminPo(); }
+    try { await api.setPoFields(id, { cutoff:v }); await refreshPos(); logAct("batas_tutup_po", id, v || "ikut pengaturan"); toast(v ? "Tutup pukul " + v.replace(":", ".") : "Ikut jam di Pengaturan"); } catch (err) { toast("Belum tersimpan. Jalankan ulang schema.sql terbaru."); renderAdminPo(); }
     return;
   }
   if (t.matches("[data-poquota]")) {
     const row = t.closest("[data-po]"), id = row.dataset.po, q = {};
     row.querySelectorAll("[data-poquota]").forEach(i => { if (i.value.trim() !== "") q[i.dataset.poquota] = Math.max(0, Math.round(Number(i.value) || 0)); });
-    try { await api.setPoFields(id, { quotas:q }); await refreshPos(); logAct("kuota_po", id, JSON.stringify(q)); toast("Kuota PO disimpan"); } catch (err) { toast("Gagal menyimpan. Jalankan ulang schema.sql terbaru."); renderAdminPo(); }
+    try { await api.setPoFields(id, { quotas:q }); await refreshPos(); logAct("kuota_po", id, JSON.stringify(q)); toast("Kuota PO disimpan"); } catch (err) { toast("Belum tersimpan. Jalankan ulang schema.sql terbaru."); renderAdminPo(); }
     return;
   }
   if (!t.matches("[data-poopen]")) return;
   const id = t.closest("[data-po]").dataset.po;
   try { await api.setPoOpen(id, t.checked); await refreshPos(); toast(t.checked ? "PO dibuka" : "PO ditutup"); }
-  catch (err) { toast("Gagal menyimpan. Coba lagi."); renderAdminPo(); }
+  catch (err) { toast("Belum tersimpan. Coba lagi."); renderAdminPo(); }
 });
 poEl.addEventListener("click", async e => {
   try {
@@ -1315,7 +1316,7 @@ poEl.addEventListener("click", async e => {
       if (armPoDel !== id) { armPoDel = id; renderAdminPo(); return; }
       armPoDel = null; await api.deletePo(id); await refreshPos(); toast("PO dihapus");
     }
-  } catch (err) { toast("Gagal menyimpan. Coba lagi."); }
+  } catch (err) { toast("Belum tersimpan. Coba lagi."); }
 });
 
 /* --- menu dan harga --- */
@@ -1394,7 +1395,7 @@ menuEl.addEventListener("change", async e => {
     else v = t.value.trim();
     if (k === "name" && !v) { toast("Nama menu tidak boleh kosong"); renderAdminMenu(); return; }
     await api.updateProduct(pid, { [k]:v }); await refreshProducts(); toast("Tersimpan");
-  } catch (err) { toast("Gagal menyimpan. Coba lagi."); }
+  } catch (err) { toast("Belum tersimpan. Coba lagi."); }
 });
 menuEl.addEventListener("click", async e => {
   try {
@@ -1422,7 +1423,7 @@ menuEl.addEventListener("click", async e => {
       if (armDel !== pid) { armDel = pid; renderAdminMenu(); return; }
       armDel = null; await api.deleteProduct(pid); await refreshProducts(); toast("Menu dihapus");
     }
-  } catch (err) { toast("Gagal menyimpan. Coba lagi."); }
+  } catch (err) { toast("Belum tersimpan. Coba lagi."); }
 });
 
 /* --- pengaturan --- */
@@ -1430,47 +1431,43 @@ function renderAdminSet(){
   const s = settings, el = $("a-set");
   const f = (id, key, label, val, opts = "", full = false) => `<div class="${full ? "full" : ""}"><label class="fl" for="${id}">${label}</label><input type="${opts.includes("number") ? "number" : "text"}" id="${id}" data-s="${key}" value="${esc(val)}" ${opts}></div>`;
   el.innerHTML = `
-    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("truck")}</span><div><h3>Antar dan ambil</h3></div></div><div class="fgrid">
+    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("truck")}</span><div><h3>Toko dan pengantaran</h3></div></div><div class="fgrid">
       ${f("s-jam", "deliveryHours", "Jam pengantaran", s.deliveryHours, 'placeholder="12.00 - 14.00"')}
       ${f("s-pj", "pickupHours", "Jam ambil", s.pickupHours, 'placeholder="12.00 - 14.00"')}
       ${f("s-co", "poCutoff", "Tutup PO pukul", s.poCutoff, 'placeholder="10:00"')}
       ${f("s-og", "ongkir", "Ongkir (Rp, 0 = gratis)", Number(s.ongkir) || 0, 'number min="0" step="500" inputmode="numeric"')}
+      ${f("s-wa", "waNumber", "WhatsApp admin (62...)", s.waNumber, 'inputmode="numeric"')}
       ${f("s-pl", "pickupLocation", "Lokasi ambil", s.pickupLocation, "", true)}
     </div></section>
     <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("receipt")}</span><div><h3>Pembayaran</h3></div></div><div class="fgrid">
       ${f("s-bn", "bankName", "Nama bank", s.bankName)}
       ${f("s-bno", "bankNumber", "Nomor rekening", s.bankNumber, 'inputmode="numeric"')}
       ${f("s-bh", "bankHolder", "Atas nama", s.bankHolder)}
+      ${f("s-pw", "payWindowMin", "Batas bayar (menit)", payMin(), 'number min="15" max="240" step="5" inputmode="numeric"')}
     </div>
+    <p class="fhint">Pesanan tanpa bukti bayar dibatalkan setelah batas ini (15 sampai 240 menit). Pembeli bisa menambah 30 menit sekali.</p>
+    <label class="switch setrow"><input type="checkbox" id="s-uc" data-s="uniqueCode" ${s.uniqueCode !== false ? "checked" : ""}><span class="track"></span><span>Kode unik Rp 1 sampai 100 di jumlah transfer${s.uniqueCode !== false ? "" : " (mati)"}</span></label>
     <div class="qrisbox">${s.qrisUrl ? `<img src="${esc(s.qrisUrl)}" alt="QRIS">` : ""}
       <div><div class="fl">QRIS</div>${s.qrisUrl ? "" : '<p class="fhint" style="margin:0 0 8px">Belum ada gambar.</p>'}
-      <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti" : "Unggah"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus QRIS</button>' : ""}</div></div></div></section>
-    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("clock")}</span><div><h3>Batas bayar</h3></div></div><div class="fgrid">
-      ${f("s-pw", "payWindowMin", "Batas bayar (menit, 15 sampai 240)", payMin(), 'number min="15" max="240" step="5" inputmode="numeric"')}</div>
-      <p class="fhint">Pesanan tanpa bukti bayar dibatalkan setelah batas ini. Pembeli bisa menambah 30 menit sekali dari layar bayar.</p></section>
+      <div class="acts">${assetsNs ? `<label class="btn line sm filebtn">${s.qrisUrl ? "Ganti" : "Unggah"}<input type="file" accept="image/*" id="s-qris" data-qris aria-label="Unggah gambar QRIS"></label>` : '<span class="fhint">Butuh akses edit.</span>'}${s.qrisUrl ? '<button class="btn line sm" data-qris-del type="button">Hapus</button>' : ""}</div></div></div></section>
     <section class="card setsec" id="nf-sec"><div class="gc-h"><span class="gc-ic">${ic("chat")}</span><div><h3>Notifikasi WhatsApp ke pembeli</h3></div></div>
-      <label class="switch"><input type="checkbox" id="nf-on" data-s="notifyOn" ${s.notifyOn ? "checked" : ""}><span class="track"></span><span>${s.notifyOn ? "Aktif" : "Mati"}</span></label>
+      <label class="switch setrow"><input type="checkbox" id="nf-on" data-s="notifyOn" ${s.notifyOn ? "checked" : ""}><span class="track"></span><span>${s.notifyOn ? "Aktif" : "Mati"}</span></label>
       <div class="nkinds">${NKINDS.map(([k, l]) => `<label class="nk"><input type="checkbox" data-nk="${k}" ${(s.notifyKinds || {})[k] === false ? "" : "checked"}><span>${l}</span></label>`).join("")}</div>
-      <div class="fgrid"><div><label class="fl" for="nf-prov">Penyedia</label><select id="nf-prov"><option value="fonnte">Fonnte</option><option value="webhook">Webhook sendiri</option></select></div>
-        <div><label class="fl" for="nf-tok">Token (tidak ditampilkan lagi setelah disimpan)</label><input type="password" id="nf-tok" autocomplete="off" placeholder="Token"></div>
-        <div class="full" id="nf-urlw" hidden><label class="fl" for="nf-url">URL webhook (menerima POST JSON target, message, kind, ref)</label><input type="text" id="nf-url" autocomplete="off" placeholder="https://..."></div></div>
-      <div class="acts"><button class="btn sm" id="nf-save" type="button">Simpan penyedia</button></div>
-      <div class="fgrid"><div><label class="fl" for="nf-hp">Kirim pesan uji ke nomor</label><input type="text" id="nf-hp" inputmode="tel" value="${esc(s.waNumber || "")}"></div></div>
-      <div class="acts"><button class="btn line sm" id="nf-test" type="button">${ic("chat")}Kirim pesan uji</button></div>
       <p class="fhint" id="nf-state">Memuat status...</p>
-      <ul class="loglist" id="nf-list"></ul></section>
-    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("check")}</span><div><h3>Kode unik</h3></div></div>
-      <label class="switch"><input type="checkbox" id="s-uc" data-s="uniqueCode" ${s.uniqueCode !== false ? "checked" : ""}><span class="track"></span><span>${s.uniqueCode !== false ? "Aktif" : "Mati"}</span></label>
-      <p class="fhint">Tambah Rp 1 sampai 100 ke jumlah transfer agar mudah dicocokkan di mutasi bank.</p></section>
-    <section class="card setsec"><div class="gc-h"><span class="gc-ic">${ic("phone")}</span><div><h3>Kontak</h3></div></div><div class="fgrid">
-      ${f("s-wa", "waNumber", "WhatsApp admin (62...)", s.waNumber, 'inputmode="numeric"')}
-    </div></section>
+      <details id="nf-d" ${nfOpen ? "open" : ""}><summary>Penyedia dan pesan uji</summary>
+        <div class="fgrid"><div><label class="fl" for="nf-prov">Penyedia</label><select id="nf-prov"><option value="fonnte">Fonnte</option><option value="webhook">Webhook sendiri</option></select></div>
+          <div><label class="fl" for="nf-tok">Token</label><input type="password" id="nf-tok" autocomplete="off" placeholder="Token"></div>
+          <div class="full" id="nf-urlw" hidden><label class="fl" for="nf-url">URL webhook (menerima POST JSON: target, message, kind, ref)</label><input type="text" id="nf-url" autocomplete="off" placeholder="https://..."></div></div>
+        <div class="acts"><button class="btn sm" id="nf-save" type="button">Simpan penyedia</button></div>
+        <div class="fgrid"><div><label class="fl" for="nf-hp">Nomor untuk pesan uji</label><input type="text" id="nf-hp" inputmode="tel" value="${esc(s.waNumber || "")}"></div></div>
+        <div class="acts"><button class="btn line sm" id="nf-test" type="button">${ic("chat")}Kirim pesan uji</button></div>
+        <ul class="loglist" id="nf-list"></ul></details></section>
     <section class="card setsec"><details id="log-d" ${logOpen ? "open" : ""}><summary>${ic("history")}Aktivitas terbaru</summary><ul class="loglist" id="log-list"><li class="note">Memuat...</li></ul></details></section>`;
   if (logOpen) fillLog();
   fillNotify();
 }
 const NKINDS = [["dicatat", "Pesanan dicatat"], ["pengingat", "Pengingat bayar"], ["lunas", "Pembayaran diterima"], ["ditolak", "Bayar tidak cocok"], ["diantar", "Sedang diantar"], ["batal_otomatis", "Batal otomatis"]];
-let logOpen = false, nfStatus = null;
+let logOpen = false, nfStatus = null, nfOpen = null;
 async function fillNotify(){
   const st = $("nf-state"); if (!st) return;
   try { nfStatus = await api.secretStatus(); } catch (e) { nfStatus = null; }
@@ -1480,6 +1477,7 @@ async function fillNotify(){
   $("nf-urlw").hidden = (prov ? prov.value : "fonnte") !== "webhook";
   const tok = $("nf-tok"); if (tok) tok.placeholder = nfStatus.hasToken ? "Sudah tersimpan (isi untuk mengganti)" : "Token";
   const ready = nfStatus.provider === "fonnte" ? nfStatus.hasToken : nfStatus.provider === "webhook" ? nfStatus.hasUrl : false;
+  const nd = $("nf-d"); if (nd && nfOpen === null) { nfOpen = !ready; nd.open = nfOpen; }
   $("nf-state").textContent = (ready ? "Penyedia terhubung." : "Penyedia belum diisi.") + (nfStatus.hasNet ? "" : " Ekstensi pg_net belum aktif di Supabase (Database, Extensions), pesan belum bisa dikirim.");
   try {
     const rows = await api.loadNotifyQueue(), ul = $("nf-list"); if (!ul) return;
@@ -1497,9 +1495,10 @@ $("a-set").addEventListener("click", async e => {
   }
   if (e.target.closest("#nf-test")) {
     const hp = $("nf-hp").value.trim(); if (!hp) { toast("Isi nomor tujuan."); return; }
-    try { const r = await api.notifyTest(hp); toast("Hasil uji: " + r); fillNotify(); } catch (err) { toast("Uji gagal. Cek penyedia dan skema."); }
+    try { const r = await api.notifyTest(hp); toast("Hasil uji: " + r); fillNotify(); } catch (err) { toast("Uji belum berhasil. Cek penyedia dan skema."); }
   }
 });
+$("a-set").addEventListener("toggle", e => { if (e.target.id === "nf-d") nfOpen = e.target.open; }, true);
 $("a-set").addEventListener("change", e => {
   if (e.target.id === "nf-prov") { $("nf-urlw").hidden = e.target.value !== "webhook"; return; }
   if (e.target.matches("[data-nk]")) { const o = {}; $("a-set").querySelectorAll("[data-nk]").forEach(c => { o[c.dataset.nk] = c.checked; }); saveSetting({ notifyKinds:o }); }
@@ -1526,21 +1525,21 @@ async function saveSetting(patch){
     settings = { ...settings, ...patch }; settings.qrisUrl = assetUrl(settings.qrisPath);
     renderPayInfo(); renderMenu(); if (view === "admin" && tab === "set") renderSetSafe();
     toast("Tersimpan");
-  } catch (e) { toast("Gagal menyimpan. Coba lagi."); }
+  } catch (e) { toast("Belum tersimpan. Coba lagi."); }
 }
 setEl.addEventListener("change", async e => {
   const t = e.target;
   if (t.matches("[data-qris]")) {
     const f = t.files[0]; if (!f || !assetsNs) return;
     try { toast("Mengunggah..."); const blob = await shrink(f); const path = await api.uploadImage(blob); await saveSetting({ qrisPath:path }); }
-    catch (err) { toast("Gagal mengunggah gambar."); }
+    catch (err) { toast("Gambar belum terunggah. Coba lagi."); }
     return;
   }
   const k = t.dataset.s; if (!k) return;
   let v = t.type === "checkbox" ? t.checked : t.type === "number" ? Math.max(0, Math.round(Number(t.value) || 0)) : t.value.trim();
   if (k === "waNumber") v = normPhone(v);
   if (k === "payWindowMin") v = Math.max(15, Math.min(240, v || 60));
-  if (k === "poCutoff") { if (!/^\d{1,2}[:.]\d{2}$/.test(v)) { toast("Format jam salah. Contoh: 10:00"); renderAdminSet(); return; } v = v.replace(".", ":").padStart(5, "0"); }
+  if (k === "poCutoff") { if (!/^\d{1,2}[:.]\d{2}$/.test(v)) { toast("Format jam salah. Contoh: 10.00"); renderAdminSet(); return; } v = v.replace(".", ":").padStart(5, "0"); }
   if (["deliveryHours", "pickupHours", "pickupLocation"].includes(k) && !v) v = DEFAULT_SETTINGS[k];
   await saveSetting({ [k]:v });
 });
@@ -1834,7 +1833,7 @@ document.querySelectorAll("[data-home]").forEach(l => { l.onclick = e => { e.pre
 /* ================= LOGIN ADMIN ================= */
 function renderGate(){
   const el = $("admin-gate");
-  if (!sb) { el.innerHTML = '<div class="empty">Toko belum tersambung ke database. Isi file config.js sesuai README.</div>'; return; }
+  if (!sb) { el.innerHTML = '<div class="empty">Toko belum tersambung ke Supabase. Isi file config.js sesuai README.</div>'; return; }
   if (!authReady) { el.innerHTML = '<p class="note" style="text-align:center">Memeriksa login...</p>'; return; }
   if (session) {
     el.innerHTML = `<div class="card"><h3>Bukan akun admin</h3><p class="fhint">${esc(session.user.email)} belum terdaftar. Minta pemilik toko mendaftarkannya.</p><button class="btn line sm" id="gate-out" type="button" style="margin-top:12px">Keluar</button></div>`;
@@ -1871,7 +1870,7 @@ $("ck-go").onclick = async () => {
   $("ck-err").textContent = "";
   if (!ids.length) { $("ck-err").textContent = "Isi nomor pesanan, contoh 1809-03."; return; }
   const m = val.hp(hp); if (m) { $("ck-err").textContent = m; return; }
-  if (!sb) { $("ck-err").textContent = "Toko belum tersambung ke database."; return; }
+  if (!sb) { $("ck-err").textContent = "Toko belum siap dipakai. Coba lagi nanti."; return; }
   $("ck-go").disabled = true; out.innerHTML = "";
   try {
     const rows = await api.trackOrders(ids, hp);
