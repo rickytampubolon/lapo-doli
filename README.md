@@ -201,3 +201,13 @@ Pesanan web yang belum dikonfirmasi, belum ada bukti bayar, dan sudah lewat 1 ja
 - **Notifikasi WhatsApp ke pembeli** (Pengaturan, Notifikasi WhatsApp ke pembeli): pesanan dicatat, pengingat bayar (15 menit sebelum batas), pembayaran diterima, bayar tidak cocok, sedang diantar, dan batal otomatis. Tiap jenis bisa dimatikan. Pesanan manual dari WhatsApp tidak memicu pesan. Satu pesan per checkout, tidak dobel.
 - **Cara kerjanya:** pemicu di database mengisi antrean `notify_queue`. Pengiriman memakai ekstensi **pg_net** ke penyedia: **Fonnte** (token) atau **Webhook sendiri** (POST JSON `target`, `message`, `kind`, `ref`, opsional token Bearer). Kunci disimpan di `app_secrets` yang tidak bisa dibaca dari browser. Pengingat dan percobaan ulang berjalan tiap 5 menit lewat pg_cron.
 - **Menyalakan:** aktifkan pg_net dan pg_cron di Supabase (Database, Extensions), jalankan ulang `schema.sql`, buka Pengaturan, isi penyedia dan token, tekan Kirim pesan uji, lalu nyalakan saklar. Pesan yang menunggu lebih dari 30 menit dilewati supaya tidak terkirim terlambat.
+
+## Keamanan login admin (skema v19)
+
+- **Siapa admin:** hanya email yang ada di tabel `admins` **dan** punya akun login terverifikasi (`email_confirmed_at` terisi). Orang lain yang masuk dengan emailnya sendiri melihat "Bukan akun admin" dan tidak bisa membaca atau mengubah apa pun: semua tabel, bukti bayar, dan fungsi admin dijaga aturan keamanan database (`is_admin()`).
+- **Form login tidak membuat akun baru** (`shouldCreateUser: false`) dan memberi pesan yang sama untuk email dikenal maupun tidak, jadi daftar admin tidak bisa ditebak. Ada jeda 60 detik antar permintaan.
+- **Menambah admin baru:** (1) Supabase, Authentication, Users, **Add user** (atau Invite) dengan emailnya; (2) di SQL Editor: `insert into public.admins values ('email@admin.com');`. Urutannya penting karena pendaftaran sendiri ditutup.
+- **Pengaturan Supabase yang wajib dicek** (Authentication):
+  - Sign In / Providers, Email: matikan **Allow new users to sign up**, dan biarkan **Confirm email** aktif.
+  - URL Configuration: isi **Site URL** dengan alamat toko dan batasi **Redirect URLs** hanya ke alamat toko.
+  - Matikan penyedia login yang tidak dipakai (misalnya password, Google) kalau tidak perlu.

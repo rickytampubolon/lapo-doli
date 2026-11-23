@@ -144,6 +144,7 @@ begin
   -- 11. admin
   perform t.ck('11 as_admin tanpa login ditolak', t.err(t.base('081200000041') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}', true) = 'forbidden');
   insert into public.admins values ('admin@test.id');
+  insert into auth.users (email, email_confirmed_at) values ('admin@test.id', now());
   perform set_config('request.jwt.claims', '{"email":"Admin@Test.id"}', false);
   perform t.ck('11 admin: tutup PO tetap boleh', t.err(t.base('081200000041') || '{"groups":[{"po_id":"po-closed","lines":[{"pid":"teri","opt":0,"qty":1}]}]}', true) = 'OK');
   r := public.create_orders(t.base('081200000042') || '{"ongkir":0,"paid":true,"source":"wa","groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":2}]}]}', true);
@@ -371,6 +372,21 @@ begin
   n := public.send_notifications();
   perform t.ck('18 pesan antri lebih dari 30 menit: dilewati', n = 0 and (select status from public.notify_queue where kind = 'uji') = 'lewati');
   update public.settings set data = data - 'notifyOn' - 'payWindowMin' where id = 'shop';
+
+  -- 19. hak admin butuh email terverifikasi
+  perform set_config('request.jwt.claims', '{"email":"Admin@Test.id"}', false);
+  perform t.ck('19 admin dengan email terverifikasi: is_admin true', public.is_admin());
+  update auth.users set email_confirmed_at = null where lower(email) = 'admin@test.id';
+  perform t.ck('19 email belum terverifikasi: bukan admin', not public.is_admin());
+  update auth.users set email_confirmed_at = now() where lower(email) = 'admin@test.id';
+  delete from auth.users where lower(email) = 'admin@test.id';
+  perform t.ck('19 tanpa akun login: bukan admin walau emailnya di tabel admins', not public.is_admin());
+  insert into auth.users (email, email_confirmed_at) values ('orang.lain@example.com', now());
+  perform set_config('request.jwt.claims', '{"email":"orang.lain@example.com"}', false);
+  perform t.ck('19 orang lain dengan akun terverifikasi: bukan admin', not public.is_admin());
+  begin perform public.set_secret('wa_token', 'x'); perform t.ck('19 orang lain tidak bisa mengatur rahasia', false); exception when others then perform t.ck('19 orang lain tidak bisa mengatur rahasia', sqlerrm = 'forbidden'); end;
+  begin perform public.create_orders(t.base('081200000131') || '{"groups":[{"po_id":"po-a","lines":[{"pid":"teri","opt":0,"qty":1}]}]}', true); perform t.ck('19 orang lain tidak bisa membuat pesanan sebagai admin', false); exception when others then perform t.ck('19 orang lain tidak bisa membuat pesanan sebagai admin', sqlerrm = 'forbidden'); end;
+  perform set_config('request.jwt.claims', '', false);
 end $$;
 
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;

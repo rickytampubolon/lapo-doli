@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261122zm">
+<link rel="stylesheet" href="/style.css?v=20261122zr">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -43,7 +43,7 @@
   <h1 class="sr-only">Lapo Doli, masakan Batak rumahan. Pre‑order tiap minggu.</h1>
   <div class="pattern" aria-hidden="true"></div>
   <main class="col">
-    <ol class="steps" id="steps" aria-label="Langkah pesan"><li class="now"><i>1</i><span>Menu</span></li><li><i>2</i><span>Data</span></li><li><i>3</i><span>Bayar</span></li></ol>
+    <ol class="steps" id="steps" aria-label="Langkah pesan"><li class="now" id="back1"><i>1</i><span>Menu</span></li><li><i>2</i><span>Data</span></li><li><i>3</i><span>Bayar</span></li></ol>
 
     <section id="s1" class="show">
       <div class="storecard">
@@ -76,8 +76,6 @@
     </section>
 
     <section id="s2">
-      <div class="pagehead"><button class="roundback" id="back1" type="button" aria-label="Kembali ke menu"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button><h1>Pesananmu</h1></div>
-
       <div class="gcard">
         <div class="gc-h"><span class="gc-ic red"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg></span><div><h2>Pesanan</h2></div><button class="pillbtn" id="addmore" type="button"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Tambah menu</button></div>
         <div id="sum-items"></div>
@@ -115,8 +113,7 @@
             <textarea id="alamat" autocomplete="street-address" enterkeyhint="next" placeholder="Jalan, nomor rumah, patokan"></textarea>
             <div class="err" id="e-alamat"></div>
           </div>
-          <label class="lb" for="notes">Catatan (opsional)</label>
-          <textarea id="notes" placeholder="Contoh: tidak pakai cabai"></textarea>
+          <details class="notes-d" id="notes-d"><summary>Tambah catatan untuk penjual</summary><textarea id="notes" aria-label="Catatan untuk penjual" placeholder="Contoh: tidak pakai cabai"></textarea></details>
         </div>
       </div>
 
@@ -158,7 +155,7 @@
       <button class="textbtn cancelbtn" id="cancel-order" type="button" hidden>Batalkan pesanan</button>
       <ul class="dlv" id="track" style="margin-top:18px"></ul>
       <button class="textbtn" id="copy-status" type="button">Salin link status pesanan</button>
-      <div class="sum" id="sum3" style="margin-top:18px"></div>
+      <details class="rincian"><summary>Rincian pesanan</summary><div class="sum" id="sum3"></div></details>
       <div class="sharecard" id="s3-share" hidden><span>Ajak teman pesan</span><button class="pillbtn" type="button" data-share><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg>Bagikan</button></div>
       <div class="actions"><button class="btn line" id="again" type="button">Pesan lagi</button></div>
     </section>
@@ -243,7 +240,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261122zm"></script>
+<script defer src="/app.js?v=20261122zr"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

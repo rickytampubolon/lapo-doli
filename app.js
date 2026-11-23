@@ -434,6 +434,8 @@ function checkClosings(){
   if (gone.length) { toast("PO " + gone.join(", ") + " sudah ditutup dan dihapus dari pesananmu"); if (screen === 2) { if (qtyTotal()) renderCheckout(); else go(1); } }
 }
 function updateSteps(n){
+  const bk = $("back1");
+  if (n === 2) { bk.setAttribute("role", "button"); bk.setAttribute("tabindex", "0"); bk.setAttribute("aria-label", "Kembali ke menu"); } else { bk.removeAttribute("role"); bk.removeAttribute("tabindex"); bk.removeAttribute("aria-label"); }
   document.querySelectorAll("#steps li").forEach((li, i) => { const k = i + 1; li.className = k < n ? "done" : k === n ? "now" : ""; li.querySelector("i").innerHTML = k < n ? ic("check") : String(k); li.setAttribute("aria-current", k === n ? "step" : "false"); });
 }
 function go(n){
@@ -446,7 +448,10 @@ function go(n){
   window.scrollTo({ top:0 });
 }
 $("next").onclick = () => { track("mulai_checkout", { porsi:qtyTotal() }); go(2); };
-$("back1").onclick = $("addmore").onclick = () => go(1);
+$("addmore").onclick = () => go(1);
+/* di layar Data, langkah "Menu" di atas menjadi tombol kembali */
+$("back1").onclick = () => { if (screen === 2) go(1); };
+$("back1").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && screen === 2) { e.preventDefault(); go(1); } });
 
 const lineKey = (poId, l) => l.addon ? addonKey(poId, l.pid, l.addonId) : l.optIdx != null ? `${poId}::${l.pid}::${l.optIdx}` : `${poId}::${l.pid}`;
 function itemsHTML(gs){
@@ -908,7 +913,7 @@ function orderRow(o){
       <span class="how">${pk ? "Ambil sendiri" : "Antar" + (o.area ? ", " + esc(o.area) : "")}${grp ? ", gabungan " + o.groupCount + " tanggal" : ""}</span>
       <span class="amt">${(o.payStatus === "cek" && o.status !== "batal") || isClaim(o) ? `<b>${rp(payDue(o))}</b><small>${Number(o.groupCount) > 1 ? "transfer gabungan" : "transfer"}</small>` : o.status === "batal" && o.refund === "perlu" ? `<b>${rp(payDue(o))}</b><small>kembalikan</small>` : rp(o.total)}</span>
       <span class="chip st ${sc}">${sl}</span>
-      <div class="oside">${o.payStatus === "cek" && o.status !== "batal" ? `<label class="selbox"><input type="checkbox" data-sel aria-label="Pilih ${esc(o.id)}" ${sel.has(o.id) ? "checked" : ""}></label>` : ""}${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
+      <div class="oside">${bulkKey(o) ? `<label class="selbox"><input type="checkbox" data-sel aria-label="Pilih ${esc(o.id)}" ${sel.has(o.id) ? "checked" : ""}></label>` : ""}${pa ? `<button class="btn sm ${pa[2]}" data-act="${pa[0]}" ${dis}>${pa[1]}</button>` : ""}<button class="btn line sm iconbtn" data-toggle aria-expanded="${open}" aria-label="${open ? "Tutup detail" : "Buka detail"}" title="${open ? "Tutup detail" : "Buka detail"}">${ic("chevron", open ? "flip" : "")}</button></div>
     </div>
     ${open && editing === o.id ? editHTML(o) : ""}
     ${open && editing !== o.id ? `<div class="odetail">
@@ -927,7 +932,7 @@ function orderRow(o){
       ${isClaim(o) ? `<p class="onote full warn">Pembeli mengaku sudah transfer setelah pesanan dibatalkan otomatis. Cek mutasi dan bukti, lalu Buka lagi dan Konfirmasi bayar.</p>` : ""}
       ${gk ? `<p class="onote full">Transfer tepat ${rp(Number(o.groupTotal) + gk)} (kode unik ${rp(gk)}).</p>` : ""}
       ${grp ? `<p class="onote full">Bayar gabungan ${o.groupCount} tanggal, total ${rp(o.groupTotal)}. Konfirmasi berlaku untuk semuanya.</p>` : ""}
-      <div class="acts full">${o.proofPath ? `<button class="btn line sm" data-proof="${esc(o.proofPath)}" type="button">${ic("image")}Lihat bukti</button>` : ""}<a class="btn line sm" href="${esc(wa)}" target="_blank" rel="noopener">${ic("chat")}Chat pelanggan</a><button class="btn line sm" data-edit type="button">${ic("edit")}Ubah</button><button class="btn line sm" data-nota type="button">${ic("print")}Cetak nota</button>${sec}</div>
+      <div class="acts full"><button class="btn line sm" data-edit type="button">${ic("edit")}Ubah</button><button class="btn line sm" data-nota type="button">${ic("print")}Cetak nota</button>${sec}</div>
       ${waTemplates(o).length ? `<div class="wachips full" aria-label="Pesan WhatsApp siap kirim"><span>Kirim pesan</span>${waTemplates(o).map(([l, t]) => `<a class="wachip" href="https://wa.me/${normPhone(o.hp)}?text=${encodeURIComponent(t)}" target="_blank" rel="noopener">${esc(l)}</a>`).join("")}</div>` : ""}
     </div>` : ""}</article>`;
 }
@@ -963,10 +968,13 @@ async function saveEdit(o, box){
   }
   busy.delete(o.id); renderAdminOrders();
 }
+/* tindakan utama yang bisa dilakukan sekaligus: konfirmasi bayar, atau pindah ke status berikutnya */
+const bulkKey = o => { const pa = primaryAct(o); return !pa ? "" : pa[0] === "pay_ok" ? "pay_ok" : pa[0] === "next" ? "next:" + NEXT[o.status] : ""; };
 function selBar(){
-  const ids = [...sel].filter(id => { const o = orders.find(x => x.id === id); return o && o.payStatus === "cek" && o.status !== "batal"; });
-  if (!ids.length) { sel.clear(); return ""; }
-  return `<div class="selbar" role="region" aria-label="Pilihan"><b>${ids.length} dipilih</b><span class="sp"></span><button class="btn sm" data-bulk="ok" type="button">${ic("check")}Konfirmasi bayar</button><button class="btn line sm" data-bulk="clear" type="button">Batal pilih</button></div>`;
+  const groups = {};
+  [...sel].forEach(id => { const o = orders.find(x => x.id === id), k = o && bulkKey(o); if (!k) { sel.delete(id); return; } (groups[k] = groups[k] || []).push(o); });
+  const keys = Object.keys(groups); if (!keys.length) return "";
+  return `<div class="selbar" role="region" aria-label="Pilihan"><b>${sel.size} dipilih</b><span class="sp"></span>${keys.map(k => `<button class="btn sm" data-bulk="${k}" type="button">${ic("check")}${k === "pay_ok" ? "Konfirmasi bayar" : esc(nextLabel(groups[k][0]))} (${groups[k].length})</button>`).join("")}<button class="btn line sm" data-bulk="clear" type="button">Batal pilih</button></div>`;
 }
 const quotaOf = (poId, pid) => { const po = (pos || []).find(p => p.id === poId), pr = (products || []).find(p => p.id === pid), q = po && po.quotas && po.quotas[pid] != null && po.quotas[pid] !== "" ? Number(po.quotas[pid]) : (pr && pr.quota != null ? Number(pr.quota) : null); return q == null || isNaN(q) ? null : q; };
 const soldOf = (poId, pid, skip) => orders.filter(x => x.poId === poId && x.id !== skip && x.status !== "batal" && x.payStatus !== "ditolak" && !(x.payStatus === "cek" && !x.proofPath && Date.now() > lateAt(x)))
@@ -1007,7 +1015,8 @@ function renderAdminOrders(){
     ${lateBar(base, cur)}
     ${dates.length ? dates.map(d => { const os = byPo[d], por = os.reduce((a, o) => a + o.items.filter(i => !i.addon).reduce((s, i) => s + (Number(i.qty) || 0), 0), 0);
       const sum = os.filter(o => o.status !== "batal" && o.payStatus !== "ditolak").reduce((t, o) => t + o.total, 0);
-      return `<div class="group"><span>${d === "-" ? "Tanggal PO tidak tercatat" : esc(dLong(d))}</span><span>${os.length} pesanan, ${por} porsi, <b>${rp(sum)}</b></span></div><div class="olist">${os.map(orderRow).join("")}</div>`; }).join("")
+      const sids = os.filter(bulkKey).map(o => o.id);
+      return `<div class="group"><span>${d === "-" ? "Tanggal PO tidak tercatat" : esc(dLong(d))}${sids.length > 1 ? ` <button class="linkbtn selall" data-selall="${esc(sids.join(","))}" type="button">Pilih semua</button>` : ""}</span><span>${os.length} pesanan, ${por} porsi, <b>${rp(sum)}</b></span></div><div class="olist">${os.map(orderRow).join("")}</div>`; }).join("")
       : `<div class="empty" style="margin-top:16px">${EMPTY[cur] || EMPTY.semua}</div>`}`;
   setCek(cekAll);
 }
@@ -1029,7 +1038,8 @@ async function openProofViewer(startId){
     box.querySelector("#pv-s").textContent = (o.payStatus === "lunas" ? "Lunas, " : o.status === "batal" ? "Dibatalkan, " : "Menunggu cek, ") + "transfer " + rp(payDue(o));
     const act = box.querySelector("#pv-act"), ok = o.status !== "batal" && o.payStatus === "cek";
     act.innerHTML = ok ? `<button class="btn" data-pvok type="button">${ic("check")}Konfirmasi bayar</button><button class="btn line" data-pvno type="button">${ic("xcircle")}Tidak cocok</button>` : `<span class="pv-note">${o.payStatus === "lunas" ? "Sudah dikonfirmasi" : "Tidak perlu dicek"}</span>`;
-    const im = box.querySelector("#pv-img"); im.innerHTML = '<p class="pv-load">Memuat bukti...</p>';
+    act.insertAdjacentHTML("afterbegin", '<span class="pv-hint">Ketuk gambar untuk memperbesar</span>');
+    const im = box.querySelector("#pv-img"); im.classList.remove("zoom"); im.innerHTML = '<p class="pv-load">Memuat bukti...</p>';
     try { const url = await api.proofUrl(o.proofPath); if (my === seq) im.innerHTML = `<img src="${esc(url)}" alt="Foto bukti bayar ${esc(o.id)}">`; }
     catch (e) { if (my === seq) im.innerHTML = '<p class="pv-load">Bukti belum bisa dibuka. Coba lagi.</p>'; }
   }
@@ -1037,6 +1047,7 @@ async function openProofViewer(startId){
   box.addEventListener("click", async ev => {
     if (ev.target === box || ev.target.closest(".lb-x")) { close(); return; }
     const nv = ev.target.closest("[data-pv]"); if (nv) { go(Number(nv.dataset.pv)); return; }
+    if (ev.target.closest("#pv-img img")) { box.querySelector("#pv-img").classList.toggle("zoom"); return; }
     const o = cur(); if (!o) return;
     const ts = (o.gid ? orders.filter(x => x.gid === o.gid) : [o]).filter(x => x.status !== "batal");
     if (ev.target.closest("[data-pvok]")) { await applyOrders(ts, { pay_status:"lunas" }, ACT_MSG.pay_ok, "pay_ok"); if (i < ids.length - 1) go(1); else show(); }
@@ -1058,11 +1069,19 @@ $("a-orders").addEventListener("click", async e => {
   if (e.target.closest("[data-newopen]")) { openNew(); return; }
   const fb = e.target.closest("[data-filter]");
   if (fb) { filter = fb.dataset.filter; armCancel = null; armLate = false; renderAdminOrders(); return; }
+  const sa = e.target.closest("[data-selall]");
+  if (sa) { sa.dataset.selall.split(",").forEach(id => sel.add(id)); renderAdminOrders(); return; }
   const bk = e.target.closest("[data-bulk]");
   if (bk) {
     if (bk.dataset.bulk === "clear") { sel.clear(); renderAdminOrders(); return; }
-    const ids = new Set(); [...sel].forEach(id => { const o = orders.find(x => x.id === id); if (o) (o.gid ? orders.filter(x => x.gid === o.gid) : [o]).filter(x => x.status !== "batal").forEach(x => ids.add(x.id)); });
-    const ts = orders.filter(x => ids.has(x.id)); sel.clear(); if (ts.length) await applyOrders(ts, { pay_status:"lunas" }, ts.length + " pesanan dikonfirmasi", "konfirmasi_massal"); else renderAdminOrders(); return;
+    const key = bk.dataset.bulk, sels = [...sel].map(id => orders.find(x => x.id === id)).filter(o => o && bulkKey(o) === key);
+    sels.forEach(o => sel.delete(o.id));
+    if (!sels.length) { renderAdminOrders(); return; }
+    if (key === "pay_ok") {
+      const ids = new Set(); sels.forEach(o => (o.gid ? orders.filter(x => x.gid === o.gid) : [o]).filter(x => x.status !== "batal").forEach(x => ids.add(x.id)));
+      const ts = orders.filter(x => ids.has(x.id)); await applyOrders(ts, { pay_status:"lunas" }, ts.length + " pesanan dikonfirmasi", "konfirmasi_massal");
+    } else await applyOrders(sels, { status:key.slice(5) }, sels.length + " pesanan diperbarui", "status_massal");
+    return;
   }
   if (e.target.closest("[data-snd]")) { try { localStorage.setItem("ld_snd", sndOn() ? "0" : "1"); } catch (er) {} ensureAudio(); if (sndOn()) beep(); renderAdminOrders(); return; }
   if (e.target.closest("[data-late]")) {
@@ -1252,11 +1271,19 @@ function renderAdminPo(){
         ${sched ? `<button class="textbtn opennow" data-popennow type="button">${ic("check")}Buka sekarang</button>` : ""}
         <button class="textbtn iconbtn-t ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button" aria-label="Hapus PO" title="Hapus PO">${armPoDel === po.id ? "Yakin hapus?" : ic("trash")}</button></div>${adv}</div>`;
   }).join("");
-  el.innerHTML = `<div class="newpo"><input type="date" id="po-new" aria-label="Tanggal PO"><input type="datetime-local" id="po-opens" aria-label="Buka otomatis (opsional)" title="Buka otomatis pada. Kosongkan untuk buka sekarang."><button class="btn sm add" data-poadd type="button">${ic("plus")}<span id="po-add-t">Buka PO</span></button></div>
-    <p class="fhint" style="margin:-4px 0 10px">Waktu buka otomatis (opsional): PO baru bisa dipesan setelah waktu itu.</p>
+  el.innerHTML = `<section class="card newpo2">
+      <div class="gc-h"><span class="gc-ic">${ic("plus")}</span><div><h3>Buka PO baru</h3></div></div>
+      <label class="fl" for="po-new">Tanggal PO (hari pengiriman)</label>
+      <input type="date" id="po-new" class="dtin" value="${esc(poDraft.date)}">
+      <p class="fhint" id="po-new-h">${poDraft.date ? esc(dLong(poDraft.date)) : "Ketuk kolom di atas untuk memilih tanggal."}</p>
+      <div class="fl">Kapan dibuka untuk pembeli?</div>
+      <div class="stabs seg" role="group" aria-label="Kapan dibuka"><button type="button" data-powhen="now" aria-pressed="${poDraft.when === "now"}">Sekarang</button><button type="button" data-powhen="later" aria-pressed="${poDraft.when === "later"}">Jadwalkan</button></div>
+      <div id="po-opens-w" ${poDraft.when === "later" ? "" : "hidden"}><label class="fl" for="po-opens">Dibuka pada</label><input type="datetime-local" id="po-opens" class="dtin" value="${esc(poDraft.opens)}"><p class="fhint">Sebelum waktu ini, PO tampil sebagai "belum dibuka" dan belum bisa dipesan.</p></div>
+      <button class="btn" data-poadd type="button">${ic("plus")}<span id="po-add-t">${poDraft.when === "later" ? "Jadwalkan PO" : "Buka PO"}</span></button>
+    </section>
     ${rows || '<div class="empty">Belum ada PO.</div>'}`;
 }
-const poEl = $("a-po"), poAdvOpen = new Set();
+const poEl = $("a-po"), poAdvOpen = new Set(), poDraft = { date:"", when:"now", opens:"" };
 poEl.addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.poadv) { if (d.open) poAdvOpen.add(d.dataset.poadv); else poAdvOpen.delete(d.dataset.poadv); } }, true);
 async function dupPo(po){
   const taken = new Set((pos || []).map(p => String(p.date))), d = new Date(po.date + "T00:00:00Z");
@@ -1273,7 +1300,10 @@ function renderPoSafe(){
   poDirty = false; renderAdminPo();
 }
 poEl.addEventListener("focusout", () => setTimeout(() => { if (poDirty) renderPoSafe(); }, 50));
-poEl.addEventListener("input", e => { if (e.target.id === "po-opens") $("po-add-t").textContent = e.target.value ? "Jadwalkan" : "Buka PO"; });
+poEl.addEventListener("input", e => {
+  if (e.target.id === "po-new") { poDraft.date = e.target.value; $("po-new-h").textContent = dparse(e.target.value) ? dLong(e.target.value) : "Ketuk kolom di atas untuk memilih tanggal."; }
+  else if (e.target.id === "po-opens") poDraft.opens = e.target.value;
+});
 poEl.addEventListener("change", async e => {
   const t = e.target;
   if (t.matches("[data-pocutoff]")) {
@@ -1295,14 +1325,18 @@ poEl.addEventListener("change", async e => {
 });
 poEl.addEventListener("click", async e => {
   try {
+    const pw = e.target.closest("[data-powhen]");
+    if (pw) { poDraft.when = pw.dataset.powhen; $("po-opens-w").hidden = poDraft.when !== "later"; $("po-add-t").textContent = poDraft.when === "later" ? "Jadwalkan PO" : "Buka PO"; poEl.querySelectorAll("[data-powhen]").forEach(b => b.setAttribute("aria-pressed", String(b === pw))); return; }
     if (e.target.closest("[data-poadd]")) {
       const v = $("po-new").value;
       if (!dparse(v)) { toast("Pilih tanggal PO dulu"); return; }
       const id = "po-" + v.replace(/-/g, "");
       if ((pos || []).some(p => p.id === id)) { toast("PO tanggal itu sudah ada"); return; }
-      const ov = $("po-opens").value, opensAt = ov ? new Date(ov) : null;
+      const ov = poDraft.when === "later" ? $("po-opens").value : "", opensAt = ov ? new Date(ov) : null;
+      if (poDraft.when === "later" && !ov) { toast("Isi waktu buka, atau pilih Sekarang."); return; }
       if (opensAt && isNaN(opensAt)) { toast("Waktu buka tidak valid"); return; }
       await api.addPo(v, opensAt ? opensAt.toISOString() : null); await refreshPos();
+      poDraft.date = ""; poDraft.opens = ""; poDraft.when = "now"; renderAdminPo();
       toast(opensAt ? "PO dijadwalkan" : "PO dibuka"); return;
     }
     if (e.target.closest("[data-popennow]")) {
@@ -1503,7 +1537,7 @@ $("a-set").addEventListener("change", e => {
   if (e.target.id === "nf-prov") { $("nf-urlw").hidden = e.target.value !== "webhook"; return; }
   if (e.target.matches("[data-nk]")) { const o = {}; $("a-set").querySelectorAll("[data-nk]").forEach(c => { o[c.dataset.nk] = c.checked; }); saveSetting({ notifyKinds:o }); }
 });
-const LOGL = { refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (lewat batas bayar)", penyedia_wa:"mengatur penyedia WhatsApp", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
+const LOGL = { status_massal:"mengubah status beberapa pesanan", refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (lewat batas bayar)", penyedia_wa:"mengatur penyedia WhatsApp", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
 async function fillLog(){
   const ul = $("log-list"); if (!ul) return;
   try { const rows = await api.loadLog(); ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.at))}</span><span><b>${esc(String(r.actor || "").split("@")[0] || "admin")}</b> ${esc(LOGL[r.action] || r.action)} <span class="mono">${esc(r.target)}</span></span></li>`).join("") : '<li class="note">Belum ada aktivitas.</li>'; }
@@ -1826,7 +1860,7 @@ function setView(v){
 window.addEventListener("hashchange", () => { const v = location.hash === "#admin" ? "admin" : (view === "admin" ? "shop" : view); if (v !== view) setView(v); });
 $("to-admin").onclick = () => setView("admin");
 $("to-shop").onclick = $("to-shop-top").onclick = () => setView("shop");
-document.querySelectorAll("[data-help]").forEach(b => { b.onclick = () => { setView("help"); const u = lsGet(LS.cust); if (u && u.hp && !$("ck-hp").value) $("ck-hp").value = u.hp; }; });
+document.querySelectorAll("[data-help]").forEach(b => { b.onclick = () => { setView("help"); if (lastData && lastData.placed && !$("ck-id").value) $("ck-id").value = lastData.placed.map(o => o.id).join(", "); const u = lsGet(LS.cust); if (u && u.hp && !$("ck-hp").value) $("ck-hp").value = u.hp; }; });
 $("help-back").onclick = () => setView("shop");
 document.querySelectorAll("[data-home]").forEach(l => { l.onclick = e => { e.preventDefault(); closeSheets(); setView("shop"); go(1); }; });
 
@@ -1845,13 +1879,22 @@ function renderGate(){
   $("gate-send").onclick = sendMagic;
   $("gate-email").addEventListener("keydown", e => { if (e.key === "Enter") sendMagic(); });
 }
+let magicNext = 0;
 async function sendMagic(){
-  const email = $("gate-email").value.trim();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $("gate-err").textContent = "Email tidak valid."; return; }
-  $("gate-err").textContent = ""; $("gate-send").disabled = true;
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo:location.origin + "/?admin=1" } });
-  if (error) { $("gate-send").disabled = false; $("gate-err").textContent = "Link belum terkirim. Coba lagi sebentar lagi."; return; }
-  $("admin-gate").innerHTML = `<div class="card"><h3>Cek email Anda</h3><p class="fhint" style="margin:0">Link masuk dikirim ke ${esc(email)}. Cek juga folder spam.</p></div>`;
+  const email = $("gate-email").value.trim(), err = $("gate-err");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Email tidak valid."; return; }
+  if (Date.now() < magicNext) { err.textContent = "Tunggu " + Math.ceil((magicNext - Date.now()) / 1000) + " detik sebelum meminta link lagi."; return; }
+  err.textContent = ""; $("gate-send").disabled = true;
+  /* hanya akun yang sudah ada yang boleh dikirimi link: orang asing tidak bisa membuat akun baru lewat form ini */
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false, emailRedirectTo:location.origin + "/?admin=1" } });
+  const m = ((error && (error.code || "")) + " " + (error && error.message || "")).toLowerCase();
+  if (error && (error.status === 429 || /rate|too many|over_email/.test(m))) { $("gate-send").disabled = false; magicNext = Date.now() + 60000; err.textContent = "Terlalu sering meminta link. Coba lagi beberapa menit lagi."; return; }
+  const unknown = error && /otp_disabled|signups? not allowed|not found|user_not_found/.test(m);
+  if (error && !unknown) { $("gate-send").disabled = false; err.textContent = "Link belum terkirim. Periksa koneksi lalu coba lagi."; return; }
+  magicNext = Date.now() + 60000;
+  /* pesan sama untuk email yang dikenal maupun tidak, supaya daftar admin tidak bisa ditebak */
+  $("admin-gate").innerHTML = `<div class="card"><h3>Cek email Anda</h3><p class="fhint" style="margin:0">Kalau ${esc(email)} terdaftar sebagai admin, link masuk sudah dikirim. Cek juga folder spam.</p><button class="btn line sm" id="gate-back" type="button" style="margin-top:12px">Pakai email lain</button></div>`;
+  $("gate-back").onclick = renderGate;
 }
 async function signOut(){ try { await sb.auth.signOut(); } catch (e) {} await applySession(null); }
 $("logout").onclick = signOut;
@@ -1917,7 +1960,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 18;
+const SCHEMA_VERSION = 19;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
