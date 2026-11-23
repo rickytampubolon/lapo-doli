@@ -1252,11 +1252,19 @@ function renderAdminPo(){
         ${sched ? `<button class="textbtn opennow" data-popennow type="button">${ic("check")}Buka sekarang</button>` : ""}
         <button class="textbtn iconbtn-t ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button" aria-label="Hapus PO" title="Hapus PO">${armPoDel === po.id ? "Yakin hapus?" : ic("trash")}</button></div>${adv}</div>`;
   }).join("");
-  el.innerHTML = `<div class="newpo"><input type="date" id="po-new" aria-label="Tanggal PO"><input type="datetime-local" id="po-opens" aria-label="Buka otomatis (opsional)" title="Buka otomatis pada. Kosongkan untuk buka sekarang."><button class="btn sm add" data-poadd type="button">${ic("plus")}<span id="po-add-t">Buka PO</span></button></div>
-    <p class="fhint" style="margin:-4px 0 10px">Waktu buka otomatis (opsional): PO baru bisa dipesan setelah waktu itu.</p>
+  el.innerHTML = `<section class="card newpo2">
+      <div class="gc-h"><span class="gc-ic">${ic("plus")}</span><div><h3>Buka PO baru</h3></div></div>
+      <label class="fl" for="po-new">Tanggal PO (hari pengiriman)</label>
+      <input type="date" id="po-new" class="dtin" value="${esc(poDraft.date)}">
+      <p class="fhint" id="po-new-h">${poDraft.date ? esc(dLong(poDraft.date)) : "Ketuk kolom di atas untuk memilih tanggal."}</p>
+      <div class="fl">Kapan dibuka untuk pembeli?</div>
+      <div class="stabs seg" role="group" aria-label="Kapan dibuka"><button type="button" data-powhen="now" aria-pressed="${poDraft.when === "now"}">Sekarang</button><button type="button" data-powhen="later" aria-pressed="${poDraft.when === "later"}">Jadwalkan</button></div>
+      <div id="po-opens-w" ${poDraft.when === "later" ? "" : "hidden"}><label class="fl" for="po-opens">Dibuka pada</label><input type="datetime-local" id="po-opens" class="dtin" value="${esc(poDraft.opens)}"><p class="fhint">Sebelum waktu ini, PO tampil sebagai "belum dibuka" dan belum bisa dipesan.</p></div>
+      <button class="btn" data-poadd type="button">${ic("plus")}<span id="po-add-t">${poDraft.when === "later" ? "Jadwalkan PO" : "Buka PO"}</span></button>
+    </section>
     ${rows || '<div class="empty">Belum ada PO.</div>'}`;
 }
-const poEl = $("a-po"), poAdvOpen = new Set();
+const poEl = $("a-po"), poAdvOpen = new Set(), poDraft = { date:"", when:"now", opens:"" };
 poEl.addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.poadv) { if (d.open) poAdvOpen.add(d.dataset.poadv); else poAdvOpen.delete(d.dataset.poadv); } }, true);
 async function dupPo(po){
   const taken = new Set((pos || []).map(p => String(p.date))), d = new Date(po.date + "T00:00:00Z");
@@ -1273,7 +1281,10 @@ function renderPoSafe(){
   poDirty = false; renderAdminPo();
 }
 poEl.addEventListener("focusout", () => setTimeout(() => { if (poDirty) renderPoSafe(); }, 50));
-poEl.addEventListener("input", e => { if (e.target.id === "po-opens") $("po-add-t").textContent = e.target.value ? "Jadwalkan" : "Buka PO"; });
+poEl.addEventListener("input", e => {
+  if (e.target.id === "po-new") { poDraft.date = e.target.value; $("po-new-h").textContent = dparse(e.target.value) ? dLong(e.target.value) : "Ketuk kolom di atas untuk memilih tanggal."; }
+  else if (e.target.id === "po-opens") poDraft.opens = e.target.value;
+});
 poEl.addEventListener("change", async e => {
   const t = e.target;
   if (t.matches("[data-pocutoff]")) {
@@ -1295,14 +1306,18 @@ poEl.addEventListener("change", async e => {
 });
 poEl.addEventListener("click", async e => {
   try {
+    const pw = e.target.closest("[data-powhen]");
+    if (pw) { poDraft.when = pw.dataset.powhen; $("po-opens-w").hidden = poDraft.when !== "later"; $("po-add-t").textContent = poDraft.when === "later" ? "Jadwalkan PO" : "Buka PO"; poEl.querySelectorAll("[data-powhen]").forEach(b => b.setAttribute("aria-pressed", String(b === pw))); return; }
     if (e.target.closest("[data-poadd]")) {
       const v = $("po-new").value;
       if (!dparse(v)) { toast("Pilih tanggal PO dulu"); return; }
       const id = "po-" + v.replace(/-/g, "");
       if ((pos || []).some(p => p.id === id)) { toast("PO tanggal itu sudah ada"); return; }
-      const ov = $("po-opens").value, opensAt = ov ? new Date(ov) : null;
+      const ov = poDraft.when === "later" ? $("po-opens").value : "", opensAt = ov ? new Date(ov) : null;
+      if (poDraft.when === "later" && !ov) { toast("Isi waktu buka, atau pilih Sekarang."); return; }
       if (opensAt && isNaN(opensAt)) { toast("Waktu buka tidak valid"); return; }
       await api.addPo(v, opensAt ? opensAt.toISOString() : null); await refreshPos();
+      poDraft.date = ""; poDraft.opens = ""; poDraft.when = "now"; renderAdminPo();
       toast(opensAt ? "PO dijadwalkan" : "PO dibuka"); return;
     }
     if (e.target.closest("[data-popennow]")) {
