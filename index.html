@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261122zh">
+<link rel="stylesheet" href="/style.css?v=20261122zj">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -53,7 +53,7 @@
           <div><b id="sc-cut">-</b><small>PO tutup</small></div>
           <div><b>Jakarta saja</b><small>Area antar</small></div>
         </div>
-        <p class="howto">Pilih menu, isi data, lalu transfer dan unggah bukti dalam <b>1 jam</b>.</p>
+        <p class="howto">Pilih menu, isi data, lalu transfer dan unggah bukti dalam <b data-paywin>1 jam</b>.</p>
       </div>
       <div class="closed" id="closed" hidden>
         <span class="logo emptylogo" role="img" aria-label="Logo Lapo Doli"></span>
@@ -91,6 +91,7 @@
           <div class="err" id="e-nama"></div>
           <label class="lb" for="hp">No. WhatsApp <i class="req">*</i></label>
           <input id="hp" type="tel" inputmode="numeric" autocomplete="tel" enterkeyhint="next" placeholder="08123456789">
+          <p class="fhint" id="hp-note" hidden>Konfirmasi dan pengingat bayar kami kirim lewat WhatsApp ke nomor ini.</p>
           <div class="err" id="e-hp"></div>
           <div id="addr-fields">
             <div id="addr-search" hidden>
@@ -144,6 +145,7 @@
         <div class="payamt"><div><span class="muted">Transfer tepat</span><b id="d-amt">Rp 0</b></div><button class="copybtn" id="copy-amt" type="button" aria-label="Salin jumlah" title="Salin jumlah"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
         <p class="note" id="d-kode" hidden></p>
         <p class="ttl" id="d-ttl" hidden></p>
+        <button class="textbtn extendbtn" id="ttl-extend" type="button" hidden>Tambah waktu 30 menit (sekali)</button>
         <div id="d-bank"><div class="bankname"><b id="d-bank-name"></b> <span class="muted" id="d-bank-holder"></span></div>
           <div class="bankrow"><div class="copy" id="d-bank-no"></div><button class="copybtn" id="copy-no" type="button" aria-label="Salin nomor rekening" title="Salin nomor rekening"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div></div>
         <div id="d-qris" hidden><p class="note" style="text-align:center;margin:0 0 10px">Scan QRIS, lalu isi nominal sesuai jumlah di atas.</p><div class="qris" id="qris-box"></div></div>
@@ -189,7 +191,7 @@
       <details><summary>Apa itu PO?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Boleh pesan beberapa tanggal sekaligus dan bayar sekali. PO tutup pukul <span data-cutoff></span> di hari itu.</p></details>
       <details><summary>Antar atau ambil sendiri?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Antar ke Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir <span data-ongkir></span> per tanggal. Ambil sendiri di <span data-pickloc></span>, jam <span data-pickhours></span>, tanpa ongkir.</p></details>
       <details><summary>Nasi dan sop tambahan<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Muncul setelah menu utama dipilih. Jumlahnya maksimal sama dengan menu utama.</p></details>
-      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah kamu transfer dan mengunggah bukti bayar di halaman pesanan, admin mengecek lalu mengubah statusnya. Transfer paling lambat 1 jam setelah memesan. Pesanan yang belum dibayar dalam 1 jam dibatalkan otomatis.</p></details>
+      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah kamu transfer dan mengunggah bukti bayar di halaman pesanan, admin mengecek lalu mengubah statusnya. Transfer paling lambat <span data-paywin>1 jam</span> setelah memesan. Pesanan yang belum dibayar dalam <span data-paywin>1 jam</span> dibatalkan otomatis.</p></details>
       <details><summary>Ubah atau batalkan pesanan?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Selama belum kirim bukti bayar, batalkan sendiri lewat tombol Batalkan pesanan di halaman bayar. Kalau sudah kirim bukti, hubungi admin lewat WhatsApp dengan nomor pesanan.</p></details>
     </div>
     <a class="btn ink" id="help-wa" style="margin-top:20px" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Chat admin</a>
@@ -242,7 +244,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261122zh"></script>
+<script defer src="/app.js?v=20261122zj"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

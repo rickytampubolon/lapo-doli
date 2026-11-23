@@ -108,6 +108,28 @@ alter table public.orders add column if not exists maps_url text not null defaul
 alter table public.orders add column if not exists claimed_at timestamptz;
 -- pesanan lunas yang dibatalkan: perlu dikembalikan uangnya ('perlu') atau sudah ('selesai')
 alter table public.orders add column if not exists refund text not null default '' check (refund in ('', 'perlu', 'selesai'));
+-- perpanjangan batas bayar yang dipakai pembeli (sekali, 30 menit)
+alter table public.orders add column if not exists extra_min integer not null default 0 check (extra_min in (0, 30));
+
+-- Batas bayar (menit) diatur admin di Pengaturan (payWindowMin, 15 sampai 240, bawaan 60)
+create or replace function public.pay_window()
+returns interval
+language sql stable security definer
+set search_path = public
+as $$
+  select make_interval(mins => greatest(15, least(240, coalesce((select nullif(data ->> 'payWindowMin', '')::integer from public.settings where id = 'shop'), 60))));
+$$;
+create or replace function public.order_deadline(p_created timestamptz, p_extra integer)
+returns timestamptz
+language sql stable security definer
+set search_path = public
+as $$
+  select p_created + public.pay_window() + make_interval(mins => coalesce(p_extra, 0));
+$$;
+revoke all on function public.pay_window() from public;
+revoke all on function public.order_deadline(timestamptz, integer) from public;
+grant execute on function public.pay_window() to anon, authenticated;
+grant execute on function public.order_deadline(timestamptz, integer) to anon, authenticated;
 create index if not exists orders_ref_idx on public.orders (client_ref) where client_ref is not null;
 create index if not exists orders_po_idx on public.orders (po_id);
 create index if not exists orders_gid_idx on public.orders (gid);
@@ -268,7 +290,7 @@ begin
   if not as_admin and (
        select count(distinct o.gid) from public.orders o
        where o.status = 'baru' and o.pay_status = 'cek' and o.proof_path = ''
-         and o.created_at > now() - interval '1 hour' and public.norm_hp(o.hp) = public.norm_hp(v_hp)
+         and public.order_deadline(o.created_at, o.extra_min) > now() and public.norm_hp(o.hp) = public.norm_hp(v_hp)
      ) >= 3 then
     raise exception 'too_many_pending';
   end if;
@@ -359,7 +381,7 @@ begin
           select coalesce(sum((i.value ->> 'qty')::integer), 0) into v_sold
           from public.orders o, jsonb_array_elements(o.items) i
           where o.po_id = po.id and o.status <> 'batal' and o.pay_status <> 'ditolak'
-            and not (o.pay_status = 'cek' and o.proof_path = '' and o.created_at < now() - interval '1 hour')
+            and not (o.pay_status = 'cek' and o.proof_path = '' and public.order_deadline(o.created_at, o.extra_min) < now())
             and i.value ->> 'pid' = k and not coalesce((i.value ->> 'addon')::boolean, false);
           if v_sold + (mainq ->> k)::integer > v_quota then
             raise exception 'sold_out:%:%', k, greatest(0, v_quota - v_sold);
@@ -386,7 +408,7 @@ begin
       exit when not exists (
         select 1 from public.orders o
         where o.kode = v_kode and o.group_total = v_total_all and o.pay_status = 'cek'
-          and o.status <> 'batal' and o.created_at > now() - interval '1 hour');
+          and o.status <> 'batal' and public.order_deadline(o.created_at, o.extra_min) > now());
     end loop;
   end if;
 
@@ -433,11 +455,11 @@ grant execute on function public.create_orders(jsonb, boolean) to anon, authenti
 -- ---------------------------------------------------------------------
 drop function if exists public.track_orders(text[], text);
 create or replace function public.track_orders(ids text[], phone text)
-returns table (id text, po_date date, fulfil text, hours text, pickup_loc text, total integer, pay_status text, status text, has_proof boolean, claimed boolean)
+returns table (id text, po_date date, fulfil text, hours text, pickup_loc text, total integer, pay_status text, status text, has_proof boolean, claimed boolean, deadline timestamptz, extended boolean)
 language sql stable security definer
 set search_path = public
 as $$
-  select o.id, o.po_date, o.fulfil, o.hours, o.pickup_loc, o.total, o.pay_status, o.status, (o.proof_path <> '') as has_proof, (o.claimed_at is not null) as claimed
+  select o.id, o.po_date, o.fulfil, o.hours, o.pickup_loc, o.total, o.pay_status, o.status, (o.proof_path <> '') as has_proof, (o.claimed_at is not null) as claimed, public.order_deadline(o.created_at, o.extra_min) as deadline, (o.extra_min > 0) as extended
   from public.orders o
   where coalesce(array_length(ids, 1), 0) between 1 and 20
     and o.id = any (ids)
@@ -496,6 +518,27 @@ $$;
 revoke all on function public.claim_paid(text, text) from public;
 grant execute on function public.claim_paid(text, text) to anon, authenticated;
 
+-- Pembeli menambah waktu bayar 30 menit, sekali, selama batas belum lewat dan belum ada bukti.
+create or replace function public.extend_pay(p_gid text, phone text)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare n integer;
+begin
+  if p_gid !~ '^[A-Z0-9]{8}$' then return 0; end if;
+  update public.orders set extra_min = 30
+   where gid = p_gid and public.norm_hp(hp) = public.norm_hp(phone)
+     and status = 'baru' and pay_status = 'cek' and proof_path = '' and extra_min = 0
+     and public.order_deadline(created_at, 0) > now();
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+revoke all on function public.extend_pay(text, text) from public;
+grant execute on function public.extend_pay(text, text) to anon, authenticated;
+
 -- Pembeli membatalkan pesanannya sendiri selama belum ada bukti bayar dan belum dikonfirmasi.
 -- Dicocokkan dengan kode gabungan (gid) dan nomor HP yang sama. Setelah bukti terkirim, pembatalan lewat admin.
 create or replace function public.cancel_orders(p_gid text, phone text)
@@ -533,7 +576,7 @@ as $$
     select o.po_id, i.value ->> 'pid' as pid, sum((i.value ->> 'qty')::integer) as sold
     from public.orders o, jsonb_array_elements(o.items) i
     where o.status <> 'batal' and o.pay_status <> 'ditolak'
-      and not (o.pay_status = 'cek' and o.proof_path = '' and o.created_at < now() - interval '1 hour')
+      and not (o.pay_status = 'cek' and o.proof_path = '' and public.order_deadline(o.created_at, o.extra_min) < now())
       and not coalesce((i.value ->> 'addon')::boolean, false)
     group by 1, 2
   ) s on s.po_id = p.id and s.pid = pr.id
@@ -627,13 +670,15 @@ set search_path = public
 as $$
 declare n integer; ids text;
 begin
+  perform set_config('app.cancel_by', 'sistem', true);
   with c as (
     update public.orders set status = 'batal'
      where status = 'baru' and pay_status = 'cek' and proof_path = '' and source = 'web'
-       and created_at < now() - interval '1 hour'
+       and public.order_deadline(created_at, extra_min) < now()
     returning id
   )
   select count(*), string_agg(id, ', ' order by id) into n, ids from c;
+  perform set_config('app.cancel_by', '', true);
   if n > 0 then
     insert into public.activity_log (actor, action, target, detail) values ('sistem', 'batal_otomatis', left(ids, 200), 'belum bayar lebih dari 1 jam');
   end if;
@@ -656,9 +701,223 @@ exception when others then
   raise notice 'Jadwal batal otomatis belum terpasang: %', sqlerrm;
 end $$;
 
+-- ---------------------------------------------------------------------
+-- 6g. Notifikasi WhatsApp ke pembeli (antrean, pemicu, pengingat, pengiriman)
+--     Pengiriman memakai ekstensi pg_net ke penyedia WhatsApp (Fonnte atau webhook sendiri).
+--     Kunci penyedia disimpan di tabel app_secrets yang tidak bisa dibaca dari browser.
+-- ---------------------------------------------------------------------
+create table if not exists public.app_secrets (key text primary key, value text not null);
+alter table public.app_secrets enable row level security;
+revoke all on public.app_secrets from anon, authenticated;
+
+create table if not exists public.notify_queue (
+  id         bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  hp         text not null,
+  nama       text not null default '',
+  kind       text not null,
+  ref        text not null,
+  message    text not null,
+  status     text not null default 'antri' check (status in ('antri', 'dikirim', 'gagal', 'lewati')),
+  sent_at    timestamptz,
+  error      text not null default '',
+  unique (kind, ref)
+);
+alter table public.notify_queue enable row level security;
+drop policy if exists notify_admin on public.notify_queue;
+create policy notify_admin on public.notify_queue for select to authenticated using (public.is_admin());
+revoke all on public.notify_queue from anon;
+
+create or replace function public.shop_settings() returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce((select data from public.settings where id = 'shop'), '{}'::jsonb);
+$$;
+create or replace function public.rp_text(n numeric) returns text language sql immutable as $$
+  select 'Rp ' || regexp_replace(round(n)::text, '(\d)(?=(\d{3})+$)', '\1.', 'g');
+$$;
+create or replace function public.site_url() returns text language sql stable security definer set search_path = public as $$
+  select regexp_replace(coalesce(nullif(public.shop_settings() ->> 'siteUrl', ''), 'https://lapo-doli.vercel.app'), '/+$', '');
+$$;
+create or replace function public.pay_minutes() returns integer language sql stable security definer set search_path = public as $$
+  select (extract(epoch from public.pay_window()) / 60)::integer;
+$$;
+
+create or replace function public.enqueue_notify(p_kind text, p_hp text, p_nama text, p_ref text, p_msg text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare s jsonb := public.shop_settings();
+begin
+  if coalesce(s ->> 'notifyOn', 'false') <> 'true' then return; end if;
+  if coalesce(s -> 'notifyKinds' ->> p_kind, 'true') = 'false' then return; end if;
+  insert into public.notify_queue (hp, nama, kind, ref, message) values (public.norm_hp(p_hp), coalesce(p_nama, ''), p_kind, p_ref, p_msg)
+  on conflict (kind, ref) do nothing;
+end;
+$$;
+
+create or replace function public.send_notifications(p_max integer default 20)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare r record; prov text; tok text; url text; n integer := 0; has_net boolean := to_regproc('net.http_post') is not null;
+begin
+  update public.notify_queue set status = 'lewati', error = 'kedaluwarsa' where status = 'antri' and created_at < now() - interval '30 minutes';
+  select value into prov from public.app_secrets where key = 'wa_provider';
+  select value into tok from public.app_secrets where key = 'wa_token';
+  select value into url from public.app_secrets where key = 'wa_url';
+  if prov is null or (prov = 'fonnte' and tok is null) or (prov = 'webhook' and url is null) then return 0; end if;
+  for r in select * from public.notify_queue where status = 'antri' order by id limit p_max for update skip locked loop
+    if not has_net then
+      update public.notify_queue set status = 'gagal', error = 'pg_net belum aktif' where id = r.id; continue;
+    end if;
+    begin
+      if prov = 'fonnte' then
+        perform net.http_post(url := 'https://api.fonnte.com/send', body := jsonb_build_object('target', r.hp, 'message', r.message),
+                              headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', tok));
+      else
+        perform net.http_post(url := url, body := jsonb_build_object('target', r.hp, 'message', r.message, 'kind', r.kind, 'ref', r.ref),
+                              headers := jsonb_build_object('Content-Type', 'application/json') || case when tok is not null then jsonb_build_object('Authorization', 'Bearer ' || tok) else '{}'::jsonb end);
+      end if;
+      update public.notify_queue set status = 'dikirim', sent_at = now() where id = r.id; n := n + 1;
+    exception when others then
+      update public.notify_queue set status = 'gagal', error = left(sqlerrm, 200) where id = r.id;
+    end;
+  end loop;
+  return n;
+end;
+$$;
+revoke all on function public.send_notifications(integer) from public;
+revoke all on function public.send_notifications(integer) from anon, authenticated;
+
+create or replace function public.trg_order_insert() returns trigger language plpgsql security definer set search_path = public as $$
+declare s jsonb;
+begin
+  if NEW.source <> 'web' then return NEW; end if;
+  s := public.shop_settings();
+  perform public.enqueue_notify('dicatat', NEW.hp, NEW.nama, NEW.gid,
+    'Halo kak ' || NEW.nama || ', pesananmu ' || NEW.id || case when NEW.group_count > 1 then ' (gabungan beberapa tanggal)' else '' end ||
+    ' sudah dicatat. Transfer ' || public.rp_text(NEW.group_total + NEW.kode) || ' ke ' || coalesce(s ->> 'bankName', '') || ' ' || coalesce(s ->> 'bankNumber', '') || ' ' || coalesce(s ->> 'bankHolder', '') ||
+    ' dalam ' || public.pay_minutes() || ' menit, lalu unggah bukti di ' || public.site_url() || '/?cek=' || NEW.id || '. Terima kasih!');
+  begin perform public.send_notifications(5); exception when others then null; end;
+  return NEW;
+end;
+$$;
+create or replace function public.trg_order_update() returns trigger language plpgsql security definer set search_path = public as $$
+declare link text;
+begin
+  if NEW.source <> 'web' then return NEW; end if;
+  link := public.site_url() || '/?cek=' || NEW.id;
+  if NEW.pay_status = 'lunas' and OLD.pay_status <> 'lunas' then
+    perform public.enqueue_notify('lunas', NEW.hp, NEW.nama, NEW.gid || ':lunas',
+      'Halo kak ' || NEW.nama || ', pembayaran pesananmu ' || NEW.id || ' sudah kami terima. ' || case when NEW.fulfil = 'ambil' then 'Pesanan siap diambil' else 'Pesanan diantar' end ||
+      ' ' || to_char(NEW.po_date, 'DD-MM-YYYY') || ', jam ' || NEW.hours || '. Terima kasih!');
+  elsif NEW.pay_status = 'ditolak' and OLD.pay_status <> 'ditolak' then
+    perform public.enqueue_notify('ditolak', NEW.hp, NEW.nama, NEW.gid || ':ditolak',
+      'Halo kak ' || NEW.nama || ', pembayaran pesananmu ' || NEW.id || ' belum cocok. Unggah bukti transfer yang jelas di ' || link || ' atau hubungi admin.');
+  end if;
+  if NEW.status = 'diantar' and OLD.status <> 'diantar' and NEW.pay_status = 'lunas' then
+    perform public.enqueue_notify('diantar', NEW.hp, NEW.nama, NEW.id || ':diantar',
+      'Halo kak ' || NEW.nama || ', pesananmu ' || NEW.id || case when NEW.fulfil = 'ambil' then ' sudah siap diambil.' else ' sedang diantar. Mohon ditunggu ya.' end);
+  end if;
+  if NEW.status = 'batal' and OLD.status <> 'batal' and coalesce(current_setting('app.cancel_by', true), '') = 'sistem' then
+    perform public.enqueue_notify('batal_otomatis', NEW.hp, NEW.nama, NEW.gid || ':batal',
+      'Halo kak ' || NEW.nama || ', pesananmu ' || NEW.id || ' dibatalkan otomatis karena belum dibayar dalam ' || public.pay_minutes() || ' menit. Sudah transfer? Buka ' || link || ' lalu ketuk Saya sudah transfer.');
+  end if;
+  begin perform public.send_notifications(5); exception when others then null; end;
+  return NEW;
+end;
+$$;
+drop trigger if exists orders_notify_insert on public.orders;
+create trigger orders_notify_insert after insert on public.orders for each row execute function public.trg_order_insert();
+drop trigger if exists orders_notify_update on public.orders;
+create trigger orders_notify_update after update on public.orders for each row execute function public.trg_order_update();
+
+-- Pengingat: pesanan web yang belum dibayar dan tinggal 15 menit sebelum batas
+create or replace function public.enqueue_reminders()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare r record; n integer := 0;
+begin
+  for r in
+    select distinct on (o.gid) o.* from public.orders o
+     where o.source = 'web' and o.status = 'baru' and o.pay_status = 'cek' and o.proof_path = ''
+       and public.order_deadline(o.created_at, o.extra_min) > now()
+       and public.order_deadline(o.created_at, o.extra_min) - now() <= interval '15 minutes'
+     order by o.gid, o.id
+  loop
+    perform public.enqueue_notify('pengingat', r.hp, r.nama, r.gid,
+      'Halo kak ' || r.nama || ', pesananmu ' || r.id || ' belum dibayar. Sisa waktu sekitar ' ||
+      greatest(1, ceil(extract(epoch from (public.order_deadline(r.created_at, r.extra_min) - now())) / 60))::integer || ' menit. Transfer ' ||
+      public.rp_text(r.group_total + coalesce((select sum(kode) from public.orders where gid = r.gid), 0)) || ' lalu unggah bukti di ' || public.site_url() || '/?cek=' || r.id ||
+      '. Kamu bisa menambah waktu 30 menit sekali di halaman itu.');
+    n := n + 1;
+  end loop;
+  begin perform public.send_notifications(10); exception when others then null; end;
+  return n;
+end;
+$$;
+revoke all on function public.enqueue_reminders() from public;
+revoke all on function public.enqueue_reminders() from anon, authenticated;
+
+-- Admin: simpan kunci penyedia (hanya tulis), cek status, kirim pesan uji
+create or replace function public.set_secret(p_key text, p_value text) returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  if p_key not in ('wa_provider', 'wa_token', 'wa_url') then raise exception 'bad_key'; end if;
+  if coalesce(p_value, '') = '' then delete from public.app_secrets where key = p_key;
+  else insert into public.app_secrets (key, value) values (p_key, p_value) on conflict (key) do update set value = excluded.value; end if;
+end;
+$$;
+create or replace function public.secret_status() returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  return jsonb_build_object('provider', (select value from public.app_secrets where key = 'wa_provider'),
+                            'hasToken', exists (select 1 from public.app_secrets where key = 'wa_token'),
+                            'hasUrl', exists (select 1 from public.app_secrets where key = 'wa_url'),
+                            'hasNet', to_regproc('net.http_post') is not null);
+end;
+$$;
+create or replace function public.notify_test(p_hp text) returns text language plpgsql security definer set search_path = public as $$
+declare rid bigint; st text;
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  insert into public.notify_queue (hp, nama, kind, ref, message)
+  values (public.norm_hp(p_hp), 'Admin', 'uji', 'uji-' || clock_timestamp()::text, 'Pesan uji dari Lapo Doli. Kalau pesan ini sampai, notifikasi WhatsApp sudah terhubung.') returning id into rid;
+  perform public.send_notifications(5);
+  select status || case when error <> '' then ': ' || error else '' end into st from public.notify_queue where id = rid;
+  return st;
+end;
+$$;
+revoke all on function public.set_secret(text, text) from public;
+revoke all on function public.secret_status() from public;
+revoke all on function public.notify_test(text) from public;
+grant execute on function public.set_secret(text, text) to authenticated;
+grant execute on function public.secret_status() to authenticated;
+grant execute on function public.notify_test(text) to authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
+    create extension if not exists pg_cron;
+    perform cron.unschedule(jobid) from cron.job where jobname = 'lapo-notify';
+    perform cron.schedule('lapo-notify', '*/5 * * * *', 'select public.enqueue_reminders(), public.send_notifications()');
+  end if;
+  if exists (select 1 from pg_available_extensions where name = 'pg_net') then
+    create extension if not exists pg_net;
+  end if;
+exception when others then
+  raise notice 'Jadwal notifikasi atau pg_net belum terpasang: %', sqlerrm;
+end $$;
+
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 17 $$;
+returns integer language sql immutable as $$ select 18 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 
