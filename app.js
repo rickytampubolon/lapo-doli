@@ -680,53 +680,54 @@ async function submitOrder(){
 $("paid").onclick = submitOrder;
 ["nama", "hp", "area", "alamat"].forEach(k => { $(k).addEventListener("input", () => { $("e-" + k).textContent = ""; }); });
 
-/* ===== cari alamat lewat Google Maps (Places API New, tanpa skrip tambahan) ===== */
-const GKEY = String((window.LAPO_CONFIG || {}).GOOGLE_MAPS_KEY || "").trim();
-let gSess = "", gAbort = null, gTimer = null, gItems = [], gIdx = -1;
-const gNewSess = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(16).slice(2));
-const gAreaOf = comps => { const m = /Jakarta\s+(Pusat|Utara|Barat|Selatan|Timur)/i.exec((comps || []).map(c => c.longText || "").join(" ")); return m ? "Jakarta " + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : ""; };
-const gMapsOk = u => /^https:\/\/(www\.google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl)([/?]|$)/.test(u || "") && u.length <= 300;
+/* ===== cari alamat lewat OpenStreetMap (Photon, gratis, tanpa kunci) ===== */
+let gAbort = null, gTimer = null, gItems = [], gIdx = -1;
+const PHOTON = "https://photon.komoot.io/api/", JKT_BBOX = "106.68,-6.40,107.00,-6.08";
+const AREA_EN = { central:"Pusat", north:"Utara", west:"Barat", south:"Selatan", east:"Timur" };
+function gAreaOf(pr){
+  const t = [pr.county, pr.city, pr.district, pr.locality, pr.state, pr.name].filter(Boolean).join(" | ");
+  let m = /Jakarta\s+(Pusat|Utara|Barat|Selatan|Timur)/i.exec(t); if (m) return "Jakarta " + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+  m = /(Central|North|West|South|East)\s+Jakarta/i.exec(t); return m ? "Jakarta " + AREA_EN[m[1].toLowerCase()] : "";
+}
 function showAddrHint(on){ $("addr-hint").hidden = !on; }
 function gClose(){ $("addr-list").hidden = true; $("addr-q").setAttribute("aria-expanded", "false"); $("addr-q").removeAttribute("aria-activedescendant"); gIdx = -1; }
 function gRender(){
   const ul = $("addr-list");
-  ul.innerHTML = gItems.map((s, i) => `<li role="option" id="addr-o${i}" data-i="${i}" aria-selected="${i === gIdx}"><b>${esc(s.main)}</b><small>${esc(s.sub)}</small></li>`).join("") + '<li class="gpow" aria-hidden="true">Powered by Google</li>';
+  ul.innerHTML = gItems.map((s, i) => `<li role="option" id="addr-o${i}" data-i="${i}" aria-selected="${i === gIdx}"><b>${esc(s.main)}</b><small>${esc(s.sub)}</small></li>`).join("") + '<li class="gpow" aria-hidden="true">Data © OpenStreetMap</li>';
   ul.hidden = !gItems.length; $("addr-q").setAttribute("aria-expanded", String(!!gItems.length));
   if (gIdx >= 0) $("addr-q").setAttribute("aria-activedescendant", "addr-o" + gIdx);
 }
+const gUniq = arr => arr.filter((x, i) => x && arr.findIndex(y => String(y).toLowerCase() === String(x).toLowerCase()) === i);
+function gParse(f){
+  const p = f.properties || {}, c = (f.geometry && f.geometry.coordinates) || [], area = gAreaOf(p);
+  if (!area || c.length < 2) return null;
+  const st = [p.street, p.housenumber].filter(Boolean).join(" ");
+  const main = p.name || st || p.district || "";
+  const rest = gUniq([st, p.district || p.locality, area, p.postcode]).filter(x => x !== main);
+  if (!main) return null;
+  return { main, sub:rest.join(", "), area, full:gUniq([main, ...rest]).join(", "), lat:Number(c[1]), lon:Number(c[0]) };
+}
 async function gSuggest(q){
-  if (gAbort) gAbort.abort(); gAbort = new AbortController(); if (!gSess) gSess = gNewSess();
-  const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", { method:"POST", signal:gAbort.signal, headers:{ "Content-Type":"application/json", "X-Goog-Api-Key":GKEY },
-    body:JSON.stringify({ input:q, sessionToken:gSess, languageCode:"id", includedRegionCodes:["id"], locationBias:{ circle:{ center:{ latitude:-6.2088, longitude:106.8456 }, radius:30000 } } }) });
-  if (!res.ok) throw new Error("places " + res.status);
-  const j = await res.json();
-  return (j.suggestions || []).filter(s => s.placePrediction).slice(0, 5).map(s => { const p = s.placePrediction, f = p.structuredFormat || {};
-    return { id:p.placeId, main:(f.mainText && f.mainText.text) || (p.text && p.text.text) || "", sub:(f.secondaryText && f.secondaryText.text) || "" }; });
+  if (gAbort) gAbort.abort(); gAbort = new AbortController();
+  const res = await fetch(PHOTON + "?limit=10&bbox=" + JKT_BBOX + "&q=" + encodeURIComponent(q + " Jakarta"), { signal:gAbort.signal });
+  if (!res.ok) throw new Error("photon " + res.status);
+  const j = await res.json(), seen = new Set();
+  return (j.features || []).map(gParse).filter(x => x && !seen.has(x.full) && seen.add(x.full)).slice(0, 5);
 }
-async function gPick(i){
+function gPick(i){
   const s = gItems[i]; if (!s) return; gClose();
-  $("addr-q").value = s.main; $("e-addr-q").textContent = ""; $("addr-q").disabled = true;
-  try {
-    const res = await fetch("https://places.googleapis.com/v1/places/" + encodeURIComponent(s.id) + "?languageCode=id&sessionToken=" + encodeURIComponent(gSess), { headers:{ "X-Goog-Api-Key":GKEY, "X-Goog-FieldMask":"displayName,formattedAddress,googleMapsUri,addressComponents" } });
-    if (!res.ok) throw new Error("place " + res.status);
-    const p = await res.json(), area = gAreaOf(p.addressComponents), formatted = String(p.formattedAddress || ""), nm = (p.displayName && p.displayName.text) || s.main;
-    gSess = "";
-    if (!area) { mapsUrl = ""; showAddrHint(false); $("e-addr-q").textContent = "Antar hanya untuk wilayah Jakarta. Pilih alamat lain."; return; }
-    $("area").value = area;
-    $("alamat").value = (nm && !formatted.toLowerCase().startsWith(nm.toLowerCase()) ? nm + ", " : "") + formatted;
-    $("alamat").value = $("alamat").value.slice(0, 300);
-    mapsUrl = gMapsOk(p.googleMapsUri) ? p.googleMapsUri : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent($("alamat").value) + "&query_place_id=" + encodeURIComponent(s.id);
-    ["e-area", "e-alamat"].forEach(k => { $(k).textContent = ""; }); showAddrHint(true); saveCust(); track("alamat_gmaps");
-  } catch (e) { mapsUrl = ""; showAddrHint(false); $("e-addr-q").textContent = "Pencarian alamat belum bisa dipakai. Isi alamat di bawah secara manual."; }
-  finally { $("addr-q").disabled = false; }
+  $("addr-q").value = s.main; $("e-addr-q").textContent = "";
+  $("area").value = s.area; $("alamat").value = s.full.slice(0, 300);
+  mapsUrl = Number.isFinite(s.lat) && Number.isFinite(s.lon) ? `https://www.google.com/maps/search/?api=1&query=${s.lat.toFixed(6)},${s.lon.toFixed(6)}` : "";
+  ["e-area", "e-alamat"].forEach(k => { $(k).textContent = ""; }); showAddrHint(true); saveCust(); track("alamat_peta");
 }
-if (GKEY) {
+{
   $("addr-search").hidden = false;
   const q = $("addr-q");
   q.addEventListener("input", () => {
     mapsUrl = ""; showAddrHint(false); $("e-addr-q").textContent = ""; clearTimeout(gTimer);
     const v = q.value.trim(); if (v.length < 3) { gItems = []; gClose(); return; }
-    gTimer = setTimeout(async () => { try { gItems = await gSuggest(v); gIdx = -1; gRender(); } catch (e) { if (e.name !== "AbortError") { gItems = []; gClose(); $("e-addr-q").textContent = "Pencarian alamat belum bisa dipakai. Isi alamat di bawah secara manual."; } } }, 250);
+    gTimer = setTimeout(async () => { try { gItems = await gSuggest(v); gIdx = -1; gRender(); if (!gItems.length) $("e-addr-q").textContent = "Alamat tidak ditemukan di Jakarta. Isi alamat di bawah secara manual."; } catch (e) { if (e.name !== "AbortError") { gItems = []; gClose(); $("e-addr-q").textContent = "Pencarian alamat belum bisa dipakai. Isi alamat di bawah secara manual."; } } }, 400);
   });
   q.addEventListener("keydown", e => {
     if (e.key === "Escape") { gClose(); return; }
