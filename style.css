@@ -1402,3 +1402,25 @@ img.thumb{background:var(--soft)}
 
 /* ikon kartu: lembut, tidak tebal */
 .gc-ic.red{background:var(--soft);color:var(--accent)}
+
+/* tab PO: formulir Buka PO ringkas dan tombol Atur di baris */
+.newpo3{padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3)}
+.newpo3 h3{margin:0 0 var(--sp-2);font-size:15px;line-height:20px;font-weight:700}
+.np-row{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:flex-end}
+.np-f{display:grid;gap:4px;min-width:0}
+.np-f .fl{margin:0;font-size:13px;line-height:16px}
+.np-f .dtxt{font-weight:400;color:var(--text-secondary);margin-left:var(--sp-2)}
+.newpo3 .dtin{width:100%;min-width:180px;min-height:40px;padding:0 var(--sp-3);border:1px solid var(--border-default);border-radius:var(--r-md);background:#fff;font:inherit;font-size:14px;color:var(--text-primary);-webkit-appearance:none;appearance:none}
+.newpo3 .dtin:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(166,74,61,.22)}
+#admin .newpo3 .seg{display:inline-flex;gap:var(--sp-2);border:0;background:none;padding:0;box-shadow:none}
+#admin .newpo3 .seg button{min-height:40px;padding:0 var(--sp-4);font-size:14px}
+.newpo3 .np-go{width:auto;min-height:40px;padding:0 var(--sp-5);font-size:14px}
+.po-gear{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 var(--sp-3);color:var(--accent);font-weight:600;font-size:14px;border-radius:999px}
+.po-gear .ic{width:18px;height:18px;margin:0}
+.po-gear[aria-expanded="true"]{background:var(--soft)}
+.po-adv{margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px dashed var(--border-default)}
+@media (max-width:640px){
+  .np-f,.newpo3 .np-go{flex:1 1 100%}
+  #admin .newpo3 .seg{display:grid;grid-template-columns:1fr 1fr}
+}
+@media (max-width:640px){.po-gear .gl{display:none}.po-gear{min-width:44px;justify-content:center;padding:0}#admin .po-h{gap:var(--sp-2)}}
