@@ -1591,3 +1591,29 @@ body:has(#s1.show:not([hidden])) .fab-share span{display:inline}
 .minibar [data-help]{justify-self:end}
 /* toast di atas bar bawah pembeli, jangan menutupi tombol lanjut */
 body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+
+/* ===================== design system (lihat DESIGN.md) ===================== */
+:root{
+  --t-page:17px;--lh-page:24px;
+  --t-title:20px;--lh-title:28px;
+  --t-h2:16px;--lh-h2:24px;
+  --t-h3:15px;--lh-h3:22px;
+  --t-label:14px;--lh-label:20px;
+  --t-small:14px;--lh-small:20px;
+  --t-cap:12px;--lh-cap:16px;
+  --ic-sm:16px;--ic-md:20px;--ic-lg:24px;
+}
+/* huruf: judul 700, label 600, isi 400 */
+.mb-title,.ahead h2{font-size:var(--t-page);line-height:var(--lh-page);font-weight:700}
+.title,#help-view h1,.closed h2{font-size:var(--t-title);line-height:var(--lh-title);font-weight:700}
+.gc-h h2,#s2 .gc-h h2,#s3 .gc-h h2,#menu-h,#s1 #menu-h,.ct,#admin h3,#help-view h2{font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700}
+.item h3{font-size:var(--t-h3);line-height:var(--lh-h3);font-weight:700}
+.label,#s1 .label,.gh2,.rk-h,#admin h4{font-size:var(--t-label);line-height:var(--lh-label);font-weight:600}
+#menu-h,#s1 #menu-h{font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700}
+.gh2{font-weight:600}
+/* ikon: hanya 16, 20, 24 */
+.dlv small .ic,.rk-wa .ic,.rk-r .ic,.meta .ic,.steps i .ic,.lb .ic,.proofchip .ic,.opennow .ic,#addr-hint .ic,.pillbtn .ic,.sc-i .ic,#s1 .cbtn .ic{width:var(--ic-sm);height:var(--ic-sm)}
+.ofacts .ic,#admin .odetail .acts .btn .ic,.soft .ic,.seg .sl .ic,.cust .ic,.reorder .ic,.osearch .ic,.po-gear .ic,.gh2 .ic,.lastcard .ic,.latebar .ic,.schemawarn .ic,.proofok .ic,.pv-nav .ic,.fab-share .ic,.side .tabs button .ic{width:var(--ic-md);height:var(--ic-md)}
+.hlink .ic,.minibar .hlink .ic,.ahead .menubtn .ic,.gc-ic .ic,.cp-r .ic{width:var(--ic-lg);height:var(--ic-lg)}
+#admin .panel h3,#admin .card h3,#admin .porow h3,#admin .po-h h3,#admin .tview h3,.po-h h3{font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700}
+.sc-tag{font-size:var(--t-h2);line-height:var(--lh-h2)}

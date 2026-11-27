@@ -5,6 +5,9 @@ Toko pre-order untuk Lapo Doli. Pembeli pesan lewat website, admin mengelola men
 - Hosting: Vercel (situs statis, tanpa build)
 - Database, login admin, dan penyimpanan foto: Supabase
 
+
+Aturan tampilan (huruf, jarak, ikon, komponen) ada di [DESIGN.md](DESIGN.md).
+
 ## Langkah 1. Siapkan Supabase
 
 1. Daftar di https://supabase.com lalu buat project baru (pilih region Singapore).
