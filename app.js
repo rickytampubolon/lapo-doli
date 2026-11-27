@@ -642,6 +642,7 @@ $("copy-status").onclick = () => copyText(location.origin + "/?cek=" + placed.ma
 $("copy-no").onclick = () => copyText(String(settings.bankNumber), $("d-bank-no"), "Nomor rekening disalin");
 $("copy-amt").onclick = () => copyText(String(placedPay.total + placedPay.kode), $("d-amt"), "Jumlah disalin");
 
+const OUT_JKT = /bekasi|tangerang|depok|bogor|bintaro|serpong|karawaci|cibubur/i;
 const areaFromText = t => { const m = /Jakarta\s+(Pusat|Utara|Barat|Selatan|Timur)/i.exec(t || ""); return m ? "Jakarta " + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : ""; };
 const val = {
   nama:   v => v.trim().length >= 2 ? "" : "Isi nama kamu.",
@@ -681,7 +682,7 @@ async function submitOrder(){
   let ok = true;
   const chk = (k, m) => { $("e-" + k).textContent = m; if (m) ok = false; };
   chk("nama", val.nama($("nama").value)); chk("hp", val.hp($("hp").value));
-  if (isPick()) { chk("area", ""); chk("alamat", ""); } else { const at = areaFromText($("alamat").value); if (at) $("area").value = at; chk("alamat", val.alamat($("alamat").value)); if (!ok || !$("alamat").value.trim()) chk("area", ""); else chk("alamat", val.area($("area").value)); }
+  if (isPick()) { chk("area", ""); chk("alamat", ""); } else { const at = areaFromText($("alamat").value); if (at) $("area").value = at; chk("alamat", val.alamat($("alamat").value)); if (ok && OUT_JKT.test($("alamat").value) && !at) chk("alamat", "Antar hanya untuk Jakarta."); chk("area", ""); }
   if (!ok) { const f = [...document.querySelectorAll("#s2 .err")].find(x => x.textContent && !x.closest("[hidden]")); if (f) f.scrollIntoView({ behavior:"smooth", block:"center" }); return; }
   if (!sb) { toast("Toko belum siap dipakai. Coba lagi nanti."); return; }
   const btn = $("paid"); btn.disabled = true; $("paid-t").textContent = "Memproses...";
@@ -1275,7 +1276,7 @@ async function createManual(){
   let ok = true; const chk = (k, m) => { $("n-e-" + k).textContent = m; if (m) ok = false; };
   chk("nama", val.nama(g("nama"))); chk("hp", val.hp(g("hp")));
   const nArea = areaFromText(g("alamat"));
-  if (pick) chk("alamat", ""); else { chk("alamat", val.alamat(g("alamat"))); if (!ok) {} else if (!nArea) chk("alamat", "Tulis kotanya, misalnya Jakarta Selatan."); }
+  if (pick) chk("alamat", ""); else { chk("alamat", val.alamat(g("alamat"))); if (ok && !nArea && OUT_JKT.test(g("alamat"))) chk("alamat", "Antar hanya untuk Jakarta."); }
   const t = nTotals(), po = (pos || []).find(x => x.id === g("po"));
   if (!po) { toast("Pilih tanggal PO dulu"); return; }
   if (!t.ls.some(l => !l.addon)) { toast("Pilih minimal satu menu"); return; }
@@ -2081,7 +2082,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 22;
+const SCHEMA_VERSION = 23;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
