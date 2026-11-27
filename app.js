@@ -264,9 +264,11 @@ function syncMenuDom(){
   const anyOpen = openItems.size > 0; $("scrim").hidden = !anyOpen; document.body.classList.toggle("sheet-open", anyOpen);
 }
 let sheetOpener = null;
+let editBack = false;
 function closeSheets(){
   if (!openItems.size) return;
   openItems.clear(); syncMenuDom();
+  if (editBack) { editBack = false; sheetOpener = null; if (qtyTotal()) go(2); else go(1); return; }
   if (sheetOpener && document.contains(sheetOpener)) sheetOpener.focus();
   sheetOpener = null;
 }
@@ -447,7 +449,7 @@ function go(n){
   screen = n;
   document.querySelectorAll("#shop section").forEach((s, i) => s.classList.toggle("show", i + 1 === n));
   $("bar").hidden = n !== 1 || qtyTotal() === 0; $("shop").classList.toggle("has-bar", n === 1 && qtyTotal() > 0); $("shop").classList.toggle("home", n === 1);
-  updateSteps(n); openItems.clear(); sheetOpener = null;
+  updateSteps(n); openItems.clear(); sheetOpener = null; if (n !== 1) editBack = false;
   if (n === 2) renderCheckout();
   renderReorder();
   window.scrollTo({ top:0 });
@@ -462,10 +464,21 @@ const lineKey = (poId, l) => l.addon ? addonKey(poId, l.pid, l.addonId) : l.optI
 function itemsHTML(gs){
   return gs.map(g => `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + g.items.map(l => {
     const k = lineKey(g.poId, l), plusOff = l.addon && (cart[k] || 0) >= mainQty(g.poId, l.pid);
-    return `<div class="li"><div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}</div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
+    const pr = shopList().find(x => x.id === l.pid), im = pr ? imgSrc(pr) : "";
+    const th = l.addon ? '<span class="lthumb addtile" aria-hidden="true">+</span>' : im ? `<img class="thumb lthumb" src="${esc(im)}" alt="" width="56" height="56" loading="lazy" decoding="async" data-fallback="${esc((pr && pr.emoji) || "🍽️")}">` : `<span class="thumb tile lthumb" aria-hidden="true">${esc((pr && pr.emoji) || "🍽️")}</span>`;
+    return `<div class="li${l.addon ? " add" : ""}">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}${l.addon ? "" : `<button type="button" class="editline" data-edit="${esc(g.poId + "::" + l.pid)}">Ubah pilihan</button>`}</div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
   }).join("")).join("");
 }
 $("sum-items").addEventListener("click", e => {
+  const ed = e.target.closest("[data-edit]");
+  if (ed) {
+    const id = ed.dataset.edit; go(1); editBack = true;
+    const it = [...document.querySelectorAll("#menu .item")].find(x => x.dataset.po + "::" + x.dataset.pid === id);
+    if (!it) { editBack = false; go(2); return; }
+    openItems.add(id); sheetOpener = null; syncMenuDom(); it.scrollIntoView({ block:"center" });
+    const hd = it.querySelector(".sheet h3"); if (hd) hd.focus({ preventScroll:true });
+    track("ubah_item", { menu:it.dataset.pid }); return;
+  }
   const b = e.target.closest("button[data-d]"); if (!b) return;
   if (!bumpCart(b.closest("[data-key]").dataset.key, Number(b.dataset.d))) return;
   syncMenuDom(); renderPoChips(); updateBar();
@@ -2044,5 +2057,5 @@ init();
 /* foto gagal dimuat: ganti dengan ubin emoji supaya tidak ada kotak rusak */
 document.addEventListener("error", e => {
   const im = e.target; if (!im || im.tagName !== "IMG" || !im.classList.contains("thumb") || im.dataset.fallback == null) return;
-  const d = document.createElement("div"); d.className = "thumb tile"; d.setAttribute("aria-hidden", "true"); d.textContent = im.dataset.fallback; im.replaceWith(d);
+  const d = document.createElement("div"); d.className = "thumb tile" + (im.classList.contains("lthumb") ? " lthumb" : ""); d.setAttribute("aria-hidden", "true"); d.textContent = im.dataset.fallback; im.replaceWith(d);
 }, true);
