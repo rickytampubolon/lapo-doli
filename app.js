@@ -29,13 +29,13 @@ const dLong = s => fmtD(s, { weekday:"long", day:"numeric", month:"long", year:"
 const dShort = s => fmtD(s, { weekday:"short", day:"numeric", month:"short" });
 
 /* Contoh data. Dipakai kalau database belum tersedia, dan untuk "Isi menu awal". */
-const SOP = { id:"sop", name:"Sop", price:0 };
+
 const DEFAULT_PRODUCTS = [
-  { id:"kecap",     name:"Babi Kecap",        desc:"Babi empuk dimasak manis gurih dengan kecap dan bumbu rempah.", price:35000, emoji:"🍖", available:true, sort:1, options:["250ml=35000", "500ml=70000"], addons:[SOP], image:"/assets/menu/babi-kecap.svg", imageUrl:"/assets/menu/babi-kecap.svg" },
-  { id:"saksang",   name:"Babi Saksang",      desc:"Khas Batak, bumbu andaliman dan rempah pekat, pedas harum.",    price:40000, emoji:"🥘", available:true, sort:2, options:["Pakai gota", "Tidak pakai gota"], addons:[SOP], image:"/assets/menu/babi-saksang.svg", imageUrl:"/assets/menu/babi-saksang.svg" },
+  { id:"kecap",     name:"Babi Kecap",        desc:"Babi empuk dimasak manis gurih dengan kecap dan bumbu rempah.", price:35000, emoji:"🍖", available:true, sort:1, options:["250ml=35000", "500ml=70000"], addons:[], image:"/assets/menu/babi-kecap.svg", imageUrl:"/assets/menu/babi-kecap.svg" },
+  { id:"saksang",   name:"Babi Saksang",      desc:"Khas Batak, bumbu andaliman dan rempah pekat, pedas harum.",    price:40000, emoji:"🥘", available:true, sort:2, options:["Pakai gota", "Tidak pakai gota"], addons:[], image:"/assets/menu/babi-saksang.svg", imageUrl:"/assets/menu/babi-saksang.svg" },
   { id:"teri",      name:"Teri Medan Balado", desc:"Teri Medan renyah dengan sambal balado pedas.",                  price:25000, emoji:"🌶️", available:true, sort:3, options:["250ml=25000", "500ml=50000"], addons:[], image:"/assets/menu/teri-medan-balado.svg", imageUrl:"/assets/menu/teri-medan-balado.svg" },
   { id:"napinadar", name:"Ayam Napinadar",    desc:"Ayam khas Batak Toba berbumbu andaliman, pedas dan harum.",      price:40000, emoji:"🍗", available:true, sort:4, options:["250ml - Pakai gota=40000", "250ml - Tidak pakai gota=40000", "500ml - Pakai gota=75000", "500ml - Tidak pakai gota=75000"], addons:[], image:"/assets/menu/ayam-napinadar.svg", imageUrl:"/assets/menu/ayam-napinadar.svg" },
-  { id:"nasi", name:"Nasi putih", desc:"Nasi putih hangat, pas untuk teman lauk.", price:5000, emoji:"🍚", available:true, sort:5, options:[], addons:[], image:"", imageUrl:"" },
+  { id:"nasi", name:"Nasi putih", desc:"Nasi putih hangat, pas untuk teman lauk.", price:5000, emoji:"🍚", available:true, sort:5, options:[], addons:[], image:"", imageUrl:"", note:false },
 ];
 const DEFAULT_POS = [{ id:"po-20260918", date:"2026-09-18", open:true }, { id:"po-20260925", date:"2026-09-25", open:true }, { id:"po-20261001", date:"2026-10-01", open:true }];
 const DEFAULT_SETTINGS = { waNumber:"6281375205386", bankName:"Seabank", bankNumber:"901912654821", bankHolder:"a.n. Ricky Halomoan", ongkir:10000, qrisPath:"", qrisUrl:"", deliveryHours:"12.00 - 14.00", pickupHours:"12.00 - 14.00", pickupLocation:"Bassura City Mall, Lobi Selatan", poCutoff:"10:00", payWindowMin:60, notifyOn:false, notifyKinds:{} };
@@ -52,11 +52,11 @@ const parseOptions = list => (list || []).map(s => String(s).trim()).filter(Bool
   return digits !== "" && i > 0 ? { name:nm, price:Number(digits) } : { name:nm };
 }).filter(o => o.name);
 const fromProduct = r => ({ id:r.id, name:r.name, desc:r.description, price:r.price, emoji:r.emoji, available:r.available, sort:r.sort, quota:r.quota == null ? null : Number(r.quota),
-  options:(r.options || []).map(o => o.price != null ? `${o.name}=${o.price}` : o.name), addons:r.addons || [], image:r.image, imageUrl:assetUrl(r.image) });
+  options:(r.options || []).map(o => o.price != null ? `${o.name}=${o.price}` : o.name), addons:r.addons || [], image:r.image, imageUrl:assetUrl(r.image), note:r.allow_note !== false });
 const toProductRow = patch => {
   const m = {};
   for (const k in patch) { const v = patch[k];
-    if (k === "desc") m.description = v; else if (k === "options") m.options = parseOptions(v);
+    if (k === "note") m.allow_note = v; else if (k === "desc") m.description = v; else if (k === "options") m.options = parseOptions(v);
     else if (["name", "price", "emoji", "available", "sort", "addons", "image", "quota"].includes(k)) m[k] = v; }
   return m;
 };
@@ -224,7 +224,7 @@ function renderMenu(){
     const ctl = off ? '' : custom ? '<button type="button" class="addbtn" data-pick aria-haspopup="dialog" aria-expanded="false">Tambah</button>' : stepper(k, p.name);
     const addsHTML = !off && adds.length ? `<div class="subs adds" data-po="${esc(act.id)}" data-pid="${esc(p.id)}" hidden><div class="subs-title">Tambahan</div>${adds.map(a => { const ak = addonKey(act.id, p.id, a.id);
       return `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${stepper(ak, a.name + " untuk " + p.name, (cart[ak] || 0) >= mainQty(act.id, p.id))}</div>`; }).join("")}</div>` : "";
-    const note = off ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note value="${esc(itemNotes[k] || "")}" maxlength="120" placeholder="Catatan, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}"></div>`;
+    const note = off || p.note === false ? "" : `<div class="noterow" hidden><input type="text" class="inote" data-note value="${esc(itemNotes[k] || "")}" maxlength="120" placeholder="Catatan, contoh: tidak pakai cabai" aria-label="Catatan untuk ${esc(p.name)}"></div>`;
     const priceTxt = `${showP ? "dari " : ""}${rp(showP ? fromPrice(p) : p.price)}`;
     const sheet = custom ? `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-${esc(p.id)}">
         <span class="sheet-grab" aria-hidden="true"></span>
@@ -1207,7 +1207,7 @@ function renderNewForm(){
       return `<div class="nitem"><div class="nrow"><div><b>${esc(p.name)}</b> <small>${optsOf(p).some(o => o.custom) ? "mulai " + rp(fromPrice(p)) : rp(p.price)}${p.available === false ? " · habis" : ""}</small></div>${opts.length ? "" : mstep(p.id, p.name)}</div>
         ${opts.length ? `<div class="vpanel" style="display:block">${variantsHTML(p, p.id, mstep)}</div>` : ""}
         ${adds.length ? `<div class="subs"><div class="subs-title">Tambahan</div>${adds.map(a => `<div class="sub"><span>${esc(a.name)}<em>${a.price ? "+" + rp(a.price) : "gratis"}</em></span>${mstep(p.id + "::+" + a.id, a.name + " untuk " + p.name)}</div>`).join("")}</div>` : ""}
-        <div class="noterow" style="margin-top:8px"><input type="text" class="inote" data-nnote="${esc(p.id)}" maxlength="120" placeholder="Catatan" aria-label="Catatan untuk ${esc(p.name)}"></div></div>`; }).join("") || '<div class="empty">Belum ada menu.</div>'}
+        ${p.note === false ? "" : `<div class="noterow" style="margin-top:8px"><input type="text" class="inote" data-nnote="${esc(p.id)}" maxlength="120" placeholder="Catatan" aria-label="Catatan untuk ${esc(p.name)}"></div>`}</div>`; }).join("") || '<div class="empty">Belum ada menu.</div>'}
     <div class="grid2" style="margin-top:12px">
       <div><label class="lb" for="n-ong" style="margin-top:0">Ongkir (Rp)</label><input type="number" id="n-ong" min="0" step="500" inputmode="numeric" value="${flat()}"></div>
       <div><label class="lb" for="n-method" style="margin-top:0">Bayar via</label><select id="n-method"><option value="transfer">Transfer</option><option value="qris">QRIS</option></select></div>
@@ -1420,6 +1420,7 @@ function renderAdminMenu(){
           <div class="fgrid">
             <div class="full"><label class="fl" for="op-${esc(p.id)}">Varian pilihan</label><input type="text" id="op-${esc(p.id)}" data-f="options" value="${esc((Array.isArray(p.options) ? p.options : []).join(", "))}" placeholder="250ml=35000, 500ml=65000"><p class="fhint">Pisahkan dengan koma. Harga beda: nama=harga.</p></div>
             <div class="full"><label class="fl" for="ad-${esc(p.id)}">Tambahan</label><input type="text" id="ad-${esc(p.id)}" data-f="addons" value="${esc(fmtAddons(p))}" placeholder="Nasi=5000, Sop=0"><p class="fhint">Format nama=harga. Harga 0 berarti gratis.</p></div>
+            <div class="full"><label class="chk"><input type="checkbox" id="nt-${esc(p.id)}" data-f="note" ${p.note === false ? "" : "checked"}><span>Pembeli boleh menulis catatan</span></label></div>
           </div></details>
         <div class="pbar"><label class="switch"><input type="checkbox" id="av-${esc(p.id)}" data-f="available" ${p.available === false ? "" : "checked"}><span class="track"></span><span>${p.available === false ? "Habis" : "Tersedia"}</span></label>
           <span class="pmove"><button class="textbtn iconbtn-t" data-move="up" type="button" aria-label="Naikkan ${esc(p.name)}" title="Naikkan" ${products.indexOf(p) === 0 ? "disabled" : ""}>${ic("up")}</button><button class="textbtn iconbtn-t" data-move="down" type="button" aria-label="Turunkan ${esc(p.name)}" title="Turunkan" ${products.indexOf(p) === products.length - 1 ? "disabled" : ""}>${ic("down")}</button></span>
@@ -1471,7 +1472,7 @@ menuEl.addEventListener("change", async e => {
     }
     const k = t.dataset.f; if (!k) return;
     let v;
-    if (k === "available") v = t.checked;
+    if (k === "available" || k === "note") v = t.checked;
     else if (k === "quota") v = t.value.trim() === "" ? null : Math.max(0, Math.round(Number(t.value) || 0));
     else if (k === "price") v = Math.max(0, parseInt(String(t.value).replace(/\D/g, ""), 10) || 0);
     else if (k === "options") v = t.value.split(",").map(s => s.trim()).filter(Boolean);
@@ -2049,7 +2050,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 21;
+const SCHEMA_VERSION = 22;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
