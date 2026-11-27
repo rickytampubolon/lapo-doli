@@ -1468,3 +1468,28 @@ img.thumb{background:var(--soft)}
 .lg .li.add .ln{grid-column:1;grid-row:1}
 .lg .li.add .p{grid-column:1;grid-row:2;justify-self:start}
 .lg .li.add .step{grid-column:2;grid-row:1 / span 2}
+
+/* foto menu: tambah, ganti, hapus */
+.pphoto{flex:0 0 96px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:opacity .2s ease,transform .2s ease}
+.pphoto.leaving{opacity:0;transform:scale(.94)}
+.pphoto .pimg{flex:none;position:relative;transition:box-shadow .2s ease}
+.pphoto .pimg:hover{box-shadow:0 0 0 2px rgba(166,74,61,.25)}
+.pphoto .pimg img{animation:pfade .4s ease both}
+@keyframes pfade{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+.pphoto.none .pimg{background:var(--soft);outline:1.5px dashed rgba(166,74,61,.4);outline-offset:-1.5px}
+.pempty{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--accent);font-size:12px;text-align:center;line-height:1.2}
+.pempty svg{width:24px;height:24px}
+.pempty b{font-weight:600}
+.pbusy{position:absolute;inset:0;display:grid;place-items:center;background:rgba(255,255,255,.78);opacity:0;pointer-events:none;transition:opacity .2s ease}
+.pbusy i{width:22px;height:22px;border-radius:50%;border:3px solid rgba(166,74,61,.2);border-top-color:var(--accent);animation:pspin .8s linear infinite}
+@keyframes pspin{to{transform:rotate(360deg)}}
+.pphoto.busy .pbusy{opacity:1;pointer-events:auto}
+.pacts{display:flex;gap:4px;width:100%;justify-content:center}
+.pact{min-height:30px;padding:4px 10px;border-radius:999px;border:1px solid rgba(166,74,61,.35);background:#fff;color:var(--accent);font:inherit;font-size:.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;transition:background .15s ease,border-color .15s ease}
+.pact:hover{background:var(--soft)}
+.pact.del{border-color:transparent;color:var(--muted,#6b5a52)}
+.pact.del:hover{color:var(--accent)}
+@media (max-width:640px){.pphoto{flex-basis:auto;width:88px}}
+@media (prefers-reduced-motion:reduce){.pphoto,.pphoto .pimg img,.pbusy{transition:none;animation:none}}
+.pphoto .pimg{width:96px;height:96px}
+@media (max-width:640px){.pphoto .pimg{width:88px;height:88px}}

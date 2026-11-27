@@ -74,6 +74,7 @@ const api = {
   updateProduct: async (id, patch) => must(await sb.from("products").update(toProductRow(patch)).eq("id", id)),
   addProduct: async p => must(await sb.from("products").insert({ id:"menu-" + Math.random().toString(36).slice(2, 8), ...toProductRow(p) })),
   upsertProduct: async p => must(await sb.from("products").upsert({ id:p.id, ...toProductRow(p) })),
+  removeImage: async path => { try { if (path && !/^(https?:)?\/\//.test(path) && !path.startsWith("/")) await sb.storage.from("menu").remove([path]); } catch (e) {} },
   deleteProduct: async id => must(await sb.from("products").delete().eq("id", id)),
   uploadImage: async blob => {
     const ext = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg", path = `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
@@ -1383,14 +1384,17 @@ poEl.addEventListener("click", async e => {
 });
 
 /* --- menu dan harga --- */
-const thumbAdmin = p => imgSrc(p) ? `<img src="${esc(imgSrc(p))}" alt="${esc(p.name)}">` : esc(p.emoji || "🍽️");
+const thumbAdmin = p => imgSrc(p) ? `<img src="${esc(imgSrc(p))}" alt="${esc(p.name)}">` : `<span class="pempty">${ic("image")}<b>Tambah foto</b></span>`;
 const advOpen = new Set();
 function renderAdminMenu(){
   const el = $("a-menu");
   if (products === null) { el.innerHTML = '<p class="note">Memuat menu...</p>'; return; }
   const rows = products.map(p => `
     <div class="prow ${p.available === false ? "off" : ""}" data-pid="${esc(p.id)}">
-      <label class="pimg" title="Ganti foto">${thumbAdmin(p)}${assetsNs ? `<input type="file" accept="image/*" data-up id="up-${esc(p.id)}" aria-label="Foto ${esc(p.name)}">` : ""}</label>
+      <div class="pphoto${imgSrc(p) ? "" : " none"}">
+        <label class="pimg" title="${imgSrc(p) ? "Ganti foto" : "Tambah foto"}">${thumbAdmin(p)}<span class="pbusy" aria-hidden="true"><i></i></span>${assetsNs ? `<input type="file" accept="image/*" data-up id="up-${esc(p.id)}" aria-label="${imgSrc(p) ? "Ganti" : "Tambah"} foto ${esc(p.name)}">` : ""}</label>
+        ${assetsNs && imgSrc(p) ? `<div class="pacts"><label class="pact" for="up-${esc(p.id)}">Ganti</label><button type="button" class="pact del" data-delimg aria-label="Hapus foto ${esc(p.name)}">Hapus</button></div>` : ""}
+      </div>
       <div class="pmain">
         <div class="fgrid">
           <div class="full"><label class="fl" for="n-${esc(p.id)}">Nama</label><input type="text" id="n-${esc(p.id)}" data-f="name" value="${esc(p.name)}"></div>
@@ -1410,7 +1414,7 @@ function renderAdminMenu(){
   const noQuota = products.filter(p => p.available !== false && (p.quota == null));
   el.innerHTML = `
     ${noQuota.length ? `<div class="latebar warnq" role="note">${ic("ban")}<span>${noQuota.length} menu belum punya kuota (${noQuota.map(p => esc(p.name)).join(", ")}). Pesanan tidak dibatasi, jadi bisa melebihi kapasitas dapur.</span></div>` : ""}
-    <div class="toolbar"><span class="note" style="margin:0">${assetsNs ? "Ketuk foto untuk mengganti. Dipotong persegi dari tengah." : ""}</span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
+    <div class="toolbar"><span class="note" style="margin:0">${assetsNs ? "Ketuk kotak foto untuk menambah atau mengganti. Dipotong persegi dari tengah." : ""}</span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
     ${rows || `<div class="empty">Belum ada menu.<br><button class="btn sm" style="display:inline-block;margin-top:12px" data-seed>Isi menu awal</button></div>`}`;
 }
 const menuEl = $("a-menu");
@@ -1441,10 +1445,14 @@ menuEl.addEventListener("change", async e => {
   try {
     if (t.matches("[data-up]")) {
       const f = t.files[0]; if (!f || !assetsNs) return;
-      toast("Mengunggah foto...");
-      const blob = await shrink(f, 900, true);
-      const path = await api.uploadImage(blob);
-      await api.updateProduct(pid, { image:path }); await refreshProducts(); toast("Foto tersimpan");
+      const ph = row.querySelector(".pphoto"), prev = (products.find(x => x.id === pid) || {}).image;
+      ph.classList.add("busy");
+      try {
+        const blob = await shrink(f, 900, true);
+        const path = await api.uploadImage(blob);
+        await api.updateProduct(pid, { image:path }); if (prev) api.removeImage(prev);
+        await refreshProducts(); toast(prev ? "Foto diganti" : "Foto ditambahkan");
+      } finally { ph.classList.remove("busy"); }
       return;
     }
     const k = t.dataset.f; if (!k) return;
@@ -1465,6 +1473,14 @@ menuEl.addEventListener("click", async e => {
       const max = Math.max(0, ...(products || []).map(p => Number(p.sort) || 0));
       await api.addProduct({ name:"Menu baru", desc:"", price:0, emoji:"🍽️", available:false, sort:max + 1, addons:[NASI] }); await refreshProducts();
       toast("Menu baru ditambahkan. Isi nama dan harga, lalu aktifkan."); return;
+    }
+    const di = e.target.closest("[data-delimg]");
+    if (di) {
+      const row = di.closest("[data-pid]"), pid = row.dataset.pid, prev = (products.find(x => x.id === pid) || {}).image;
+      const ph = row.querySelector(".pphoto"); ph.classList.add("leaving"); await new Promise(r => setTimeout(r, 200));
+      try { await api.updateProduct(pid, { image:null }); if (prev) api.removeImage(prev); await refreshProducts(); toast("Foto dihapus"); }
+      catch (err) { ph.classList.remove("leaving"); throw err; }
+      return;
     }
     if (e.target.closest("[data-seed]")) {
       for (const p of DEFAULT_PRODUCTS) await api.upsertProduct(p);
