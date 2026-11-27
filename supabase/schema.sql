@@ -273,7 +273,8 @@ begin
   if v_method not in ('transfer', 'qris') then raise exception 'invalid_method'; end if;
   if v_fulfil = 'antar' then
     v_area := coalesce(payload ->> 'area', '');
-    if v_area not in ('Jakarta Pusat', 'Jakarta Utara', 'Jakarta Barat', 'Jakarta Selatan', 'Jakarta Timur') then
+    -- wilayah boleh kosong (pembeli tidak memilih); kalau diisi harus salah satu wilayah Jakarta
+    if v_area <> '' and v_area not in ('Jakarta Pusat', 'Jakarta Utara', 'Jakarta Barat', 'Jakarta Selatan', 'Jakarta Timur') then
       raise exception 'invalid_area';
     end if;
     v_alamat := btrim(coalesce(payload ->> 'alamat', ''));
@@ -1041,7 +1042,7 @@ end $$;
 alter table public.products add column if not exists allow_note boolean not null default true;
 
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 22 $$;
+returns integer language sql immutable as $$ select 23 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 
