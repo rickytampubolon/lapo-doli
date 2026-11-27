@@ -35,7 +35,7 @@ Satu keluarga: **Figtree**. Hanya tiga bobot: 400 (isi), 600 (label), 700 (judul
 | Judul bagian (H2) | `--t-h2` | 16 / 24 | 700 | Judul kartu (Pesanan, Cara terima), "Menu untuk ...", judul panel admin |
 | Judul item (H3) | `--t-h3` | 15 / 22 | 700 | Nama menu, judul sub-bagian |
 | Label | `--t-label` | 14 / 20 | 600 | Label isian, label kelompok, tanggal kirim |
-| Isi | `--t-body` | 16 / 24 | 400 | Teks biasa |
+| Isi | `--t-body` | 16 / 24 (HP 17 / 26) | 400 | Teks biasa |
 | Isi kecil | `--t-small` | 14 / 20 | 400 | Keterangan, deskripsi |
 | Catatan kaki | `--t-cap` | 12 / 16 | 400 | Petunjuk, kesalahan isian, lencana |
 
@@ -126,3 +126,7 @@ Aturan:
 2. Pakai token huruf, jarak, dan ikon. Jangan menulis `font-size`, `padding`, atau ukuran ikon dengan angka sendiri.
 3. Tes di lebar 360, 390, dan desktop. Pastikan tepi kiri dan kanan sejajar dan tidak ada geser horizontal.
 4. Naikkan nomor `?v=` pada `style.css` dan `app.js` di `index.html` setiap kali ada perubahan yang perlu sampai ke pengguna.
+
+## Ukuran di HP
+
+Di layar sampai 640px token huruf naik satu langkah supaya nyaman dibaca: judul halaman 18, judul besar 22, H2 dan H3 17, label dan isi kecil 15, catatan kaki 13, isi 17. Isian formulir 17px agar iPhone tidak memperbesar halaman saat diketuk. Aturan ada di blok "HP" paling bawah `style.css`.
