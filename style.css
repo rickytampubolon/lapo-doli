@@ -1446,3 +1446,5 @@ img.thumb{background:var(--soft)}
 .li .ln{grid-column:2}
 .li .p{grid-column:2}
 .li .step{grid-column:3}
+
+.li .editline{display:block;margin-top:2px;padding:6px 0;min-height:32px;background:none;border:0;color:var(--accent);font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
