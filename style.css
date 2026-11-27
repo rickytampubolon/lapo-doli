@@ -1522,3 +1522,16 @@ img.thumb{background:var(--soft)}
 .sc-stats{grid-template-columns:repeat(2,1fr)}
 .chk{display:flex;align-items:center;gap:10px;min-height:44px;font-size:.92rem;cursor:pointer}
 .chk input{width:20px;height:20px;accent-color:var(--accent);flex:none}
+
+/* tombol Ajak teman: melayang di semua halaman pembeli */
+.fab-share{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:25;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px 0 14px;border:1px solid rgba(166,74,61,.28);border-radius:999px;background:#fff;color:var(--accent);font:inherit;font-size:.9rem;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(59,44,39,.14);transition:transform .15s ease,box-shadow .15s ease,bottom .2s ease}
+.fab-share:hover{box-shadow:0 6px 18px rgba(59,44,39,.2)}
+.fab-share:active{transform:scale(.97)}
+.fab-share .ic{width:20px;height:20px;margin:0}
+body:has(#bar:not([hidden])) .fab-share,body:has(#s2.show) .fab-share{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+body:has(#admin:not([hidden])) .fab-share,body.sheet-open .fab-share{display:none}
+@media (prefers-reduced-motion:reduce){.fab-share{transition:none}}
+.fab-share{padding:0;width:48px;justify-content:center}
+.fab-share span{display:none}
+body:has(#s1.show:not([hidden])) .fab-share{width:auto;padding:0 16px 0 14px}
+body:has(#s1.show:not([hidden])) .fab-share span{display:inline}

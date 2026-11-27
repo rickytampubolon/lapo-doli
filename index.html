@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261124m">
+<link rel="stylesheet" href="/style.css?v=20261124p">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -70,7 +70,6 @@
         <div class="chips" id="pochips"></div>
         <div class="label">Pilih menu</div>
         <div id="menu" class="menu" aria-busy="true"><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div></div>
-        <div class="sharecard"><span>Ajak teman pesan</span><button class="pillbtn" type="button" data-share><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg>Bagikan</button></div>
       </div>
     </section>
 
@@ -154,7 +153,6 @@
       <ul class="dlv" id="track" style="margin-top:18px"></ul>
       <button class="textbtn" id="copy-status" type="button">Salin link status pesanan</button>
       <details class="rincian"><summary>Rincian pesanan</summary><div class="sum" id="sum3"></div></details>
-      <div class="sharecard" id="s3-share" hidden><span>Ajak teman pesan</span><button class="pillbtn" type="button" data-share><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg>Bagikan</button></div>
       <div class="actions"><button class="btn line" id="again" type="button">Pesan lagi</button></div>
     </section>
 
@@ -233,12 +231,13 @@
   </div>
 </div>
 <div id="print-area" aria-hidden="true"></div>
+<button class="fab-share" id="fab-share" type="button" data-share aria-label="Ajak teman pesan"><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg><span>Ajak teman</span></button>
 <div class="toast" id="toast" role="status"></div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261124m"></script>
+<script defer src="/app.js?v=20261124p"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
