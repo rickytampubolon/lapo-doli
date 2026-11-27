@@ -1202,17 +1202,19 @@ insert into public.settings (id, data) values ('shop', jsonb_build_object(
   'poCutoff', '10:00'
 )) on conflict (id) do nothing;
 
-insert into public.products (id, name, description, price, emoji, available, sort, options, addons, image) values
-  ('kecap', 'Babi Kecap', 'Babi empuk dimasak manis gurih dengan kecap dan bumbu rempah.', 35000, '🍖', true, 1,
-   '[{"name":"250ml","price":35000},{"name":"500ml","price":70000}]',
-   '[{"id":"nasi","name":"Nasi","price":5000},{"id":"sop","name":"Sop","price":0}]', '/assets/menu/babi-kecap.svg'),
-  ('saksang', 'Babi Saksang', 'Khas Batak, bumbu andaliman dan rempah pekat, pedas harum.', 40000, '🥘', true, 2,
-   '[{"name":"Pakai gota"},{"name":"Tidak pakai gota"}]',
-   '[{"id":"nasi","name":"Nasi","price":5000},{"id":"sop","name":"Sop","price":0}]', '/assets/menu/babi-saksang.svg'),
-  ('teri', 'Teri Medan Balado', 'Teri Medan renyah dengan sambal balado pedas.', 25000, '🌶️', true, 3,
-   '[{"name":"250ml","price":25000},{"name":"500ml","price":50000}]',
-   '[{"id":"nasi","name":"Nasi","price":5000}]', '/assets/menu/teri-medan-balado.svg'),
-  ('napinadar', 'Ayam Napinadar', 'Ayam khas Batak Toba berbumbu andaliman, pedas dan harum.', 40000, '🍗', true, 4,
-   '[{"name":"250ml - Pakai gota","price":40000},{"name":"250ml - Tidak pakai gota","price":40000},{"name":"500ml - Pakai gota","price":75000},{"name":"500ml - Tidak pakai gota","price":75000}]',
-   '[{"id":"nasi","name":"Nasi","price":5000}]', '/assets/menu/ayam-napinadar.svg')
-on conflict (id) do nothing;
+-- Menu contoh hanya diisi kalau tabel menu masih kosong (database baru). Menu yang sudah dihapus admin tidak akan muncul lagi
+-- saat file ini dijalankan ulang.
+do $$ begin
+  if not exists (select 1 from public.products) then
+    insert into public.products (id, name, description, price, emoji, available, sort, options, addons, image) values
+      ('kecap', 'Babi Kecap', 'Babi empuk dimasak manis gurih dengan kecap dan bumbu rempah.', 35000, '🍖', true, 1,
+       '[{"name":"250ml","price":35000},{"name":"500ml","price":70000}]',
+       '[{"id":"nasi","name":"Nasi","price":5000},{"id":"sop","name":"Sop","price":0}]', '/assets/menu/babi-kecap.svg'),
+      ('saksang', 'Babi Saksang', 'Khas Batak, bumbu andaliman dan rempah pekat, pedas harum.', 40000, '🥘', true, 2,
+       '[{"name":"Pakai gota"},{"name":"Tidak pakai gota"}]',
+       '[{"id":"nasi","name":"Nasi","price":5000},{"id":"sop","name":"Sop","price":0}]', '/assets/menu/babi-saksang.svg'),
+      ('teri', 'Teri Medan Balado', 'Teri Medan renyah dengan sambal balado pedas.', 25000, '🌶️', true, 3,
+       '[{"name":"250ml","price":25000},{"name":"500ml","price":50000}]',
+       '[{"id":"nasi","name":"Nasi","price":5000}]', '/assets/menu/teri-medan-balado.svg');
+  end if;
+end $$;

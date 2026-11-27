@@ -98,7 +98,7 @@ Aturan:
 - **Lencana status:** pil kecil, titik berwarna, teks 12 sampai 14px.
 - **Baris tanggal kirim:** latar `--soft`, radius 12px, ikon kalender 20px.
 - **Lembar pilihan (sheet):** naik dari bawah, sudut atas 16px, judul H2, tombol utama di dasar.
-- **Header pembeli:** beranda memakai header penuh (logo, nama, bantuan). Halaman Data dan Bayar memakai baris tipis 52px (kembali, judul halaman, bantuan). Pita ulos hanya di header.
+- **Header pembeli:** beranda memakai header penuh (logo, nama, bantuan). Halaman Data dan Bayar memakai baris tipis 52px (kembali, judul halaman, bantuan). Pita ulos hanya di header, tipis (4px) dan berwarna lembut (token `--ulos-soft`).
 - **Admin:** sidebar krem di layar lebar, tab di layar sempit. Panel memakai aturan kartu yang sama. Daftar data dibuat sebagai baris, bukan kartu bersarang.
 
 ## Beda pembeli dan admin
