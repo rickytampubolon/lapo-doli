@@ -1858,3 +1858,11 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
 .saved-r::-webkit-scrollbar{display:none}
 .sv{flex:none}
 .sv button{min-height:36px}
+
+/* HP: halaman tidak zoom sendiri saat kolom diketuk. iPhone memperbesar halaman kalau teks kolom di bawah 16px. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+a,button,summary,label,select,input,textarea,[role=button],[role=tab]{touch-action:manipulation}
+@media (max-width:900px),(hover:none) and (pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{font-size:16px!important}
+  #shop input:not([type=checkbox]):not([type=radio]),#shop textarea,#shop select,#help-view input,#help-view select,#help-view textarea{font-size:17px!important}
+}
