@@ -953,9 +953,92 @@ begin
   end loop;
 end $$;
 
+-- ---------------------------------------------------------------------
+-- 6i. Kelola admin dari aplikasi
+--     Daftar admin diubah lewat fungsi di bawah (hanya admin yang sudah login). Pendaftaran akun login dijaga
+--     trigger: hanya email yang ada di tabel admins yang boleh membuat akun, jadi admin baru cukup ditambahkan
+--     di aplikasi lalu masuk lewat link email. Syarat di Supabase: Authentication, Sign In / Providers, Email,
+--     "Allow new users to sign up" aktif (trigger yang menolak email selain admin).
+-- ---------------------------------------------------------------------
+create or replace function public.admin_list()
+returns table (email text, joined boolean, last_sign_in timestamptz, is_me boolean)
+language plpgsql stable security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  return query
+    select lower(a.email), (u.id is not null and u.email_confirmed_at is not null), u.last_sign_in_at,
+           lower(a.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      from public.admins a
+      left join auth.users u on lower(u.email) = lower(a.email)
+     order by lower(a.email);
+end;
+$$;
+
+create or replace function public.admin_add(p_email text)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+declare e text := lower(btrim(coalesce(p_email, '')));
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  if e !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' or char_length(e) > 120 then raise exception 'invalid_email'; end if;
+  if (select count(*) from public.admins) >= 20 then raise exception 'too_many_admins'; end if;
+  insert into public.admins (email) values (e) on conflict do nothing;
+  insert into public.activity_log (actor, action, target, detail)
+    values (coalesce(auth.jwt() ->> 'email', ''), 'tambah_admin', e, '');
+end;
+$$;
+
+create or replace function public.admin_remove(p_email text)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+declare e text := lower(btrim(coalesce(p_email, '')));
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  if e = lower(coalesce(auth.jwt() ->> 'email', '')) then raise exception 'cannot_remove_self'; end if;
+  if (select count(*) from public.admins) <= 1 then raise exception 'last_admin'; end if;
+  delete from public.admins where lower(email) = e;
+  insert into public.activity_log (actor, action, target, detail)
+    values (coalesce(auth.jwt() ->> 'email', ''), 'hapus_admin', e, '');
+end;
+$$;
+revoke all on function public.admin_list() from public, anon;
+revoke all on function public.admin_add(text) from public, anon;
+revoke all on function public.admin_remove(text) from public, anon;
+grant execute on function public.admin_list() to authenticated;
+grant execute on function public.admin_add(text) to authenticated;
+grant execute on function public.admin_remove(text) to authenticated;
+
+-- Hanya email admin yang boleh membuat akun login
+create or replace function public.guard_admin_signup()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  if not exists (select 1 from public.admins a where lower(a.email) = lower(coalesce(new.email, ''))) then
+    raise exception 'Pendaftaran hanya untuk admin terdaftar';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.guard_admin_signup() from public, anon, authenticated;
+do $$
+begin
+  drop trigger if exists guard_admin_signup on auth.users;
+  create trigger guard_admin_signup before insert on auth.users for each row execute function public.guard_admin_signup();
+exception when others then
+  raise notice 'Trigger pendaftaran admin belum terpasang (butuh hak atas schema auth): %', sqlerrm;
+end $$;
+
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 20 $$;
+returns integer language sql immutable as $$ select 21 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 

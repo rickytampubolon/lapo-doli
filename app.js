@@ -91,6 +91,9 @@ const api = {
   setSecret: async (key, value) => must(await sb.rpc("set_secret", { p_key:key, p_value:value })),
   notifyTest: async hp => must(await sb.rpc("notify_test", { p_hp:hp })),
   loadNotifyQueue: async () => must(await sb.from("notify_queue").select("*").order("id", { ascending:false }).limit(12)),
+  adminList: async () => must(await sb.rpc("admin_list")),
+  adminAdd: async email => must(await sb.rpc("admin_add", { p_email:email })),
+  adminRemove: async email => must(await sb.rpc("admin_remove", { p_email:email })),
   claimPaid: async (gid, phone) => must(await sb.rpc("claim_paid", { p_gid:gid, phone })),
   editItems: async (id, qty) => must(await sb.rpc("admin_edit_items", { p_id:id, p_qty:qty })),
   logAct: async (action, target, detail) => { try { await sb.from("activity_log").insert({ actor:(session && session.user && session.user.email) || "", action, target, detail }); } catch (e) {} },
@@ -1501,12 +1504,43 @@ function renderAdminSet(){
         <div class="fgrid"><div><label class="fl" for="nf-hp">Nomor untuk pesan uji</label><input type="text" id="nf-hp" inputmode="tel" value="${esc(s.waNumber || "")}"></div></div>
         <div class="acts"><button class="btn line sm" id="nf-test" type="button">${ic("chat")}Kirim pesan uji</button></div>
         <ul class="loglist" id="nf-list"></ul></details></section>
+    <section class="card setsec" id="ad-sec"><div class="gc-h"><span class="gc-ic">${ic("users")}</span><div><h3>Admin</h3></div></div>
+      <ul class="adlist" id="ad-list"><li class="note">Memuat...</li></ul>
+      <label class="fl" for="ad-email">Tambah admin</label>
+      <div class="ad-row"><input type="text" id="ad-email" inputmode="email" autocomplete="off" placeholder="email@admin.com"><button class="btn sm" id="ad-add" type="button">Tambah</button></div>
+      <p class="fhint">Setelah ditambahkan, minta orang itu membuka link admin dan masuk dengan emailnya. Akun login dibuat otomatis saat pertama masuk. <button class="linkbtn" id="ad-copy" type="button">Salin link admin</button></p></section>
     <section class="card setsec"><details id="log-d" ${logOpen ? "open" : ""}><summary>${ic("history")}Aktivitas terbaru</summary><ul class="loglist" id="log-list"><li class="note">Memuat...</li></ul></details></section>`;
   if (logOpen) fillLog();
-  fillNotify();
+  fillNotify(); fillAdmins();
 }
 const NKINDS = [["dicatat", "Pesanan dicatat"], ["pengingat", "Pengingat bayar"], ["lunas", "Pembayaran diterima"], ["ditolak", "Bayar tidak cocok"], ["diantar", "Sedang diantar"], ["batal_otomatis", "Batal otomatis"]];
-let logOpen = false, nfStatus = null, nfOpen = null;
+let logOpen = false, nfStatus = null, nfOpen = null, adArm = null;
+async function fillAdmins(){
+  const ul = $("ad-list"); if (!ul) return;
+  try {
+    const rows = await api.adminList(), me = String(session && session.user && session.user.email || "").toLowerCase(); if (!$("ad-list")) return;
+    $("ad-list").innerHTML = rows.map(r => `<li><span class="ad-e">${esc(r.email)}${r.is_me || r.email === me ? ' <span class="otag">Anda</span>' : ""}</span><span class="chip st ${r.joined ? "ok" : ""}">${r.joined ? "Sudah masuk" : "Belum pernah masuk"}</span>${r.is_me || r.email === me ? '<span class="ad-sp"></span>' : `<button class="textbtn ${adArm === r.email ? "dangerbtn" : ""}" data-adrm="${esc(r.email)}" type="button">${adArm === r.email ? "Yakin hapus?" : "Hapus"}</button>`}</li>`).join("") || '<li class="note">Belum ada admin.</li>';
+  } catch (e) { if ($("ad-list")) $("ad-list").innerHTML = '<li class="note">Daftar admin belum tersedia. Jalankan ulang schema.sql terbaru.</li>'; }
+}
+$("a-set").addEventListener("click", async e => {
+  if (e.target.closest("#ad-copy")) { copyText(location.origin + "/?admin=1", $("ad-copy"), "Link admin disalin"); return; }
+  const rm = e.target.closest("[data-adrm]");
+  if (rm) {
+    const em = rm.dataset.adrm;
+    if (adArm !== em) { adArm = em; fillAdmins(); return; }
+    adArm = null;
+    try { await api.adminRemove(em); toast(em + " dihapus dari admin"); }
+    catch (err) { const m = String(err && err.message || ""); toast(/cannot_remove_self/.test(m) ? "Kamu tidak bisa menghapus dirimu sendiri." : /last_admin/.test(m) ? "Admin terakhir tidak bisa dihapus." : "Belum tersimpan. Coba lagi."); }
+    fillAdmins(); return;
+  }
+  if (e.target.closest("#ad-add")) {
+    const em = $("ad-email").value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { toast("Email tidak valid."); return; }
+    try { await api.adminAdd(em); $("ad-email").value = ""; toast(em + " ditambahkan. Minta mereka masuk lewat link admin."); }
+    catch (err) { const m = String(err && err.message || ""); toast(/too_many/.test(m) ? "Jumlah admin sudah maksimal (20)." : /invalid_email/.test(m) ? "Email tidak valid." : "Belum tersimpan. Jalankan ulang schema.sql terbaru."); }
+    fillAdmins();
+  }
+});
 async function fillNotify(){
   const st = $("nf-state"); if (!st) return;
   try { nfStatus = await api.secretStatus(); } catch (e) { nfStatus = null; }
@@ -1542,7 +1576,7 @@ $("a-set").addEventListener("change", e => {
   if (e.target.id === "nf-prov") { $("nf-urlw").hidden = e.target.value !== "webhook"; return; }
   if (e.target.matches("[data-nk]")) { const o = {}; $("a-set").querySelectorAll("[data-nk]").forEach(c => { o[c.dataset.nk] = c.checked; }); saveSetting({ notifyKinds:o }); }
 });
-const LOGL = { status_massal:"mengubah status beberapa pesanan", refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (lewat batas bayar)", penyedia_wa:"mengatur penyedia WhatsApp", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
+const LOGL = { tambah_admin:"menambah admin", hapus_admin:"menghapus admin", status_massal:"mengubah status beberapa pesanan", refund_done:"menandai sudah refund", pay_ok:"mengonfirmasi bayar", pay_no:"menandai bayar tidak cocok", pay_undo:"membatalkan konfirmasi", next:"mengubah status", cancel:"membatalkan", reopen:"membuka lagi", konfirmasi_massal:"konfirmasi massal", batal_lewat_batas:"membatalkan yang lewat batas", batal_otomatis:"batal otomatis (lewat batas bayar)", penyedia_wa:"mengatur penyedia WhatsApp", urungkan:"mengurungkan", ubah_pesanan:"mengubah pesanan", catatan_pelanggan:"mengisi catatan pelanggan", gandakan_po:"menggandakan PO", batas_tutup_po:"mengatur batas tutup PO", kuota_po:"mengatur kuota PO", urut_menu:"menggeser urutan menu", salin_kurir:"menyalin daftar kurir" };
 async function fillLog(){
   const ul = $("log-list"); if (!ul) return;
   try { const rows = await api.loadLog(); ul.innerHTML = rows.length ? rows.map(r => `<li><span class="lt">${esc(fmtTime(r.at))}</span><span><b>${esc(String(r.actor || "").split("@")[0] || "admin")}</b> ${esc(LOGL[r.action] || r.action)} <span class="mono">${esc(r.target)}</span></span></li>`).join("") : '<li class="note">Belum ada aktivitas.</li>'; }
@@ -1890,11 +1924,11 @@ async function sendMagic(){
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Email tidak valid."; return; }
   if (Date.now() < magicNext) { err.textContent = "Tunggu " + Math.ceil((magicNext - Date.now()) / 1000) + " detik sebelum meminta link lagi."; return; }
   err.textContent = ""; $("gate-send").disabled = true;
-  /* hanya akun yang sudah ada yang boleh dikirimi link: orang asing tidak bisa membuat akun baru lewat form ini */
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false, emailRedirectTo:location.origin + "/?admin=1" } });
+  /* akun dibuat otomatis saat pertama masuk, tapi database hanya mengizinkan email yang ada di daftar admin (trigger guard_admin_signup) */
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true, emailRedirectTo:location.origin + "/?admin=1" } });
   const m = ((error && (error.code || "")) + " " + (error && error.message || "")).toLowerCase();
   if (error && (error.status === 429 || /rate|too many|over_email/.test(m))) { $("gate-send").disabled = false; magicNext = Date.now() + 60000; err.textContent = "Terlalu sering meminta link. Coba lagi beberapa menit lagi."; return; }
-  const unknown = error && /otp_disabled|signups? not allowed|not found|user_not_found/.test(m);
+  const unknown = error && /otp_disabled|signups? not allowed|not found|user_not_found|unexpected_failure|database error|saving new user|admin terdaftar/.test(m);
   if (error && !unknown) { $("gate-send").disabled = false; err.textContent = "Link belum terkirim. Periksa koneksi lalu coba lagi."; return; }
   magicNext = Date.now() + 60000;
   /* pesan sama untuk email yang dikenal maupun tidak, supaya daftar admin tidak bisa ditebak */
@@ -1965,7 +1999,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 20;
+const SCHEMA_VERSION = 21;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }

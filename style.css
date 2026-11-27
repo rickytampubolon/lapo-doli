@@ -1424,3 +1424,15 @@ img.thumb{background:var(--soft)}
   #admin .newpo3 .seg{display:grid;grid-template-columns:1fr 1fr}
 }
 @media (max-width:640px){.po-gear .gl{display:none}.po-gear{min-width:44px;justify-content:center;padding:0}#admin .po-h{gap:var(--sp-2)}}
+
+/* kelola admin */
+.adlist{list-style:none;margin:var(--sp-2) 0 var(--sp-3);padding:0;display:grid;gap:0}
+.adlist li{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) 0;border-bottom:1px solid var(--border-default);min-height:48px}
+.adlist .ad-e{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px}
+.adlist .textbtn{min-height:36px;padding:0 var(--sp-2);font-size:13px}
+.ad-row{display:flex;gap:var(--sp-2);margin-top:var(--sp-1)}
+.ad-row input{flex:1;min-width:0;min-height:44px;padding:0 var(--sp-3);border:1px solid var(--border-default);border-radius:var(--r-md);background:#fff;font:inherit}
+.ad-row .btn{width:auto;min-height:44px}
+@media (max-width:640px){.adlist li{flex-wrap:wrap}}
+.adlist .ad-sp{flex:none;width:62px}
+@media (max-width:640px){.adlist .ad-sp{display:none}}
