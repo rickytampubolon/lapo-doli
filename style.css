@@ -1437,14 +1437,16 @@ img.thumb{background:var(--soft)}
 .adlist .ad-sp{flex:none;width:62px}
 @media (max-width:640px){.adlist .ad-sp{display:none}}
 
-/* foto produk di daftar pesanan */
-.li{grid-template-columns:56px minmax(0,1fr) auto;column-gap:var(--sp-3)}
-.li .lthumb{grid-column:1;grid-row:1 / span 2;width:56px;height:56px;border-radius:12px;object-fit:cover;align-self:center;box-shadow:inset 0 0 0 1px rgba(59,44,39,.06);background:var(--soft)}
+/* daftar pesanan: foto | nama + pilihan, lalu harga di kiri dan jumlah di kanan */
+.li{display:grid;grid-template-columns:56px minmax(0,1fr) auto;column-gap:var(--sp-3);row-gap:6px;align-items:center;padding:14px 0}
+.li .lthumb{grid-column:1;grid-row:1 / span 2;width:56px;height:56px;border-radius:12px;object-fit:cover;align-self:start;box-shadow:inset 0 0 0 1px rgba(59,44,39,.06);background:var(--soft)}
 .li .thumb.tile.lthumb{display:grid;place-items:center;font-size:24px}
-.li .addtile{display:grid;place-items:center;width:32px;height:32px;justify-self:center;border-radius:50%;background:var(--soft);color:var(--accent);font-weight:700;font-size:18px;line-height:1}
-.li.add .lthumb{height:32px}
-.li .ln{grid-column:2}
-.li .p{grid-column:2}
-.li .step{grid-column:3}
-
-.li .editline{display:block;margin-top:2px;padding:6px 0;min-height:32px;background:none;border:0;color:var(--accent);font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.li .addtile{display:grid;place-items:center;width:56px;height:56px;border-radius:12px;background:var(--soft);color:var(--accent);font-weight:700;font-size:20px;line-height:1;grid-column:1;grid-row:1 / span 2;align-self:start}
+.li .ln{grid-column:2 / 4;grid-row:1;min-width:0;align-self:start;display:flex;flex-direction:column;gap:1px}
+.li .ln .n{font-weight:600;line-height:1.3}
+.li .ln small{line-height:1.35}
+.li .p{grid-column:2;grid-row:2;justify-self:start;font-weight:600;font-variant-numeric:tabular-nums}
+.li .step{grid-column:3;grid-row:2;justify-self:end}
+.li .editline{align-self:flex-start;margin-top:2px;padding:4px 0;min-height:28px;background:none;border:0;color:var(--accent);font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.li .editline{margin-top:-2px}
+.li + .li{border-top:1px solid var(--line,rgba(59,44,39,.08))}
