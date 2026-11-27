@@ -1,7 +1,7 @@
 {
   "id": "/admin",
   "name": "Lapo Doli Admin",
-  "short_name": "Admin",
+  "short_name": "Lapo Admin",
   "description": "Kelola pesanan, menu, dan PO Lapo Doli.",
   "start_url": "/admin",
   "scope": "/",

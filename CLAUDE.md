@@ -12,6 +12,7 @@ Aturan yang harus diikuti setiap sesi.
 ## Tampilan
 - Ikuti `DESIGN.md` (judul, ikon, jarak, gerak). Light mode saja, tanpa hitam.
 - Naikkan `?v=` pada `style.css` dan `app.js` di `index.html` setiap ada perubahan yang harus sampai ke pengguna.
+- `admin.html` dibuat dari `index.html`. Setiap kali `index.html` berubah (termasuk menaikkan `?v=`), jalankan `node tools/sync-admin.js` lalu commit kedua file. Jangan edit `admin.html` langsung.
 
 ## Bahasa
 - Balasan dan teks antarmuka dalam bahasa Indonesia sehari-hari, tanpa tanda pisah panjang dan tanpa istilah yang terdengar seperti mesin.

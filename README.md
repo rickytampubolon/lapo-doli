@@ -177,7 +177,9 @@ Admin punya alamat sendiri: `https://lapo-doli.vercel.app/admin`. Buka alamat it
 - **Android (Chrome):** menu tiga titik, **Instal aplikasi** (atau Tambahkan ke layar utama).
 - **iPhone (Safari):** tombol bagikan, **Tambah ke Layar Utama**.
 
-Aplikasi yang terpasang dari `/admin` memakai nama "Lapo Doli Admin", latar krem, dan langsung membuka tampilan admin. Aplikasi toko untuk pembeli tetap terpisah (dipasang dari alamat utama). Kalau sebelumnya sudah memasang dari alamat utama atau `?admin=1`, hapus ikon lama lalu pasang ulang dari `/admin`.
+Aplikasi yang terpasang dari `/admin` memakai nama "Lapo Admin", latar krem, dan langsung membuka tampilan admin. Aplikasi toko untuk pembeli tetap terpisah (dipasang dari alamat utama). Kalau sebelumnya sudah memasang dari alamat utama atau `?admin=1`, hapus ikon lama lalu pasang ulang dari `/admin`.
+
+`/admin` dilayani dari file `admin.html`, yang dibuat otomatis dari `index.html` dengan `node tools/sync-admin.js` (jalankan setiap kali `index.html` berubah). Manifest harus ada di HTML-nya karena Safari di iPhone tidak membaca manifest yang diganti lewat JavaScript.
 
 Catatan iPhone: link masuk dari email selalu terbuka di Safari, bukan di aplikasi yang terpasang, dan penyimpanan login keduanya terpisah. Jadi login dilakukan di Safari dulu, atau pakai kode masuk 6 angka (belum dibuat).
 
