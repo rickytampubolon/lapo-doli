@@ -1402,7 +1402,6 @@ function renderAdminMenu(){
           <div class="fgrid">
             <div class="full"><label class="fl" for="op-${esc(p.id)}">Varian pilihan</label><input type="text" id="op-${esc(p.id)}" data-f="options" value="${esc((Array.isArray(p.options) ? p.options : []).join(", "))}" placeholder="250ml=35000, 500ml=65000"><p class="fhint">Pisahkan dengan koma. Harga beda: nama=harga.</p></div>
             <div class="full"><label class="fl" for="ad-${esc(p.id)}">Tambahan</label><input type="text" id="ad-${esc(p.id)}" data-f="addons" value="${esc(fmtAddons(p))}" placeholder="Nasi=5000, Sop=0"><p class="fhint">Format nama=harga. Harga 0 berarti gratis.</p></div>
-            <div><label class="fl" for="em-${esc(p.id)}">Ikon</label><input type="text" id="em-${esc(p.id)}" data-f="emoji" value="${esc(p.emoji || "")}" maxlength="4"></div>
           </div></details>
         <div class="pbar"><label class="switch"><input type="checkbox" id="av-${esc(p.id)}" data-f="available" ${p.available === false ? "" : "checked"}><span class="track"></span><span>${p.available === false ? "Habis" : "Tersedia"}</span></label>
           <span class="pmove"><button class="textbtn iconbtn-t" data-move="up" type="button" aria-label="Naikkan ${esc(p.name)}" title="Naikkan" ${products.indexOf(p) === 0 ? "disabled" : ""}>${ic("up")}</button><button class="textbtn iconbtn-t" data-move="down" type="button" aria-label="Turunkan ${esc(p.name)}" title="Turunkan" ${products.indexOf(p) === products.length - 1 ? "disabled" : ""}>${ic("down")}</button></span>
