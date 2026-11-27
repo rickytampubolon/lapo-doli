@@ -29,12 +29,13 @@ const dLong = s => fmtD(s, { weekday:"long", day:"numeric", month:"long", year:"
 const dShort = s => fmtD(s, { weekday:"short", day:"numeric", month:"short" });
 
 /* Contoh data. Dipakai kalau database belum tersedia, dan untuk "Isi menu awal". */
-const NASI = { id:"nasi", name:"Nasi", price:5000 }, SOP = { id:"sop", name:"Sop", price:0 };
+const SOP = { id:"sop", name:"Sop", price:0 };
 const DEFAULT_PRODUCTS = [
-  { id:"kecap",     name:"Babi Kecap",        desc:"Babi empuk dimasak manis gurih dengan kecap dan bumbu rempah.", price:35000, emoji:"🍖", available:true, sort:1, options:["250ml=35000", "500ml=70000"], addons:[NASI, SOP], image:"/assets/menu/babi-kecap.svg", imageUrl:"/assets/menu/babi-kecap.svg" },
-  { id:"saksang",   name:"Babi Saksang",      desc:"Khas Batak, bumbu andaliman dan rempah pekat, pedas harum.",    price:40000, emoji:"🥘", available:true, sort:2, options:["Pakai gota", "Tidak pakai gota"], addons:[NASI, SOP], image:"/assets/menu/babi-saksang.svg", imageUrl:"/assets/menu/babi-saksang.svg" },
-  { id:"teri",      name:"Teri Medan Balado", desc:"Teri Medan renyah dengan sambal balado pedas.",                  price:25000, emoji:"🌶️", available:true, sort:3, options:["250ml=25000", "500ml=50000"], addons:[NASI], image:"/assets/menu/teri-medan-balado.svg", imageUrl:"/assets/menu/teri-medan-balado.svg" },
-  { id:"napinadar", name:"Ayam Napinadar",    desc:"Ayam khas Batak Toba berbumbu andaliman, pedas dan harum.",      price:40000, emoji:"🍗", available:true, sort:4, options:["250ml - Pakai gota=40000", "250ml - Tidak pakai gota=40000", "500ml - Pakai gota=75000", "500ml - Tidak pakai gota=75000"], addons:[NASI], image:"/assets/menu/ayam-napinadar.svg", imageUrl:"/assets/menu/ayam-napinadar.svg" }
+  { id:"kecap",     name:"Babi Kecap",        desc:"Babi empuk dimasak manis gurih dengan kecap dan bumbu rempah.", price:35000, emoji:"🍖", available:true, sort:1, options:["250ml=35000", "500ml=70000"], addons:[SOP], image:"/assets/menu/babi-kecap.svg", imageUrl:"/assets/menu/babi-kecap.svg" },
+  { id:"saksang",   name:"Babi Saksang",      desc:"Khas Batak, bumbu andaliman dan rempah pekat, pedas harum.",    price:40000, emoji:"🥘", available:true, sort:2, options:["Pakai gota", "Tidak pakai gota"], addons:[SOP], image:"/assets/menu/babi-saksang.svg", imageUrl:"/assets/menu/babi-saksang.svg" },
+  { id:"teri",      name:"Teri Medan Balado", desc:"Teri Medan renyah dengan sambal balado pedas.",                  price:25000, emoji:"🌶️", available:true, sort:3, options:["250ml=25000", "500ml=50000"], addons:[], image:"/assets/menu/teri-medan-balado.svg", imageUrl:"/assets/menu/teri-medan-balado.svg" },
+  { id:"napinadar", name:"Ayam Napinadar",    desc:"Ayam khas Batak Toba berbumbu andaliman, pedas dan harum.",      price:40000, emoji:"🍗", available:true, sort:4, options:["250ml - Pakai gota=40000", "250ml - Tidak pakai gota=40000", "500ml - Pakai gota=75000", "500ml - Tidak pakai gota=75000"], addons:[], image:"/assets/menu/ayam-napinadar.svg", imageUrl:"/assets/menu/ayam-napinadar.svg" },
+  { id:"nasi", name:"Nasi putih", desc:"Nasi putih hangat, pas untuk teman lauk.", price:5000, emoji:"🍚", available:true, sort:5, options:[], addons:[], image:"", imageUrl:"" },
 ];
 const DEFAULT_POS = [{ id:"po-20260918", date:"2026-09-18", open:true }, { id:"po-20260925", date:"2026-09-25", open:true }, { id:"po-20261001", date:"2026-10-01", open:true }];
 const DEFAULT_SETTINGS = { waNumber:"6281375205386", bankName:"Seabank", bankNumber:"901912654821", bankHolder:"a.n. Ricky Halomoan", ongkir:10000, qrisPath:"", qrisUrl:"", deliveryHours:"12.00 - 14.00", pickupHours:"12.00 - 14.00", pickupLocation:"Bassura City Mall, Lobi Selatan", poCutoff:"10:00", payWindowMin:60, notifyOn:false, notifyKinds:{} };
@@ -1484,7 +1485,7 @@ menuEl.addEventListener("click", async e => {
   try {
     if (e.target.closest("[data-add]")) {
       const max = Math.max(0, ...(products || []).map(p => Number(p.sort) || 0));
-      await api.addProduct({ name:"Menu baru", desc:"", price:0, emoji:"🍽️", available:false, sort:max + 1, addons:[NASI] }); await refreshProducts();
+      await api.addProduct({ name:"Menu baru", desc:"", price:0, emoji:"🍽️", available:false, sort:max + 1, addons:[] }); await refreshProducts();
       toast("Menu baru ditambahkan. Isi nama dan harga, lalu aktifkan."); return;
     }
     const di = e.target.closest("[data-delimg]");
