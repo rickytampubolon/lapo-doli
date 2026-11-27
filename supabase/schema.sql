@@ -1037,8 +1037,11 @@ exception when others then
 end $$;
 
 -- Versi skema: admin memeriksa ini supaya tahu kalau database belum diperbarui
+-- v22: menu bisa mematikan kolom catatan pembeli (misalnya Nasi putih)
+alter table public.products add column if not exists allow_note boolean not null default true;
+
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 21 $$;
+returns integer language sql immutable as $$ select 22 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 
