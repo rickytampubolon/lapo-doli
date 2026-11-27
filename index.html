@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261124c">
+<link rel="stylesheet" href="/style.css?v=20261124f">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -106,9 +106,8 @@
               <p class="fhint" id="addr-hint" hidden><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>Lokasi dari peta. Tambahkan tower, lantai, atau patokan di kolom alamat.</p>
               <div class="err" id="e-addr-q"></div>
             </div>
-            <label class="lb" for="area">Wilayah <i class="req">*</i></label>
-            <select id="area"><option value="">Pilih wilayah</option><option>Jakarta Pusat</option><option>Jakarta Utara</option><option>Jakarta Barat</option><option>Jakarta Selatan</option><option>Jakarta Timur</option></select>
-            <div class="err" id="e-area"></div>
+            <input type="hidden" id="area">
+            <div class="err" id="e-area" hidden></div>
             <label class="lb" for="alamat">Alamat lengkap <i class="req">*</i></label>
             <textarea id="alamat" autocomplete="street-address" enterkeyhint="next" placeholder="Jalan, nomor rumah, patokan"></textarea>
             <div class="err" id="e-alamat"></div>
@@ -240,7 +239,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261124c"></script>
+<script defer src="/app.js?v=20261124f"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

@@ -610,10 +610,11 @@ $("copy-status").onclick = () => copyText(location.origin + "/?cek=" + placed.ma
 $("copy-no").onclick = () => copyText(String(settings.bankNumber), $("d-bank-no"), "Nomor rekening disalin");
 $("copy-amt").onclick = () => copyText(String(placedPay.total + placedPay.kode), $("d-amt"), "Jumlah disalin");
 
+const areaFromText = t => { const m = /Jakarta\s+(Pusat|Utara|Barat|Selatan|Timur)/i.exec(t || ""); return m ? "Jakarta " + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : ""; };
 const val = {
   nama:   v => v.trim().length >= 2 ? "" : "Isi nama kamu.",
   hp:     v => /^(\+?62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g, "")) ? "" : "Nomor HP tidak valid. Contoh: 08123456789",
-  area:   v => AREAS.includes(v) ? "" : "Pilih wilayah di Jakarta.",
+  area:   v => AREAS.includes(v) ? "" : "Antar hanya untuk Jakarta. Cari alamatnya di atas, atau tulis kotanya, misalnya Jakarta Selatan.",
   alamat: v => v.trim().length >= 10 ? "" : "Alamat belum lengkap."
 };
 
@@ -648,7 +649,7 @@ async function submitOrder(){
   let ok = true;
   const chk = (k, m) => { $("e-" + k).textContent = m; if (m) ok = false; };
   chk("nama", val.nama($("nama").value)); chk("hp", val.hp($("hp").value));
-  if (isPick()) { chk("area", ""); chk("alamat", ""); } else { chk("area", val.area($("area").value)); chk("alamat", val.alamat($("alamat").value)); }
+  if (isPick()) { chk("area", ""); chk("alamat", ""); } else { const at = areaFromText($("alamat").value); if (at) $("area").value = at; chk("alamat", val.alamat($("alamat").value)); if (!ok || !$("alamat").value.trim()) chk("area", ""); else chk("alamat", val.area($("area").value)); }
   if (!ok) { const f = [...document.querySelectorAll("#s2 .err")].find(x => x.textContent && !x.closest("[hidden]")); if (f) f.scrollIntoView({ behavior:"smooth", block:"center" }); return; }
   if (!sb) { toast("Toko belum siap dipakai. Coba lagi nanti."); return; }
   const btn = $("paid"); btn.disabled = true; $("paid-t").textContent = "Memproses...";
@@ -684,10 +685,16 @@ $("paid").onclick = submitOrder;
 let gAbort = null, gTimer = null, gItems = [], gIdx = -1;
 const PHOTON = "https://photon.komoot.io/api/", JKT_BBOX = "106.68,-6.40,107.00,-6.08";
 const AREA_EN = { central:"Pusat", north:"Utara", west:"Barat", south:"Selatan", east:"Timur" };
+const KEC = { Pusat:"gambir|sawah besar|kemayoran|senen|cempaka putih|menteng|tanah abang|johar baru", Utara:"penjaringan|pademangan|tanjung priok|koja|kelapa gading|cilincing",
+  Barat:"cengkareng|grogol petamburan|taman sari|tambora|kebon jeruk|kalideres|palmerah|kembangan", Selatan:"tebet|setiabudi|setia budi|mampang prapatan|pasar minggu|kebayoran lama|cilandak|kebayoran baru|pancoran|jagakarsa|pesanggrahan",
+  Timur:"matraman|pulogadung|pulo gadung|jatinegara|kramat jati|pasar rebo|cakung|duren sawit|makasar|ciracas|cipayung" };
 function gAreaOf(pr){
   const t = [pr.county, pr.city, pr.district, pr.locality, pr.state, pr.name].filter(Boolean).join(" | ");
   let m = /Jakarta\s+(Pusat|Utara|Barat|Selatan|Timur)/i.exec(t); if (m) return "Jakarta " + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-  m = /(Central|North|West|South|East)\s+Jakarta/i.exec(t); return m ? "Jakarta " + AREA_EN[m[1].toLowerCase()] : "";
+  m = /(Central|North|West|South|East)\s+Jakarta/i.exec(t); if (m) return "Jakarta " + AREA_EN[m[1].toLowerCase()];
+  const d = String(pr.district || "").toLowerCase().replace(/^(kecamatan|kec\.?)\s+/, "");
+  for (const k in KEC) if (new RegExp("^(" + KEC[k] + ")$").test(d)) return "Jakarta " + k;
+  return "";
 }
 function showAddrHint(on){ $("addr-hint").hidden = !on; }
 function gClose(){ $("addr-list").hidden = true; $("addr-q").setAttribute("aria-expanded", "false"); $("addr-q").removeAttribute("aria-activedescendant"); gIdx = -1; }
@@ -702,7 +709,7 @@ function gParse(f){
   const p = f.properties || {}, c = (f.geometry && f.geometry.coordinates) || [], area = gAreaOf(p);
   const reg = [p.state, p.county, p.city, p.district, p.locality].filter(Boolean).join(" ");
   /* kotak pencarian juga menyentuh Tangerang, Bekasi, Depok: tolak yang jelas di luar Jakarta */
-  if (c.length < 2 || (reg && !/jakarta|dki/i.test(reg))) return null;
+  if (c.length < 2 || /tangerang|bekasi|depok|bogor|banten|jawa barat|west java/i.test(reg + " " + (p.county || ""))) return null;
   const st = [p.street, p.housenumber].filter(Boolean).join(" ");
   const main = p.name || st || p.district || "";
   const rest = gUniq([st, p.district || p.locality, area || "Jakarta", p.postcode]).filter(x => x !== main);
@@ -713,8 +720,10 @@ async function gSuggest(q){
   if (gAbort) gAbort.abort(); gAbort = new AbortController();
   const res = await fetch(PHOTON + "?limit=12&bbox=" + JKT_BBOX + "&q=" + encodeURIComponent(q), { signal:gAbort.signal });
   if (!res.ok) throw new Error("photon " + res.status);
-  const j = await res.json(), seen = new Set();
-  return (j.features || []).map(gParse).filter(x => x && !seen.has(x.full) && seen.add(x.full)).slice(0, 5);
+  const j = await res.json(), seen = new Set(), raw = j.features || [];
+  const out = raw.map(gParse).filter(x => x && !seen.has(x.full) && seen.add(x.full)).slice(0, 5);
+  if (!out.length && window.console) console.warn("alamat: Photon memberi " + raw.length + " hasil, semuanya disaring", raw.slice(0, 3).map(f => f.properties));
+  return out;
 }
 function gPick(i){
   const s = gItems[i]; if (!s) return; gClose();
