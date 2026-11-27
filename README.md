@@ -156,6 +156,17 @@ Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`,
 - Tombol bawah di checkout memakai kapsul yang sama dengan keranjang.
 - Pembeli bisa membatalkan pesanan sendiri di halaman bayar selama belum ada bukti bayar (`cancel_orders`, skema v13).
 
+## Captcha login admin (Cloudflare Turnstile)
+
+Form login admin bisa dilindungi Cloudflare Turnstile (gratis dan tidak mengganggu). Pemeriksaan dilakukan Supabase di server, bukan di browser.
+
+1. Di dash.cloudflare.com buka **Turnstile**, lalu **Add widget**. Isi nama, tambahkan domain toko (`lapo-doli.vercel.app` dan domain sendiri kalau ada), pilih mode **Managed**. Simpan, lalu salin **Site key** dan **Secret key**.
+2. Di Supabase buka **Authentication, Attack Protection** (atau Bot and Abuse Protection), aktifkan **Enable CAPTCHA protection**, pilih **Cloudflare Turnstile**, tempel **Secret key**, lalu simpan.
+3. Isi `TURNSTILE_SITE_KEY` di `config.js` dengan **Site key**. Kunci ini publik, jadi aman ditaruh di sana. Secret key jangan pernah ditaruh di repo.
+4. Deploy. Halaman login admin sekarang menampilkan kotak pemeriksaan, dan tombol "Kirim link masuk" butuh pemeriksaan selesai dulu.
+
+Urutan penting: aktifkan captcha di Supabase dan isi site key dalam waktu berdekatan. Kalau captcha sudah aktif di Supabase tapi site key masih kosong, login ditolak. Kalau site key sudah terisi tapi captcha belum aktif di Supabase, login tetap jalan. Kalau site key kosong, widget tidak tampil. `vercel.json` sudah mengizinkan `challenges.cloudflare.com`.
+
 ## Pilih alamat dari peta
 
 Di halaman pesanan, pembeli yang memilih "Antar" bisa mencari alamat lewat OpenStreetMap (layanan Photon, gratis, tanpa kunci dan tanpa akun). Pilihan mengisi alamat dan wilayah otomatis, dan tautan peta (koordinat di Google Maps) ikut tersimpan di pesanan, jadi tombol "Buka peta" di detail pesanan admin langsung menuju titiknya. Hasil pencarian dibatasi ke area Jakarta dan alamat di luar Jakarta tidak muncul. Pembeli tetap bisa mengisi alamat manual kalau pencarian tidak menemukan atau layanan sedang gangguan.
