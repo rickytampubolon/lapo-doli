@@ -466,10 +466,10 @@ function itemsHTML(gs){
   return gs.map(g => {
     const row = l => {
       const k = lineKey(g.poId, l), plusOff = l.addon && (cart[k] || 0) >= mainQty(g.poId, l.pid);
-      if (l.addon) return `<div class="li add"><div class="ln"><span class="n">+ ${esc(l.name)}</span></div><span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span>${stepper(k, l.name, plusOff)}</div>`;
+      if (l.addon) return `<div class="li add"><div class="ln"><span class="n">${esc(l.name)}</span><span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>${stepper(k, l.name, plusOff)}</div>`;
       const pr = shopList().find(x => x.id === l.pid), im = pr ? imgSrc(pr) : "";
       const th = im ? `<img class="thumb lthumb" src="${esc(im)}" alt="" width="56" height="56" loading="lazy" decoding="async" data-fallback="${esc((pr && pr.emoji) || "🍽️")}">` : `<span class="thumb tile lthumb" aria-hidden="true">${esc((pr && pr.emoji) || "🍽️")}</span>`;
-      return `<div class="li">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}<button type="button" class="editline" data-edit="${esc(g.poId + "::" + l.pid)}">Ubah</button></div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
+      return `<div class="li">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}<span class="meta"><span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span><button type="button" class="editline" data-edit="${esc(g.poId + "::" + l.pid)}">Ubah</button></span></div>${stepper(k, l.name, plusOff)}</div>`;
     };
     const mains = g.items.filter(l => !l.addon), adds = g.items.filter(l => l.addon), seen = {};
     return `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + mains.map(l => {
