@@ -1617,3 +1617,35 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
 .hlink .ic,.minibar .hlink .ic,.ahead .menubtn .ic,.gc-ic .ic,.cp-r .ic{width:var(--ic-lg);height:var(--ic-lg)}
 #admin .panel h3,#admin .card h3,#admin .porow h3,#admin .po-h h3,#admin .tview h3,.po-h h3{font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700}
 .sc-tag{font-size:var(--t-h2);line-height:var(--lh-h2)}
+
+/* HP: teks sedikit lebih besar supaya nyaman dibaca */
+@media (max-width:640px){
+  :root{--t-page:18px;--lh-page:26px;--t-title:22px;--lh-title:30px;--t-h2:17px;--lh-h2:26px;--t-h3:17px;--lh-h3:24px;--t-label:15px;--lh-label:22px;--t-small:15px;--lh-small:22px;--t-cap:13px;--lh-cap:18px}
+  body{font-size:17px;line-height:26px}
+  .item p,.note,.fhint,.muted,.gc-h p,.intro{font-size:15px;line-height:22px}
+  small,.fl,.err,.chip,.cbtn .cnt{font-size:13px;line-height:18px}
+  .price{font-size:17px}
+  .item h3{font-size:var(--t-h3)}
+  .sc-i,.sc-i small,.sc-i b{font-size:14px}
+  #s1 .cbtn,#s1 .cbtn .dow,#s1 .cbtn .mon,#s1 .cbtn .dnum{font-size:15px}
+  .addbtn,.pillbtn,.reorder,.quick .reorder,.quick .lastcard,.textbtn,.editline,#sum-items .lg .li .editline{font-size:15px}
+  #sum-items .lg .li .p{font-size:15px}
+  #sum-items .lg .li.add .n{font-size:15px}
+  #sum-items .lg .li.add .p{font-size:14px}
+  .gh2 small,.gh2{font-size:15px}
+  .vrow,.vrow .n{font-size:15px}
+  .lb,.lb .req{font-size:15px}
+  input,textarea,select{font-size:17px}
+  .checkout-bar b,.cartpill b{font-size:16px}
+  .checkout-bar small,.cartpill small{font-size:13px}
+  .fab-share{font-size:15px}
+}
+@media (max-width:640px){
+  #menu .item .price,.item .ibody .price{font-size:17px}
+  #sum-items .lg .li .n,#sum-items .li .n{font-size:17px;line-height:24px}
+  #sum-items .lg .li .ln small,#sum-items .li small{font-size:15px;line-height:22px}
+  .opt small{font-size:15px;line-height:21px}
+  #s2 .lb,#s2 label.lb{font-size:15px;line-height:22px}
+  #s2 input,#s2 textarea,#s2 select,#nama,#hp,#alamat,#addr-q{font-size:17px}
+  .checkout-bar b,.checkout-bar .cp-l b,.cartpill b{font-size:16px}
+}
