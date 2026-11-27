@@ -466,7 +466,7 @@ function itemsHTML(gs){
     const k = lineKey(g.poId, l), plusOff = l.addon && (cart[k] || 0) >= mainQty(g.poId, l.pid);
     const pr = shopList().find(x => x.id === l.pid), im = pr ? imgSrc(pr) : "";
     const th = l.addon ? '<span class="lthumb addtile" aria-hidden="true">+</span>' : im ? `<img class="thumb lthumb" src="${esc(im)}" alt="" width="56" height="56" loading="lazy" decoding="async" data-fallback="${esc((pr && pr.emoji) || "🍽️")}">` : `<span class="thumb tile lthumb" aria-hidden="true">${esc((pr && pr.emoji) || "🍽️")}</span>`;
-    return `<div class="li${l.addon ? " add" : ""}">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}${l.addon ? "" : `<button type="button" class="editline" data-edit="${esc(g.poId + "::" + l.pid)}">Ubah pilihan</button>`}</div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
+    return `<div class="li${l.addon ? " add" : ""}">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}${l.addon ? "" : `<button type="button" class="editline" data-edit="${esc(g.poId + "::" + l.pid)}">Ubah</button>`}</div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
   }).join("")).join("");
 }
 $("sum-items").addEventListener("click", e => {
