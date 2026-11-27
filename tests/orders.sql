@@ -447,5 +447,40 @@ begin
   perform set_config('request.jwt.claims', '', false);
 end $$;
 
+do $$ begin
+  -- 22: analytics corong
+  perform public.log_event('abcdef123456', 'kunjungan');
+  perform public.log_event('abcdef123456', 'kunjungan');
+  perform t.ck('22 kejadian sama dalam 30 menit dicatat sekali', (select count(*) from public.events where sid = 'abcdef123456' and name = 'kunjungan') = 1);
+  perform public.log_event('abcdef123456', 'tambah_keranjang'); perform public.log_event('abcdef123456', 'mulai_checkout'); perform public.log_event('abcdef123456', 'pesan');
+  perform public.log_event('zzzzzzzz9999', 'kunjungan'); perform public.log_event('zzzzzzzz9999', 'tambah_keranjang');
+  perform public.log_event('abcdef123456', 'hacked');
+  perform t.ck('22 nama kejadian di luar daftar diabaikan', not exists (select 1 from public.events where name = 'hacked'));
+  perform public.log_event('pendek', 'kunjungan'); perform public.log_event('ada spasi dan simbol!', 'kunjungan'); perform public.log_event(null, 'kunjungan');
+  perform t.ck('22 id sesi tidak valid diabaikan', not exists (select 1 from public.events where sid in ('pendek', 'ada spasi dan simbol!')));
+  insert into public.events (sid, name, at) select 'banjir' || lpad(g::text, 6, '0'), 'kunjungan', now() from generate_series(1, 3) g;
+  perform t.ck('22 anon tidak bisa membaca tabel kejadian', not has_table_privilege('anon', 'public.events', 'select') and not has_table_privilege('authenticated', 'public.events', 'select'));
+  perform t.ck('22 anon tidak bisa memanggil admin_funnel', not has_function_privilege('anon', 'public.admin_funnel(integer)', 'execute'));
+  perform t.ck('22 anon boleh mencatat kejadian', has_function_privilege('anon', 'public.log_event(text,text,text,text)', 'execute'));
+  perform set_config('request.jwt.claims', '{"email":"orang.lain@example.com"}', false);
+  begin perform public.admin_funnel(30); perform t.ck('22 bukan admin tidak bisa melihat corong', false); exception when others then perform t.ck('22 bukan admin tidak bisa melihat corong', true); end;
+  perform set_config('request.jwt.claims', '{"email":"Admin@Test.id"}', false);
+  perform t.ck('22 corong admin: kunjungan 5 sesi (2 + 3 banjir), tambah 2, checkout 1, pesan 1, bukti 0',
+    (select string_agg((s ->> 'n'), ',' order by ord) from jsonb_array_elements(public.admin_funnel(30) -> 'steps') with ordinality as x(s, ord)) = '5,2,1,1,0',
+    (select string_agg((s ->> 'n'), ',') from jsonb_array_elements(public.admin_funnel(30) -> 'steps') s));
+  update public.events set at = now() - interval '40 days' where sid = 'zzzzzzzz9999';
+  perform t.ck('22 rentang 30 hari tidak menghitung kejadian 40 hari lalu', ((public.admin_funnel(30) -> 'steps' -> 1) ->> 'n')::int = 1);
+  perform t.ck('22 rentang 90 hari menghitungnya', ((public.admin_funnel(90) -> 'steps' -> 1) ->> 'n')::int = 2);
+  perform t.ck('22 rentang dibatasi 1 sampai 90 hari', (public.admin_funnel(9999) ->> 'days')::int = 90 and (public.admin_funnel(-5) ->> 'days')::int = 1);
+  perform public.log_event('devsess000001', 'kunjungan', '', 'hp'); perform public.log_event('devsess000001', 'pesan', '', 'hp'); perform public.log_event('devsess000002', 'kunjungan', '', 'desktop'); perform public.log_event('devsess000003', 'kunjungan', '', 'bogus');
+  perform set_config('request.jwt.claims', '{"email":"Admin@Test.id"}', false);
+  perform t.ck('22 perangkat: hp 1 kunjungan 1 pesan, desktop 1 kunjungan, nilai asing tidak dihitung',
+    (public.admin_funnel(30) #>> '{device,hp,v}')::int = 1 and (public.admin_funnel(30) #>> '{device,hp,p}')::int = 1 and (public.admin_funnel(30) #>> '{device,desktop,v}')::int = 1 and (public.admin_funnel(30) -> 'device' ? 'bogus') is not true);
+  perform t.ck('22 harian: 30 hari, jumlah kunjungan cocok dengan ringkasan', jsonb_array_length(public.admin_funnel(30) -> 'daily') = 30 and (select sum((x ->> 'v')::int) from jsonb_array_elements(public.admin_funnel(30) -> 'daily') x) >= 1);
+  perform t.ck('22 jam 24 nilai dan hari 7 nilai', jsonb_array_length(public.admin_funnel(30) -> 'hours') = 24 and jsonb_array_length(public.admin_funnel(30) -> 'dow') = 7);
+  perform t.ck('22 periode sebelumnya dihitung terpisah', ((public.admin_funnel(30) -> 'steps' -> 0) ->> 'prev')::int >= 0 and ((public.admin_funnel(7) -> 'steps' -> 0) ? 'prev'));
+  perform set_config('request.jwt.claims', '', false);
+end $$;
+
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;
 select count(*) filter (where ok) as lulus, count(*) filter (where not ok) as gagal from t.res;

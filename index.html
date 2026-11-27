@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261126g">
+<link rel="stylesheet" href="/style.css?v=20261128b">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -136,7 +136,7 @@
     </section>
 
     <section id="s3">
-      <div class="status" style="margin-top:24px"><span class="dot" id="d-dot"></span><h1 class="title" id="d-title" style="margin:0;font-size:1.5rem">Pesanan dicatat</h1></div>
+      <div class="status" style="margin-top:24px"><span class="dot" id="d-dot"></span><h1 class="title" id="d-title" style="margin:0">Pesanan dicatat</h1></div>
       <p class="intro" id="d-sub" style="margin:8px 0 18px"></p>
 
       <div class="paybox" id="d-pay" hidden>
@@ -168,13 +168,14 @@
 </div>
 
 <div id="help-view" hidden>
-  <header class="top"><div class="col">
-    <a class="brandrow" href="/" data-home aria-label="Lapo Doli, ke beranda"><span class="logo sm" role="img" aria-label="Logo Lapo Doli"></span><span class="brand">Lapo Doli</span></a>
-    <button class="hlink" id="help-back" type="button" aria-label="Kembali" title="Kembali"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button>
+  <header class="top"><div class="col minibar">
+    <button class="hlink mb-back" id="help-back" type="button" aria-label="Kembali" title="Kembali"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button>
+    <h2 class="mb-title">Bantuan</h2>
+    <span class="mb-sp" aria-hidden="true"></span>
   </div></header>
   <div class="pattern" aria-hidden="true"></div>
   <main class="col">
-    <h1 class="title">Bantuan</h1>
+    <h1 class="sr-only">Bantuan</h1>
     <div class="card checkcard">
       <h2 class="ct">Cek status pesanan</h2>
       <div class="ckrow"><div><label class="fl" for="ck-id">Nomor pesanan</label><input type="text" id="ck-id" placeholder="1809-03" autocomplete="off"></div>
@@ -183,13 +184,14 @@
       <button class="btn" id="ck-go" type="button" style="margin-top:6px">Cek status</button>
       <ul class="dlv" id="ck-out" style="margin-top:14px"></ul>
     </div>
-    <div class="label">Pertanyaan umum</div>
+    <h2 class="sec-h">Pertanyaan umum</h2>
     <div class="faq">
-      <details><summary>Apa itu PO (pre-order)?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Boleh pesan beberapa tanggal sekaligus dan bayar sekali. PO tutup pukul <span data-cutoff></span> di hari itu.</p></details>
-      <details><summary>Antar atau ambil sendiri?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Antar ke Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir <span data-ongkir></span> per tanggal. Ambil sendiri di <span data-pickloc></span>, jam <span data-pickhours></span>, tanpa ongkir.</p></details>
-      <details><summary>Nasi dan sop tambahan<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Muncul setelah menu utama dipilih. Jumlahnya maksimal sama dengan menu utama.</p></details>
-      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah kamu transfer dan mengunggah bukti bayar di halaman pesanan, admin mengecek lalu mengubah statusnya. Transfer paling lambat <span data-paywin>1 jam</span> setelah memesan. Pesanan yang belum dibayar dalam <span data-paywin>1 jam</span> dibatalkan otomatis.</p></details>
-      <details><summary>Ubah atau batalkan pesanan?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Selama belum kirim bukti bayar, batalkan sendiri lewat tombol Batalkan pesanan di halaman bayar. Kalau sudah kirim bukti, hubungi admin lewat WhatsApp dengan nomor pesanan.</p></details>
+      <details><summary>Apa itu PO (pre-order)?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Satu pesanan untuk satu tanggal, jadi kalau mau pesan untuk tanggal lain, buat pesanan terpisah. PO tutup pukul <span data-cutoff></span> di hari itu, dan sebagian menu punya jumlah terbatas.</p></details>
+      <details><summary>Antar atau ambil sendiri?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Antar hanya untuk wilayah Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir <span data-ongkir></span> per pesanan. Cari alamatmu di kolom pencarian atau ketik manual dengan lengkap. Ambil sendiri di <span data-pickloc></span>, jam <span data-pickhours></span>, tanpa ongkir.</p></details>
+      <details><summary>Bagaimana cara bayar?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Transfer sesuai jumlah persis di halaman bayar, termasuk kode unik di ujungnya, lalu unggah bukti transfer di halaman yang sama. Bayar dalam <span data-paywin>1 jam</span> setelah memesan. Kalau waktunya hampir habis, ada tombol Tambah waktu 30 menit (sekali). Pesanan yang belum dibayar otomatis dibatalkan.</p></details>
+      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah bukti bayar terkirim, admin mengecek lalu mengubah statusnya. Pantau di halaman bayar atau pakai Cek status di atas dengan nomor pesanan dan nomor HP.</p></details>
+      <details><summary>Varian dan catatan menu<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Untuk menu yang bisa diatur, ketuk Tambah lalu pilih varian dan tulis catatan, misalnya tidak pakai cabai. Menu seperti nasi putih dipesan langsung seperti menu lain. Di halaman Data, ketuk Ubah untuk mengganti pilihan atau catatan.</p></details>
+      <details><summary>Ubah atau batalkan pesanan?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Selama belum kirim bukti bayar, batalkan sendiri lewat tombol Batalkan pesanan di halaman bayar, lalu pesan ulang kalau mau mengubah isinya. Kalau sudah kirim bukti, hubungi admin lewat WhatsApp dengan nomor pesanan.</p></details>
     </div>
     <a class="btn ink" id="help-wa" style="margin-top:20px" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>Chat admin</a>
   </main>
@@ -242,7 +244,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261126g"></script>
+<script defer src="/app.js?v=20261128b"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

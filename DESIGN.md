@@ -130,3 +130,27 @@ Aturan:
 ## Ukuran di HP
 
 Di layar sampai 640px token huruf naik satu langkah supaya nyaman dibaca: judul halaman 18, judul besar 22, H2 dan H3 17, label dan isi kecil 15, catatan kaki 13, isi 17. Isian formulir 17px agar iPhone tidak memperbesar halaman saat diketuk. Aturan ada di blok "HP" paling bawah `style.css`.
+
+## Transisi dan gerak
+
+Gerak hanya untuk menunjukkan apa yang berubah, bukan hiasan.
+
+| Elemen | Gerak | Durasi |
+|---|---|---|
+| Pindah halaman (Menu, Data, Bayar, Bantuan) | Muncul dengan geser 6px ke atas | 240ms |
+| Lembar pilihan menu | Naik dari bawah, layar gelap memudar masuk | 220ms dan 200ms |
+| Bar bawah (lanjut, pesan) | Naik 12px sambil memudar masuk | 220ms |
+| Pil tanggal, kartu pilihan, tombol | Warna dan bayangan berubah halus, tombol mengecil 2% saat ditekan | 120 sampai 180ms |
+| Daftar menu saat pertama dimuat | Item muncul berurutan | 400ms |
+
+Aturan:
+- Semua gerak berada di dalam `prefers-reduced-motion: no-preference`, jadi otomatis mati bagi pengguna yang meminta gerak dikurangi.
+- Pakai `animation-fill-mode: backwards`, bukan `both` atau `forwards`, pada elemen yang membungkus lapisan melayang (halaman, kartu menu). `both` membuat elemen tetap menjadi lapisan tumpukan sendiri setelah animasi selesai, sehingga lembar pilihan dan layar gelap bisa tertukar urutannya.
+- Jangan menganimasikan tata letak (lebar, tinggi, margin). Pakai `opacity` dan `transform` saja.
+- Satu gerakan per aksi. Jangan menumpuk beberapa efek pada satu elemen.
+
+## Keadaan khusus
+
+- **PO belum dibuka atau tutup:** logo, judul, satu kalimat arahan, dan tombol Chat admin, di tengah layar. Kartu toko tetap menampilkan jam antar dan ambil.
+- **Galat memuat:** judul "Menu belum bisa dimuat", satu kalimat penyebab dan arahan, dan tombol Coba lagi.
+- **Kuota habis:** kartu menu pudar dengan lencana Habis. Tombol Tambah tidak tampil.

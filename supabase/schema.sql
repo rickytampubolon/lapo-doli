@@ -1041,8 +1041,91 @@ end $$;
 -- v22: menu bisa mematikan kolom catatan pembeli (misalnya Nasi putih)
 alter table public.products add column if not exists allow_note boolean not null default true;
 
+-- v24: analytics corong pembeli (anonim, tanpa data pribadi, disimpan 90 hari)
+create table if not exists public.events (
+  id     bigint generated always as identity primary key,
+  at     timestamptz not null default now(),
+  sid    text not null,
+  name   text not null,
+  po_id  text not null default '',
+  device text not null default ''
+);
+alter table public.events add column if not exists device text not null default '';
+create index if not exists events_at_idx on public.events (at);
+create index if not exists events_sid_idx on public.events (sid, name, at);
+alter table public.events enable row level security;
+revoke all on public.events from anon, authenticated;
+
+-- Dipanggil browser pembeli. Tidak pernah melempar galat: kejadian yang tidak sah diabaikan begitu saja.
+drop function if exists public.log_event(text, text, text);
+create or replace function public.log_event(p_sid text, p_name text, p_po text default '', p_device text default '')
+returns void language plpgsql security definer
+set search_path = public
+as $$
+begin
+  if p_name is null or p_name not in ('kunjungan', 'tambah_keranjang', 'mulai_checkout', 'pesan', 'bukti_terkirim') then return; end if;
+  if p_sid is null or p_sid !~ '^[A-Za-z0-9]{8,32}$' then return; end if;
+  -- maksimal 40 kejadian per sesi per jam, dan satu kejadian per jenis per 30 menit
+  if (select count(*) from public.events where sid = p_sid and at > now() - interval '1 hour') >= 40 then return; end if;
+  if exists (select 1 from public.events where sid = p_sid and name = p_name and at > now() - interval '30 minutes') then return; end if;
+  insert into public.events (sid, name, po_id, device)
+    values (p_sid, p_name, left(coalesce(p_po, ''), 40), case when p_device in ('hp', 'desktop') then p_device else '' end);
+  if random() < 0.02 then delete from public.events where at < now() - interval '90 days'; end if;
+end;
+$$;
+revoke all on function public.log_event(text, text, text, text) from public;
+grant execute on function public.log_event(text, text, text, text) to anon, authenticated;
+
+-- Hanya admin: ringkasan corong p_days hari terakhir, dibanding periode sebelumnya dengan panjang sama.
+-- steps: sesi unik per langkah; daily: per hari (zona Jakarta); hours dan dow: kunjungan per jam dan per hari (1 = Senin); device: hp dan desktop.
+create or replace function public.admin_funnel(p_days integer default 30)
+returns jsonb language plpgsql stable security definer
+set search_path = public
+as $$
+declare
+  d integer := least(greatest(coalesce(p_days, 30), 1), 90);
+  v_from timestamptz := now() - make_interval(days => least(greatest(coalesce(p_days, 30), 1), 90));
+  v_prev timestamptz := now() - make_interval(days => 2 * least(greatest(coalesce(p_days, 30), 1), 90));
+  today date := (now() at time zone 'Asia/Jakarta')::date;
+  out jsonb;
+begin
+  if not public.is_admin() then raise exception 'forbidden' using errcode = '42501'; end if;
+  select jsonb_build_object(
+    'days', d,
+    'steps', (select coalesce(jsonb_agg(jsonb_build_object('name', s.name, 'n', coalesce(c.n, 0), 'prev', coalesce(c.pn, 0)) order by s.ord), '[]'::jsonb)
+                from (values (1, 'kunjungan'), (2, 'tambah_keranjang'), (3, 'mulai_checkout'), (4, 'pesan'), (5, 'bukti_terkirim')) as s(ord, name)
+                left join (select e.name, count(distinct e.sid) filter (where e.at > v_from) as n, count(distinct e.sid) filter (where e.at <= v_from) as pn
+                             from public.events e where e.at > v_prev group by e.name) c on c.name = s.name),
+    'daily', (select coalesce(jsonb_agg(jsonb_build_object('d', to_char(g.dd, 'YYYY-MM-DD'), 'v', coalesce(x.v, 0), 'c', coalesce(x.c, 0), 'p', coalesce(x.p, 0)) order by g.dd), '[]'::jsonb)
+                from (select (today - i) as dd from generate_series(0, d - 1) as gs(i)) g
+                left join (select (e.at at time zone 'Asia/Jakarta')::date as dd,
+                                  count(distinct e.sid) filter (where e.name = 'kunjungan') as v,
+                                  count(distinct e.sid) filter (where e.name = 'tambah_keranjang') as c,
+                                  count(distinct e.sid) filter (where e.name = 'pesan') as p
+                             from public.events e where e.at > v_from group by 1) x on x.dd = g.dd),
+    'hours', (select coalesce(jsonb_agg(coalesce(x.n, 0) order by h.h), '[]'::jsonb)
+                from generate_series(0, 23) as h(h)
+                left join (select extract(hour from e.at at time zone 'Asia/Jakarta')::int as hh, count(distinct e.sid) as n
+                             from public.events e where e.at > v_from and e.name = 'kunjungan' group by 1) x on x.hh = h.h),
+    'dow', (select coalesce(jsonb_agg(coalesce(x.n, 0) order by w.w), '[]'::jsonb)
+              from generate_series(1, 7) as w(w)
+              left join (select extract(isodow from e.at at time zone 'Asia/Jakarta')::int as ww, count(distinct e.sid) as n
+                           from public.events e where e.at > v_from and e.name = 'kunjungan' group by 1) x on x.ww = w.w),
+    'device', (select coalesce(jsonb_object_agg(z.dv, jsonb_build_object('v', z.v, 'c', z.c, 'p', z.p)), '{}'::jsonb)
+                 from (select e.device as dv,
+                              count(distinct e.sid) filter (where e.name = 'kunjungan') as v,
+                              count(distinct e.sid) filter (where e.name = 'tambah_keranjang') as c,
+                              count(distinct e.sid) filter (where e.name = 'pesan') as p
+                         from public.events e where e.at > v_from and e.device in ('hp', 'desktop') group by e.device) z)
+  ) into out;
+  return out;
+end;
+$$;
+revoke all on function public.admin_funnel(integer) from public, anon;
+grant execute on function public.admin_funnel(integer) to authenticated;
+
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 23 $$;
+returns integer language sql immutable as $$ select 24 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 
