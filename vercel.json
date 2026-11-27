@@ -52,11 +52,5 @@
         }
       ]
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/admin",
-      "destination": "/"
-    }
   ]
 }

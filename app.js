@@ -13,7 +13,7 @@ if (IS_ADMIN_URL) {
     const mf = document.querySelector('link[rel="manifest"]'); if (mf) mf.href = "/admin.webmanifest";
     document.title = "Lapo Doli Admin";
     const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = "#f7efe5";
-    let at = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (!at) { at = document.createElement("meta"); at.name = "apple-mobile-web-app-title"; document.head.appendChild(at); } at.content = "Admin";
+    let at = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (!at) { at = document.createElement("meta"); at.name = "apple-mobile-web-app-title"; document.head.appendChild(at); } at.content = "Lapo Admin";
   } catch (e) {}
 }
 /* analitik: Vercel Analytics bila aktif; tanpa itu tidak melakukan apa pun */
