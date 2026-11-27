@@ -684,10 +684,16 @@ $("paid").onclick = submitOrder;
 let gAbort = null, gTimer = null, gItems = [], gIdx = -1;
 const PHOTON = "https://photon.komoot.io/api/", JKT_BBOX = "106.68,-6.40,107.00,-6.08";
 const AREA_EN = { central:"Pusat", north:"Utara", west:"Barat", south:"Selatan", east:"Timur" };
+const KEC = { Pusat:"gambir|sawah besar|kemayoran|senen|cempaka putih|menteng|tanah abang|johar baru", Utara:"penjaringan|pademangan|tanjung priok|koja|kelapa gading|cilincing",
+  Barat:"cengkareng|grogol petamburan|taman sari|tambora|kebon jeruk|kalideres|palmerah|kembangan", Selatan:"tebet|setiabudi|setia budi|mampang prapatan|pasar minggu|kebayoran lama|cilandak|kebayoran baru|pancoran|jagakarsa|pesanggrahan",
+  Timur:"matraman|pulogadung|pulo gadung|jatinegara|kramat jati|pasar rebo|cakung|duren sawit|makasar|ciracas|cipayung" };
 function gAreaOf(pr){
   const t = [pr.county, pr.city, pr.district, pr.locality, pr.state, pr.name].filter(Boolean).join(" | ");
   let m = /Jakarta\s+(Pusat|Utara|Barat|Selatan|Timur)/i.exec(t); if (m) return "Jakarta " + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-  m = /(Central|North|West|South|East)\s+Jakarta/i.exec(t); return m ? "Jakarta " + AREA_EN[m[1].toLowerCase()] : "";
+  m = /(Central|North|West|South|East)\s+Jakarta/i.exec(t); if (m) return "Jakarta " + AREA_EN[m[1].toLowerCase()];
+  const d = String(pr.district || "").toLowerCase().replace(/^(kecamatan|kec\.?)\s+/, "");
+  for (const k in KEC) if (new RegExp("^(" + KEC[k] + ")$").test(d)) return "Jakarta " + k;
+  return "";
 }
 function showAddrHint(on){ $("addr-hint").hidden = !on; }
 function gClose(){ $("addr-list").hidden = true; $("addr-q").setAttribute("aria-expanded", "false"); $("addr-q").removeAttribute("aria-activedescendant"); gIdx = -1; }
