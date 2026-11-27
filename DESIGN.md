@@ -163,3 +163,11 @@ Aturan:
 - **Panel yang kosong disembunyikan** kalau tidak ada gunanya, misalnya panel "Tambahan" di Penjualan hanya muncul kalau ada tambahan yang terjual.
 - **Perpindahan tab** memakai gerak yang sama dengan perpindahan halaman pembeli (geser 6px, 220ms), dan detail pesanan yang dibuka memudar masuk (180ms). Semua mati bila gerak dikurangi.
 - **Panel analytics** memakai kartu angka (soft), saran bernada (amber untuk perlu perhatian, hijau untuk baik, hero untuk info), dan batang horizontal. Warna amber hanya untuk hal yang perlu tindakan.
+
+## Komponen tambahan
+
+- **Label menu:** pil kecil berlatar `--soft` di bawah deskripsi, maksimal tiga, tiap label maksimal 18 huruf. Diatur admin di kolom Label (dengan pilihan cepat Babi, Ayam, Ikan, Pedas, Tidak pedas).
+- **Linimasa pesanan (halaman Bayar):** lima tahap, Dicatat, Bayar, Diproses, Diantar (atau Siap diambil), Selesai. Selesai berisi centang, tahap berjalan memakai lingkaran berisi titik, tahap berikutnya lingkaran kosong, dan pembayaran yang belum cocok memakai tanda merah. Linimasa disembunyikan kalau pesanan dibatalkan.
+- **Pesanan sebelumnya (beranda):** lima pesanan terakhir yang tersimpan di perangkat. Ditampilkan sebagai daftar lipat di kartu pesanan terakhir, tiap baris punya tombol Pesan lagi. Hanya muncul kalau ada lebih dari satu pesanan, keranjang kosong, dan ada PO terbuka.
+- **Alamat tersimpan (checkout):** sampai empat alamat antar terakhir sebagai pil yang bisa digeser, dengan tombol hapus kecil. Muncul kalau ada dua alamat atau lebih.
+- **Istilah:** di sisi pembeli selalu "Nomor WhatsApp", bukan "No. HP" atau "Nomor HP".

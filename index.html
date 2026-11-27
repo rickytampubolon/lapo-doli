@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261129h">
+<link rel="stylesheet" href="/style.css?v=20261130e">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -69,6 +69,7 @@
       <div class="quick" id="quick" hidden>
       <button class="lastcard" id="lastorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span class="lc-t"><b id="lc-id"></b></span><span class="chip" id="lc-chip"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button>
       <button class="reorder" id="reorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg><span id="reorder-t">Pesan seperti sebelumnya</span></button>
+      <details class="hist" id="hist" hidden><summary><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg><span id="hist-t">Pesanan sebelumnya</span><svg class="ic chev" aria-hidden="true"><use href="#i-chevron"/></svg></summary><ul id="hist-list"></ul></details>
       </div>
       <div id="po-wrap">
         <div class="label">Tanggal PO</div>
@@ -95,11 +96,12 @@
           <label class="lb" for="nama">Nama <i class="req">*</i></label>
           <input id="nama" type="text" autocomplete="name" autocapitalize="words" enterkeyhint="next" placeholder="Nama lengkap">
           <div class="err" id="e-nama"></div>
-          <label class="lb" for="hp">No. WhatsApp <i class="req">*</i></label>
+          <label class="lb" for="hp">Nomor WhatsApp <i class="req">*</i></label>
           <input id="hp" type="tel" inputmode="numeric" autocomplete="tel" enterkeyhint="next" placeholder="08123456789">
           <p class="fhint" id="hp-note" hidden>Konfirmasi dan pengingat bayar kami kirim lewat WhatsApp ke nomor ini.</p>
           <div class="err" id="e-hp"></div>
           <div id="addr-fields">
+            <div class="saved" id="addr-saved" role="group" aria-label="Alamat tersimpan" hidden></div>
             <div id="addr-search" hidden>
               <label class="lb" for="addr-q">Cari alamat</label>
               <div class="combo">
@@ -137,7 +139,8 @@
 
     <section id="s3">
       <div class="status" style="margin-top:24px"><span class="dot" id="d-dot"></span><h1 class="title" id="d-title" style="margin:0">Pesanan dicatat</h1></div>
-      <p class="intro" id="d-sub" style="margin:8px 0 18px"></p>
+      <p class="intro" id="d-sub" style="margin:8px 0 14px"></p>
+      <ol class="tl" id="tl" aria-label="Tahap pesanan" hidden></ol>
 
       <div class="paybox" id="d-pay" hidden>
         <div class="payamt"><div><span class="muted">Transfer tepat</span><b id="d-amt">Rp 0</b></div><button class="copybtn" id="copy-amt" type="button" aria-label="Salin jumlah" title="Salin jumlah"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
@@ -179,7 +182,7 @@
     <div class="card checkcard">
       <h2 class="ct">Cek status pesanan</h2>
       <div class="ckrow"><div><label class="fl" for="ck-id">Nomor pesanan</label><input type="text" id="ck-id" placeholder="1809-03" autocomplete="off"></div>
-      <div><label class="fl" for="ck-hp">No. HP</label><input type="tel" id="ck-hp" inputmode="tel" placeholder="08123456789" autocomplete="tel"></div></div>
+      <div><label class="fl" for="ck-hp">Nomor WhatsApp</label><input type="tel" id="ck-hp" inputmode="tel" placeholder="08123456789" autocomplete="tel"></div></div>
       <div class="err" id="ck-err"></div>
       <button class="btn" id="ck-go" type="button" style="margin-top:6px">Cek status</button>
       <ul class="dlv" id="ck-out" style="margin-top:14px"></ul>
@@ -189,7 +192,7 @@
       <details><summary>Apa itu PO (pre-order)?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Kami memasak sesuai pesanan. Admin membuka PO untuk tanggal tertentu, biasanya tiap minggu. Satu pesanan untuk satu tanggal, jadi kalau mau pesan untuk tanggal lain, buat pesanan terpisah. PO tutup pukul <span data-cutoff></span> di hari itu, dan sebagian menu punya jumlah terbatas.</p></details>
       <details><summary>Antar atau ambil sendiri?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Antar hanya untuk wilayah Jakarta lewat Lalamove, jam <span data-hours></span>, ongkir <span data-ongkir></span> per pesanan. Cari alamatmu di kolom pencarian atau ketik manual dengan lengkap. Ambil sendiri di <span data-pickloc></span>, jam <span data-pickhours></span>, tanpa ongkir.</p></details>
       <details><summary>Bagaimana cara bayar?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Transfer sesuai jumlah persis di halaman bayar, termasuk kode unik di ujungnya, lalu unggah bukti transfer di halaman yang sama. Bayar dalam <span data-paywin>1 jam</span> setelah memesan. Kalau waktunya hampir habis, ada tombol Tambah waktu 30 menit (sekali). Pesanan yang belum dibayar otomatis dibatalkan.</p></details>
-      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah bukti bayar terkirim, admin mengecek lalu mengubah statusnya. Pantau di halaman bayar atau pakai Cek status di atas dengan nomor pesanan dan nomor HP.</p></details>
+      <details><summary>Kapan pesanan terkonfirmasi?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Setelah bukti bayar terkirim, admin mengecek lalu mengubah statusnya. Pantau di halaman bayar atau pakai Cek status di atas dengan nomor pesanan dan nomor WhatsApp.</p></details>
       <details><summary>Varian dan catatan menu<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Untuk menu yang bisa diatur, ketuk Tambah lalu pilih varian dan tulis catatan, misalnya tidak pakai cabai. Menu seperti nasi putih dipesan langsung seperti menu lain. Di halaman Data, ketuk Ubah untuk mengganti pilihan atau catatan.</p></details>
       <details><summary>Ubah atau batalkan pesanan?<svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></summary><p>Selama belum kirim bukti bayar, batalkan sendiri lewat tombol Batalkan pesanan di halaman bayar, lalu pesan ulang kalau mau mengubah isinya. Kalau sudah kirim bukti, hubungi admin lewat WhatsApp dengan nomor pesanan.</p></details>
     </div>
@@ -244,7 +247,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261129h"></script>
+<script defer src="/app.js?v=20261130e"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

@@ -51,6 +51,8 @@ create table if not exists public.products (
 );
 -- batas porsi per tanggal PO; kosong = tanpa batas
 alter table public.products add column if not exists quota integer check (quota is null or quota >= 0);
+-- label singkat di kartu menu, dipisah koma (misalnya "Babi, Pedas")
+alter table public.products add column if not exists tags text not null default '';
 
 create table if not exists public.pos (
   id         text primary key,
@@ -1125,7 +1127,7 @@ revoke all on function public.admin_funnel(integer) from public, anon;
 grant execute on function public.admin_funnel(integer) to authenticated;
 
 create or replace function public.schema_version()
-returns integer language sql immutable as $$ select 24 $$;
+returns integer language sql immutable as $$ select 25 $$;
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
 
