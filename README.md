@@ -56,7 +56,7 @@ Di Vercel buka **Settings > Domains**, tambahkan domain, lalu ikuti petunjuk DNS
 
 ## Catatan
 
-- Harga 500ml (Kecap 70.000, Teri 50.000) dan Ayam Napinadar (40.000 / 75.000) masih perkiraan. Ubah di tab Menu admin.
+- Harga 500ml (Kecap 70.000, Teri 50.000) masih perkiraan. Ubah di tab Menu admin. Menu contoh hanya diisi di database yang masih kosong, jadi menu yang kamu hapus tidak muncul lagi setiap `schema.sql` dijalankan ulang.
 - QRIS berupa gambar statis. Pembeli membayar lalu admin mengecek manual.
 - Harga, ongkir, dan batas waktu PO dihitung ulang di server, jadi tidak bisa dimanipulasi dari browser.
 - Email login bawaan Supabase punya batas kirim per jam. Kalau sering dipakai, pasang SMTP sendiri di Authentication > SMTP.
