@@ -531,7 +531,6 @@ function renderPayInfo(){
 /* Kotak bayar di layar setelah pesan: jumlah tepat (dengan kode unik) dan tujuan transfer */
 function renderPay(){
   const need = (payVisible && (!placedProof || placedRejected)) || (placedClaimed && !placedProof);
-  $("s3-share").hidden = !placedProof;
   $("d-proofwrap").hidden = !need; $("d-proofok").hidden = !((payVisible || placedClaimed) && placedProof && !placedRejected);
   $("d-up-t").textContent = placedRejected ? "Unggah ulang bukti" : "Unggah bukti bayar";
   $("cancel-order").hidden = !(payVisible && !placedProof); if ($("cancel-order").hidden) resetCancel();
