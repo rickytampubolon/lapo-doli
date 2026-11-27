@@ -1263,25 +1263,25 @@ function renderAdminPo(){
     const rekap = Object.keys(rk).map(k => `<li>${esc(k)} × ${rk[k]}</li>`).join("");
     const noteLines = os.flatMap(o => o.items.filter(i => i.note).map(i => `${o.id} · ${i.name}${i.option && !i.addon ? " (" + i.option + ")" : ""}: ${i.note}`)).concat(os.filter(o => o.notes).map(o => `${o.id} · pesanan: ${o.notes}`));
     const auto = po.open === true && isPast(po), on = po.open === true && !auto, sched = poScheduled(po);
-    const adv = `<details class="po-adv" data-poadv="${esc(po.id)}" ${poAdvOpen.has(po.id) ? "open" : ""}><summary>Pengaturan PO ini</summary>
+    const adv = !poAdvOpen.has(po.id) ? "" : `<div class="po-adv" data-poadv="${esc(po.id)}">
       <div class="fgrid"><div><label class="fl" for="pc-${esc(po.id)}">Tutup pukul</label><input id="pc-${esc(po.id)}" data-pocutoff type="text" inputmode="numeric" maxlength="5" placeholder="${cutoffLabel()}" value="${esc(String(po.cutoff || "").replace(":", "."))}"><p class="fhint">Kosong ikut Pengaturan (${cutoffLabel()}).</p></div>
       <div class="full"><div class="fl">Kuota khusus PO ini</div><div class="pq">${(products || []).map(p => `<label class="pqrow"><span>${esc(p.name)}</span><input type="number" min="0" data-poquota="${esc(p.id)}" placeholder="${p.quota == null ? "Tanpa batas" : "Ikut " + p.quota}" value="${po.quotas && po.quotas[p.id] != null ? po.quotas[p.id] : ""}" aria-label="Kuota ${esc(p.name)}"></label>`).join("")}</div></div></div>
-      <div class="acts"><button class="btn line sm" data-podup type="button">${ic("copy")}Gandakan ke minggu berikutnya</button></div></details>`;
+      <div class="acts"><button class="btn line sm" data-podup type="button">${ic("copy")}Gandakan ke minggu berikutnya</button></div></div>`;
     return `<div class="porow ${on ? "" : "off"}" data-po="${esc(po.id)}">
       <div class="po-h"><div><h3>${esc(dLong(po.date))}</h3><span class="note">${sched ? `Buka ${esc(fmtWhen(po.opens_at))}` : `${os.length} pesanan${os.length ? `, ${lunas} lunas` : ""}`}</span></div>
+        <button class="textbtn po-gear" data-poadvbtn type="button" aria-expanded="${poAdvOpen.has(po.id)}" aria-label="Pengaturan PO ini" title="Jam tutup, kuota, dan gandakan PO">${ic("settings")}<span class="gl">Atur</span></button>
         <label class="switch"><input type="checkbox" id="po-open-${esc(po.id)}" data-poopen ${on ? "checked" : ""} ${auto ? "disabled" : ""}><span class="track"></span><span>${sched ? "Terjadwal" : on ? "Buka" : auto ? "Tutup otomatis" : "Tutup"}</span></label>
         ${sched ? `<button class="textbtn opennow" data-popennow type="button">${ic("check")}Buka sekarang</button>` : ""}
         <button class="textbtn iconbtn-t ${armPoDel === po.id ? "dangerbtn" : ""}" data-podel type="button" aria-label="Hapus PO" title="Hapus PO">${armPoDel === po.id ? "Yakin hapus?" : ic("trash")}</button></div>${adv}</div>`;
   }).join("");
-  el.innerHTML = `<section class="card newpo2">
-      <div class="gc-h"><span class="gc-ic">${ic("plus")}</span><div><h3>Buka PO baru</h3></div></div>
-      <label class="fl" for="po-new">Tanggal PO (hari pengiriman)</label>
-      <input type="date" id="po-new" class="dtin" value="${esc(poDraft.date)}">
-      <p class="fhint" id="po-new-h">${poDraft.date ? esc(dLong(poDraft.date)) : "Ketuk kolom di atas untuk memilih tanggal."}</p>
-      <div class="fl">Kapan dibuka untuk pembeli?</div>
-      <div class="stabs seg" role="group" aria-label="Kapan dibuka"><button type="button" data-powhen="now" aria-pressed="${poDraft.when === "now"}">Sekarang</button><button type="button" data-powhen="later" aria-pressed="${poDraft.when === "later"}">Jadwalkan</button></div>
-      <div id="po-opens-w" ${poDraft.when === "later" ? "" : "hidden"}><label class="fl" for="po-opens">Dibuka pada</label><input type="datetime-local" id="po-opens" class="dtin" value="${esc(poDraft.opens)}"><p class="fhint">Sebelum waktu ini, PO tampil sebagai "belum dibuka" dan belum bisa dipesan.</p></div>
-      <button class="btn" data-poadd type="button">${ic("plus")}<span id="po-add-t">${poDraft.when === "later" ? "Jadwalkan PO" : "Buka PO"}</span></button>
+  el.innerHTML = `<section class="card newpo3">
+      <h3>Buka PO baru</h3>
+      <div class="np-row">
+        <div class="np-f"><label class="fl" for="po-new">Tanggal PO <span class="dtxt" id="po-new-h">${poDraft.date ? esc(dLong(poDraft.date)) : ""}</span></label><input type="date" id="po-new" class="dtin" value="${esc(poDraft.date)}"></div>
+        <div class="np-f"><div class="fl">Dibuka untuk pembeli</div><div class="stabs seg" role="group" aria-label="Kapan dibuka"><button type="button" data-powhen="now" aria-pressed="${poDraft.when === "now"}">Sekarang</button><button type="button" data-powhen="later" aria-pressed="${poDraft.when === "later"}">Jadwalkan</button></div></div>
+        <div class="np-f" id="po-opens-w" ${poDraft.when === "later" ? "" : "hidden"}><label class="fl" for="po-opens">Waktu buka</label><input type="datetime-local" id="po-opens" class="dtin" value="${esc(poDraft.opens)}" title="Sebelum waktu ini PO tampil belum dibuka"></div>
+        <button class="btn np-go" data-poadd type="button">${ic("plus")}<span id="po-add-t">${poDraft.when === "later" ? "Jadwalkan PO" : "Buka PO"}</span></button>
+      </div>
     </section>
     ${rows || '<div class="empty">Belum ada PO.</div>'}`;
 }
@@ -1294,7 +1294,10 @@ async function dupPo(po){
   try { await api.insertPo({ id:"po-" + date.replace(/-/g, ""), date, open:true, opens_at:null, cutoff:po.cutoff || "", quotas:po.quotas || {} }); await refreshPos(); logAct("gandakan_po", po.id, date); toast("PO " + dShort(date) + " dibuat dari salinan"); }
   catch (e) { toast("Belum berhasil menggandakan. Jalankan ulang schema.sql terbaru."); }
 }
-poEl.addEventListener("click", e => { const b = e.target.closest("[data-podup]"); if (!b) return; const po = (pos || []).find(p => p.id === b.closest("[data-po]").dataset.po); if (po) dupPo(po); });
+poEl.addEventListener("click", e => {
+  const gb = e.target.closest("[data-poadvbtn]");
+  if (gb) { const id = gb.closest("[data-po]").dataset.po; if (poAdvOpen.has(id)) poAdvOpen.delete(id); else poAdvOpen.add(id); renderAdminPo(); return; }
+  const b = e.target.closest("[data-podup]"); if (!b) return; const po = (pos || []).find(p => p.id === b.closest("[data-po]").dataset.po); if (po) dupPo(po); });
 let poDirty = false;
 function renderPoSafe(){
   const a = document.activeElement;
@@ -1303,7 +1306,7 @@ function renderPoSafe(){
 }
 poEl.addEventListener("focusout", () => setTimeout(() => { if (poDirty) renderPoSafe(); }, 50));
 poEl.addEventListener("input", e => {
-  if (e.target.id === "po-new") { poDraft.date = e.target.value; $("po-new-h").textContent = dparse(e.target.value) ? dLong(e.target.value) : "Ketuk kolom di atas untuk memilih tanggal."; }
+  if (e.target.id === "po-new") { poDraft.date = e.target.value; $("po-new-h").textContent = dparse(e.target.value) ? dLong(e.target.value) : ""; }
   else if (e.target.id === "po-opens") poDraft.opens = e.target.value;
 });
 poEl.addEventListener("change", async e => {
