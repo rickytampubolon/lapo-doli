@@ -462,7 +462,9 @@ const lineKey = (poId, l) => l.addon ? addonKey(poId, l.pid, l.addonId) : l.optI
 function itemsHTML(gs){
   return gs.map(g => `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + g.items.map(l => {
     const k = lineKey(g.poId, l), plusOff = l.addon && (cart[k] || 0) >= mainQty(g.poId, l.pid);
-    return `<div class="li"><div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}</div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
+    const pr = shopList().find(x => x.id === l.pid), im = pr ? imgSrc(pr) : "";
+    const th = l.addon ? '<span class="lthumb addtile" aria-hidden="true">+</span>' : im ? `<img class="thumb lthumb" src="${esc(im)}" alt="" width="56" height="56" loading="lazy" decoding="async" data-fallback="${esc((pr && pr.emoji) || "🍽️")}">` : `<span class="thumb tile lthumb" aria-hidden="true">${esc((pr && pr.emoji) || "🍽️")}</span>`;
+    return `<div class="li${l.addon ? " add" : ""}">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}</div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
   }).join("")).join("");
 }
 $("sum-items").addEventListener("click", e => {
@@ -2044,5 +2046,5 @@ init();
 /* foto gagal dimuat: ganti dengan ubin emoji supaya tidak ada kotak rusak */
 document.addEventListener("error", e => {
   const im = e.target; if (!im || im.tagName !== "IMG" || !im.classList.contains("thumb") || im.dataset.fallback == null) return;
-  const d = document.createElement("div"); d.className = "thumb tile"; d.setAttribute("aria-hidden", "true"); d.textContent = im.dataset.fallback; im.replaceWith(d);
+  const d = document.createElement("div"); d.className = "thumb tile" + (im.classList.contains("lthumb") ? " lthumb" : ""); d.setAttribute("aria-hidden", "true"); d.textContent = im.dataset.fallback; im.replaceWith(d);
 }, true);

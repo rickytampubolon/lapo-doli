@@ -1436,3 +1436,13 @@ img.thumb{background:var(--soft)}
 @media (max-width:640px){.adlist li{flex-wrap:wrap}}
 .adlist .ad-sp{flex:none;width:62px}
 @media (max-width:640px){.adlist .ad-sp{display:none}}
+
+/* foto produk di daftar pesanan */
+.li{grid-template-columns:56px minmax(0,1fr) auto;column-gap:var(--sp-3)}
+.li .lthumb{grid-column:1;grid-row:1 / span 2;width:56px;height:56px;border-radius:12px;object-fit:cover;align-self:center;box-shadow:inset 0 0 0 1px rgba(59,44,39,.06);background:var(--soft)}
+.li .thumb.tile.lthumb{display:grid;place-items:center;font-size:24px}
+.li .addtile{display:grid;place-items:center;width:32px;height:32px;justify-self:center;border-radius:50%;background:var(--soft);color:var(--accent);font-weight:700;font-size:18px;line-height:1}
+.li.add .lthumb{height:32px}
+.li .ln{grid-column:2}
+.li .p{grid-column:2}
+.li .step{grid-column:3}
