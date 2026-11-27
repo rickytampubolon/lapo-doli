@@ -983,7 +983,7 @@ function editHTML(o){
     ${o.payStatus === "lunas" ? `<p class="onote full warn">Pesanan ini sudah lunas. Mengubah jumlah mengubah total, tapi pembayaran pembeli tidak ikut berubah. Hitung selisihnya dan hubungi pembeli.</p>` : ""}
     <label class="ef">Nama<input data-ef="nama" value="${esc(o.nama)}"></label>
     <label class="ef">No. HP<input data-ef="hp" value="${esc(o.hp)}" inputmode="tel"></label>
-    ${pk ? "" : `<label class="ef">Wilayah<select data-ef="area">${AREAS.map(a => `<option ${a === o.area ? "selected" : ""}>${esc(a)}</option>`).join("")}</select></label>
+    ${pk ? "" : `
     <label class="ef full">Alamat<textarea data-ef="alamat">${esc(o.alamat)}</textarea></label>`}
     <label class="ef full">Catatan<textarea data-ef="notes">${esc(o.notes)}</textarea></label>
     ${one ? `<div class="full eq"><span>Jumlah</span>${o.items.map((i, k) => `<label class="eqrow"><span>${esc(i.name)}${i.option && !i.addon ? " (" + esc(i.option) + ")" : ""}${i.addon ? " (tambahan)" : ""}</span><input type="number" min="0" max="99" data-eq="${k}" value="${Number(i.qty) || 0}" aria-label="Jumlah ${esc(i.name)}"></label>`).join("")}<small>Total dihitung ulang. Jumlah 0 menghapus baris.</small></div>` : `<p class="onote full">Pesanan gabungan: jumlah item tidak bisa diubah di sini. Batalkan lalu buat ulang kalau perlu.</p>`}
@@ -995,7 +995,7 @@ async function saveEdit(o, box){
   const err = val.nama(g("nama")) || val.hp(g("hp")) || (pk ? "" : val.alamat(g("alamat")));
   if (err) { toast(err); return; }
   const patch = { nama:g("nama"), hp:g("hp"), notes:g("notes") };
-  if (!pk) { patch.area = g("area"); patch.alamat = g("alamat"); if (patch.alamat !== o.alamat) patch.maps_url = ""; }
+  if (!pk) { patch.alamat = g("alamat"); patch.area = areaFromText(patch.alamat) || o.area; if (patch.alamat !== o.alamat) patch.maps_url = ""; }
   const qs = [...box.querySelectorAll("[data-eq]")].map(i => Math.max(0, Math.min(99, parseInt(i.value, 10) || 0))), qChanged = qs.length && qs.some((q, k) => q !== (Number(o.items[k].qty) || 0));
   busy.add(o.id); renderAdminOrders();
   try {
@@ -1198,7 +1198,6 @@ function renderNewForm(){
       <div><label class="lb" for="n-hp">No. HP</label><input type="tel" id="n-hp" inputmode="tel" placeholder="08123456789"><div class="err" id="n-e-hp"></div></div>
     </div>
     <div id="n-addr">
-      <label class="lb" for="n-area">Wilayah</label><select id="n-area"><option value="">Pilih wilayah</option>${AREAS.map(a => `<option>${a}</option>`).join("")}</select><div class="err" id="n-e-area"></div>
       <label class="lb" for="n-alamat">Alamat lengkap</label><textarea id="n-alamat" placeholder="Jalan, nomor rumah, patokan"></textarea><div class="err" id="n-e-alamat"></div>
     </div>
     <label class="lb" for="n-notes">Catatan</label><textarea id="n-notes" placeholder="Contoh: tidak pakai cabai"></textarea>
@@ -1243,7 +1242,8 @@ async function createManual(){
   const g = k => $("n-" + k).value, pick = document.querySelector("[name=nf]:checked").value === "ambil";
   let ok = true; const chk = (k, m) => { $("n-e-" + k).textContent = m; if (m) ok = false; };
   chk("nama", val.nama(g("nama"))); chk("hp", val.hp(g("hp")));
-  if (pick) { chk("area", ""); chk("alamat", ""); } else { chk("area", val.area(g("area"))); chk("alamat", val.alamat(g("alamat"))); }
+  const nArea = areaFromText(g("alamat"));
+  if (pick) chk("alamat", ""); else { chk("alamat", val.alamat(g("alamat"))); if (!ok) {} else if (!nArea) chk("alamat", "Tulis kotanya, misalnya Jakarta Selatan."); }
   const t = nTotals(), po = (pos || []).find(x => x.id === g("po"));
   if (!po) { toast("Pilih tanggal PO dulu"); return; }
   if (!t.ls.some(l => !l.addon)) { toast("Pilih minimal satu menu"); return; }
@@ -1253,7 +1253,7 @@ async function createManual(){
     const seenN = {}, lines = t.ls.map(l => { let note = ""; if (!l.addon && !seenN[l.pid]) { seenN[l.pid] = 1; const el = document.querySelector(`[data-nnote="${l.pid}"]`); note = el ? el.value.trim() : ""; }
       return linePayload({ ...l, note }); });
     const paid = g("pay") === "lunas";
-    const res = await api.createOrders({ nama:g("nama").trim(), hp:g("hp").trim(), fulfil:pick ? "ambil" : "antar", area:pick ? "" : g("area"), alamat:pick ? "" : g("alamat").trim(),
+    const res = await api.createOrders({ nama:g("nama").trim(), hp:g("hp").trim(), fulfil:pick ? "ambil" : "antar", area:pick ? "" : nArea, alamat:pick ? "" : g("alamat").trim(),
       notes:g("notes").trim(), method:g("method"), ongkir:t.ong, paid, source:"wa", groups:[{ po_id:po.id, lines }] }, true);
     const r = res[0], id = r.id;
     const o = { id, nama:g("nama").trim(), hp:g("hp").trim(), fulfil:r.fulfil, poDate:r.po_date, hours:r.hours, pickupLoc:r.pickup_loc, items:r.items,
