@@ -314,11 +314,11 @@ function bumpCart(key, delta){
 }
 
 /* satu pesanan untuk satu tanggal: ganti tanggal memindahkan isi keranjang ke tanggal baru */
-function moveCart(from, to){
+function moveCart(from, to, keepAll){
   const prev = { cart:{ ...cart }, notes:{ ...itemNotes }, po:activePo }, pids = new Set(); let dropped = 0;
   Object.keys(cart).filter(k => k.startsWith(from + "::")).forEach(k => {
     const pid = k.split("::")[1], q = cart[k], p = (shopList() || []).find(x => x.id === pid), rem = remainOf(to, pid); delete cart[k];
-    if (!p || p.available === false || rem === 0) { dropped++; return; }
+    if (!keepAll && (!p || p.available === false || rem === 0)) { dropped++; return; }
     const nk = to + k.slice(from.length); cart[nk] = (cart[nk] || 0) + q; pids.add(pid);
   });
   Object.keys(itemNotes).filter(k => k.startsWith(from + "::")).forEach(k => { const nk = to + k.slice(from.length); if (!itemNotes[nk]) itemNotes[nk] = itemNotes[k]; delete itemNotes[k]; });
@@ -369,7 +369,7 @@ function restoreState(){
   const c = lsGet(LS.cart);
   if (c && c.cart) { Object.assign(cart, c.cart); Object.assign(itemNotes, c.notes || {}); if (c.po && Object.keys(c.cart).length) { activePo = c.po; activeChosen = true; }
     const pos = [...new Set(Object.keys(cart).map(k => k.split("::")[0]))];
-    if (pos.length > 1) { const keep = pos.includes(c.po) ? c.po : pos.sort()[0]; pos.filter(x => x !== keep).forEach(x => moveCart(x, keep)); activePo = keep; activeChosen = true; }
+    if (pos.length > 1) { const keep = pos.includes(c.po) ? c.po : pos.sort()[0]; pos.filter(x => x !== keep).forEach(x => moveCart(x, keep, true)); activePo = keep; activeChosen = true; }
     if (c.fulfil === "ambil") { fulfil = "ambil"; const r = document.querySelector("[name=fulfil][value=ambil]"); if (r) r.checked = true; } }
   const u = lsGet(LS.cust);
   if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); if (u.area) $("area").value = u.area; if (mapsSafe(u.maps) && u.q) { mapsUrl = u.maps; $("addr-q").value = u.q; showAddrHint(true); } }
