@@ -702,7 +702,7 @@ function gParse(f){
   const p = f.properties || {}, c = (f.geometry && f.geometry.coordinates) || [], area = gAreaOf(p);
   const reg = [p.state, p.county, p.city, p.district, p.locality].filter(Boolean).join(" ");
   /* kotak pencarian juga menyentuh Tangerang, Bekasi, Depok: tolak yang jelas di luar Jakarta */
-  if (c.length < 2 || (reg && !/jakarta|dki/i.test(reg))) return null;
+  if (c.length < 2 || /tangerang|bekasi|depok|bogor|banten|jawa barat|west java/i.test(reg + " " + (p.county || ""))) return null;
   const st = [p.street, p.housenumber].filter(Boolean).join(" ");
   const main = p.name || st || p.district || "";
   const rest = gUniq([st, p.district || p.locality, area || "Jakarta", p.postcode]).filter(x => x !== main);
@@ -713,8 +713,10 @@ async function gSuggest(q){
   if (gAbort) gAbort.abort(); gAbort = new AbortController();
   const res = await fetch(PHOTON + "?limit=12&bbox=" + JKT_BBOX + "&q=" + encodeURIComponent(q), { signal:gAbort.signal });
   if (!res.ok) throw new Error("photon " + res.status);
-  const j = await res.json(), seen = new Set();
-  return (j.features || []).map(gParse).filter(x => x && !seen.has(x.full) && seen.add(x.full)).slice(0, 5);
+  const j = await res.json(), seen = new Set(), raw = j.features || [];
+  const out = raw.map(gParse).filter(x => x && !seen.has(x.full) && seen.add(x.full)).slice(0, 5);
+  if (!out.length && window.console) console.warn("alamat: Photon memberi " + raw.length + " hasil, semuanya disaring", raw.slice(0, 3).map(f => f.properties));
+  return out;
 }
 function gPick(i){
   const s = gItems[i]; if (!s) return; gClose();
