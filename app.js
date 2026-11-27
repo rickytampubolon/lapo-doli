@@ -2151,10 +2151,21 @@ function renderGate(){
     <label class="fl" for="gate-email">Email</label><input type="text" id="gate-email" inputmode="email" autocomplete="email" placeholder="nama@email.com">
     ${TSKEY ? '<div id="ts-box" style="margin-top:12px;min-height:65px"></div>' : ""}
     <div class="err" id="gate-err"></div><button class="btn" id="gate-send" type="button" style="margin-top:6px">Kirim link masuk</button></div>`;
-  $("gate-send").onclick = sendMagic; mountTurnstile();
+  $("gate-send").onclick = sendMagic; mountTurnstile(); if (magicNext > Date.now()) startCooldown();
   $("gate-email").addEventListener("keydown", e => { if (e.key === "Enter") sendMagic(); });
 }
-let magicNext = 0;
+let magicNext = 0, cdTimer = null;
+/* hitung mundur jeda kirim ulang: tombol nonaktif dan angkanya berjalan tiap detik */
+function startCooldown(){
+  clearInterval(cdTimer);
+  const tick = () => {
+    const b = $("gate-send"); if (!b) { clearInterval(cdTimer); return; }
+    const left = Math.ceil((magicNext - Date.now()) / 1000);
+    if (left > 0) { b.disabled = true; b.textContent = "Kirim ulang dalam " + left + " detik"; }
+    else { clearInterval(cdTimer); b.disabled = false; b.textContent = "Kirim link masuk"; }
+  };
+  tick(); cdTimer = setInterval(tick, 1000);
+}
 /* Cloudflare Turnstile: hanya aktif kalau TURNSTILE_SITE_KEY diisi di config.js */
 const TSKEY = String((window.LAPO_CONFIG || {}).TURNSTILE_SITE_KEY || "").trim();
 let tsToken = "", tsWidget = null, tsLoading = null;
@@ -2171,14 +2182,14 @@ const resetTurnstile = () => { tsToken = ""; try { if (tsWidget !== null && wind
 async function sendMagic(){
   const email = $("gate-email").value.trim(), err = $("gate-err");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Email tidak valid."; return; }
-  if (Date.now() < magicNext) { err.textContent = "Tunggu " + Math.ceil((magicNext - Date.now()) / 1000) + " detik sebelum meminta link lagi."; return; }
+  if (Date.now() < magicNext) { startCooldown(); return; }
   if (TSKEY && !tsToken) { err.textContent = "Selesaikan pemeriksaan keamanan di atas dulu."; return; }
   err.textContent = ""; $("gate-send").disabled = true;
   /* akun dibuat otomatis saat pertama masuk, tapi database hanya mengizinkan email yang ada di daftar admin (trigger guard_admin_signup) */
   const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true, emailRedirectTo:location.origin + "/?admin=1", ...(TSKEY ? { captchaToken:tsToken } : {}) } });
   resetTurnstile();
   const m = ((error && (error.code || "")) + " " + (error && error.message || "")).toLowerCase();
-  if (error && (error.status === 429 || /rate|too many|over_email/.test(m))) { $("gate-send").disabled = false; magicNext = Date.now() + 60000; err.textContent = "Terlalu sering meminta link. Coba lagi beberapa menit lagi."; return; }
+  if (error && (error.status === 429 || /rate|too many|over_email/.test(m))) { $("gate-send").disabled = false; magicNext = Date.now() + 60000; err.textContent = "Terlalu sering meminta link. Coba lagi beberapa menit lagi."; startCooldown(); return; }
   const unknown = error && /otp_disabled|signups? not allowed|not found|user_not_found|unexpected_failure|database error|saving new user|admin terdaftar/.test(m);
   if (error && !unknown) { $("gate-send").disabled = false; err.textContent = "Link belum terkirim. Periksa koneksi lalu coba lagi."; return; }
   magicNext = Date.now() + 60000;
