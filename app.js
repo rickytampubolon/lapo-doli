@@ -207,15 +207,15 @@ const countFor = poId => Object.keys(cart).filter(k => k.startsWith(poId + "::")
 
 function renderPoChips(){
   const el = $("pochips"), list = openPos();
+  const hr0 = s => s.replace(/\s*-\s*/, "-");
+  $("sc-hours").textContent = hours() === pickHours() ? hr0(hours()) : hr0(hours()) + ", " + hr0(pickHours());
+  document.querySelector(".sc-i small").hidden = hours() !== pickHours();
   if (poList() === null || !list.length) { el.innerHTML = ""; $("menu-h").textContent = "Pilih menu"; return; }
   if (!activeChosen || !list.some(x => x.id === activePo)) activePo = list[0].id;
   el.innerHTML = list.map(po => { const n = countFor(po.id);
     return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}">${po.id === activePo ? ic("check") : ""}<span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
   const cur = list.find(x => x.id === activePo) || list[0];
   $("menu-h").textContent = "Menu untuk " + (relDay(cur.date) ? relDay(cur.date).toLowerCase() : dShort(cur.date));
-  const hr = s => s.replace(/\s*-\s*/, "-");
-  $("sc-hours").textContent = hours() === pickHours() ? hr(hours()) : hr(hours()) + ", " + hr(pickHours());
-  document.querySelector(".sc-i small").hidden = hours() !== pickHours();
   renderCountdown();
 }
 $("pochips").addEventListener("click", e => {
@@ -234,7 +234,7 @@ function renderMenu(){
   const el = $("menu"), list = shopList(), pl = openPos();
   $("shop").classList.toggle("is-error", dbState === "error");
   renderPoChips();
-  if (dbState === "error") { el.innerHTML = `<div class="empty">Menu belum bisa dimuat.<br><button class="btn sm" data-retry type="button" style="display:inline-flex;margin-top:12px">${ic("undo")}Coba lagi</button></div>`; $("closed").hidden = true; $("po-wrap").hidden = false; updateBar(); return; }
+  if (dbState === "error") { el.innerHTML = `<div class="empty errstate"><h2>Menu belum bisa dimuat</h2><p>Periksa koneksi internetmu, lalu coba lagi.</p><button class="btn sm" data-retry type="button">${ic("undo")}Coba lagi</button></div>`; $("closed").hidden = true; $("po-wrap").hidden = false; updateBar(); return; }
   if (!list || poList() === null) { el.innerHTML = SKEL; $("closed").hidden = true; updateBar(); return; }
   if (canPrune()) for (const k of Object.keys(cart)) if (!resolveKey(k, list)) delete cart[k];
   $("closed").hidden = pl.length > 0; $("po-wrap").hidden = pl.length === 0;
@@ -455,7 +455,7 @@ $("reorder").onclick = reorder;
 function updateBar(){
   saveCart();
   const gs = groups();
-  $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? ", " + gs.length + " tanggal" : gs.length ? ", " + dShort(gs[0].date) : "");
+  $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? ", " + gs.length + " tanggal" : gs.length ? " untuk " + dShort(gs[0].date).replace(",", "") : "");
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
   $("next").disabled = qtyTotal() === 0;
   const noPo = screen === 1 && poList() !== null && openPos().length === 0;

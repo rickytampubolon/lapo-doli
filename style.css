@@ -1736,3 +1736,25 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
 /* tombol Ajak teman: ikon saja di semua halaman */
 .fab-share,body:has(#s1.show:not([hidden])) .fab-share{width:48px;padding:0;justify-content:center}
 .fab-share span,body:has(#s1.show:not([hidden])) .fab-share span{display:none}
+
+/* audit sisi pembeli: keseimbangan dan transisi */
+#sum-items .lg:last-child{padding-bottom:0}
+.empty.errstate{display:grid;justify-items:center;gap:var(--sp-2);padding:var(--sp-8) var(--sp-4)}
+.empty.errstate h2{margin:0;font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700;color:var(--text-primary)}
+.empty.errstate p{margin:0;font-size:var(--t-small);line-height:var(--lh-small)}
+.empty.errstate .btn{display:inline-flex;width:auto;margin-top:var(--sp-2);padding:0 var(--sp-5)}
+/* transisi halus: pindah halaman, lembar pilihan, bar bawah, pil tanggal, tombol */
+@media (prefers-reduced-motion:no-preference){
+  @keyframes pagein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  @keyframes barin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  #shop section.show{animation:pagein .24s ease-out backwards}
+  #help-view:not([hidden]) main{animation:pagein .24s ease-out backwards}
+  .scrim:not([hidden]){animation:fadein .2s ease-out backwards}
+  .bar:not([hidden]),.checkout-bar{animation:barin .22s ease-out backwards}
+  #s1 .cbtn{transition:background-color .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease}
+  .btn,.addbtn,.pillbtn,.cartpill,.reorder,.fab-share{transition:transform .12s ease,background-color .18s ease,box-shadow .18s ease,border-color .18s ease}
+  .btn:active,.addbtn:active,.pillbtn:active,.cartpill:active,.reorder:active{transform:scale(.98)}
+  .opt{transition:background-color .18s ease,border-color .18s ease}
+  .toast{transition:opacity .2s ease,transform .2s ease}
+}
