@@ -1726,3 +1726,13 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
 .fn-hl > div{display:grid;gap:2px;padding:var(--sp-3);border-radius:var(--r-md);background:var(--soft)}
 .fn-hl span,.fn-hl small{font-size:var(--t-cap);line-height:var(--lh-cap);color:var(--text-secondary)}
 .fn-hl b{font-size:20px;line-height:28px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* header Bantuan: baris tipis seperti halaman Data dan Bayar */
+#help-view .top .minibar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px;min-height:52px;padding-top:0;padding-bottom:0}
+.mb-sp{display:block;width:44px;height:44px}
+.sec-h{margin:var(--sp-6) 0 var(--sp-2);font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700}
+#help-view main.col{padding-top:var(--sp-4)}
+#help-view{padding-bottom:96px}
+/* tombol Ajak teman: ikon saja di semua halaman */
+.fab-share,body:has(#s1.show:not([hidden])) .fab-share{width:48px;padding:0;justify-content:center}
+.fab-share span,body:has(#s1.show:not([hidden])) .fab-share span{display:none}
