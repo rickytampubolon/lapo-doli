@@ -1493,3 +1493,26 @@ img.thumb{background:var(--soft)}
 @media (prefers-reduced-motion:reduce){.pphoto,.pphoto .pimg img,.pbusy{transition:none;animation:none}}
 .pphoto .pimg{width:96px;height:96px}
 @media (max-width:640px){.pphoto .pimg{width:88px;height:88px}}
+
+/* daftar pesanan v3: ringkas, satu blok per menu */
+#sum-items .lg{padding:12px 0}
+#sum-items .lg + .lg{border-top:1px solid rgba(59,44,39,.08)}
+#sum-items .lg .li{display:grid;grid-template-columns:56px minmax(0,1fr) auto;column-gap:12px;row-gap:0;align-items:center;padding:0;border:0;margin:0}
+#sum-items .lg .li .lthumb{grid-column:1;grid-row:1;align-self:start}
+#sum-items .lg .li .ln{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:1px;align-self:start;min-width:0}
+#sum-items .lg .li .step{grid-column:3;grid-row:1;justify-self:end;gap:2px}
+#sum-items .lg .li .meta{display:flex;align-items:center;gap:12px;margin-top:3px}
+#sum-items .lg .li .p{grid-column:auto;grid-row:auto;justify-self:auto;font-weight:600;font-size:.9rem}
+#sum-items .lg .li .editline{margin:0;padding:0;min-height:28px;font-size:.8rem}
+#sum-items .lg .li .step button{width:32px;height:32px;font-size:16px}
+#sum-items .lg .li .step span{min-width:22px}
+/* tambahan: baris kecil berlatar lembut di bawah menu utama */
+#sum-items .lg .li.add{grid-template-columns:minmax(0,1fr) auto;margin:8px 0 0 68px;padding:6px 8px 6px 12px;background:var(--soft);border-radius:12px}
+#sum-items .lg .li.add .ln{grid-column:1;flex-direction:row;align-items:baseline;gap:8px;align-self:center}
+#sum-items .lg .li.add .n{font-weight:500;font-size:.88rem}
+#sum-items .lg .li.add .p{font-weight:500;font-size:.82rem;color:var(--muted,#6b5a52)}
+#sum-items .lg .li.add .step{grid-column:2;grid-row:1}
+#sum-items .lg .li.add .step button{width:28px;height:28px;font-size:14px}
+#sum-items .lg .li.add .step span{min-width:18px;font-size:.88rem}
+#sum-items .lg .li .p{background:none;padding:0;border:0;border-radius:0;min-height:0;box-shadow:none}
+#sum-items .lg .li .step{align-self:center}
