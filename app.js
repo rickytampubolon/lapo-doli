@@ -353,8 +353,8 @@ function cutoffLeft(po){
 }
 function renderCountdown(){
   const act = openPos().find(x => x.id === activePo) || openPos()[0]; if (!act) return;
-  const left = cutoffLeft(act), when = relDay(act.date) ? relDay(act.date).toLowerCase() : fmtD(act.date, { weekday:"short" });
-  $("sc-cut").textContent = left ? left.text : when + " " + cutoffLabel(act);
+  const left = cutoffLeft(act);
+  $("cutnote").hidden = !left; $("sc-cut").textContent = left ? left.text : "";
   $("sc-cut").classList.toggle("urgent", !!(left && left.urgent));
 }
 /* layar PO kosong: kalau admin sudah menjadwalkan PO, tampilkan tanggal dan jam bukanya */
