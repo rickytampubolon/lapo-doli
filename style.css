@@ -1794,3 +1794,8 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
 #shop:not(.home) .top .minibar,#help-view .top .minibar{min-height:44px}
 #shop .top .hlink,#help-view .top .hlink{margin-top:0;margin-bottom:0}
 .minibar .hlink,#shop .top .minibar .hlink{height:44px;min-height:44px}
+
+/* header pembeli: tinggi sedang (di antara versi awal dan versi ringkas) */
+#shop .top > .col:not(.minibar){min-height:52px}
+#shop .top .logo.sm{width:30px;height:30px}
+#shop:not(.home) .top .minibar,#help-view .top .minibar{min-height:50px}
