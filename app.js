@@ -1428,7 +1428,7 @@ function renderAdminMenu(){
   const noQuota = products.filter(p => p.available !== false && (p.quota == null));
   el.innerHTML = `
     ${noQuota.length ? `<div class="latebar warnq" role="note">${ic("ban")}<span>${noQuota.length} menu belum punya kuota (${noQuota.map(p => esc(p.name)).join(", ")}). Pesanan tidak dibatasi, jadi bisa melebihi kapasitas dapur.</span></div>` : ""}
-    <div class="toolbar"><span class="note" style="margin:0">${assetsNs ? "Ketuk kotak foto untuk menambah atau mengganti. Dipotong persegi dari tengah." : ""}</span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
+    <div class="toolbar"><span></span><button class="btn sm add" data-add type="button">${ic("plus")}Tambah menu</button></div>
     ${rows || `<div class="empty">Belum ada menu.<br><button class="btn sm" style="display:inline-block;margin-top:12px" data-seed>Isi menu awal</button></div>`}`;
 }
 const menuEl = $("a-menu");
