@@ -206,9 +206,10 @@ Pesanan web yang belum dikonfirmasi, belum ada bukti bayar, dan sudah lewat 1 ja
 
 - **Siapa admin:** hanya email yang ada di tabel `admins` **dan** punya akun login terverifikasi (`email_confirmed_at` terisi). Orang lain yang masuk dengan emailnya sendiri melihat "Bukan akun admin" dan tidak bisa membaca atau mengubah apa pun: semua tabel, bukti bayar, dan fungsi admin dijaga aturan keamanan database (`is_admin()`).
 - **Form login tidak membuat akun baru** (`shouldCreateUser: false`) dan memberi pesan yang sama untuk email dikenal maupun tidak, jadi daftar admin tidak bisa ditebak. Ada jeda 60 detik antar permintaan.
-- **Menambah admin baru:** (1) Supabase, Authentication, Users, **Add user** (atau Invite) dengan emailnya; (2) di SQL Editor: `insert into public.admins values ('email@admin.com');`. Urutannya penting karena pendaftaran sendiri ditutup.
+- **Menambah admin baru: lewat aplikasi.** Buka Pengaturan, kartu **Admin**, isi email, tekan Tambah. Lalu minta orang itu membuka link admin (ada tombol Salin link admin) dan masuk dengan emailnya. Akun login dibuat otomatis saat pertama masuk. Admin bisa dihapus dari kartu yang sama (tidak bisa menghapus diri sendiri atau admin terakhir). Semua tercatat di Aktivitas terbaru.
+- **Bagaimana ini tetap aman:** daftar admin hanya bisa diubah oleh admin yang sudah login, dan database menolak pembuatan akun untuk email yang tidak ada di daftar admin (trigger `guard_admin_signup` pada `auth.users`). Orang asing yang mencoba mendaftar lewat form login tidak mendapat akun dan tidak dikirimi email.
 - **Pengaturan Supabase yang wajib dicek** (Authentication):
-  - Sign In / Providers, Email: matikan **Allow new users to sign up**, dan biarkan **Confirm email** aktif.
+  - Sign In / Providers, Email: **Allow new users to sign up harus aktif** (supaya admin baru bisa dibuatkan akun saat pertama masuk; trigger database yang menolak email selain admin), dan biarkan **Confirm email** aktif.
   - URL Configuration: isi **Site URL** dengan alamat toko dan batasi **Redirect URLs** hanya ke alamat toko.
   - Matikan penyedia login yang tidak dipakai (misalnya password, Google) kalau tidak perlu.
 

@@ -381,7 +381,9 @@ begin
   update auth.users set email_confirmed_at = now() where lower(email) = 'admin@test.id';
   delete from auth.users where lower(email) = 'admin@test.id';
   perform t.ck('19 tanpa akun login: bukan admin walau emailnya di tabel admins', not public.is_admin());
+  alter table auth.users disable trigger guard_admin_signup;
   insert into auth.users (email, email_confirmed_at) values ('orang.lain@example.com', now());
+  alter table auth.users enable trigger guard_admin_signup;
   perform set_config('request.jwt.claims', '{"email":"orang.lain@example.com"}', false);
   perform t.ck('19 orang lain dengan akun terverifikasi: bukan admin', not public.is_admin());
   begin perform public.set_secret('wa_token', 'x'); perform t.ck('19 orang lain tidak bisa mengatur rahasia', false); exception when others then perform t.ck('19 orang lain tidak bisa mengatur rahasia', sqlerrm = 'forbidden'); end;
@@ -414,6 +416,35 @@ begin
   r := public.create_orders(jsonb_build_object('nama', 'Evil http://phish.example/login', 'hp', '081200000143', 'fulfil', 'antar', 'area', 'Jakarta Timur', 'alamat', 'Jl. Contoh Raya 12 Jakarta', 'notes', '', 'method', 'transfer', 'groups', jsonb_build_array(jsonb_build_object('po_id', 'po-a', 'lines', jsonb_build_array(jsonb_build_object('pid', 'teri', 'opt', 0, 'qty', 1))))));
   perform t.ck('20 nama berisi tautan: pesan WhatsApp tidak memuat tautan dari pembeli', (select message not like '%phish.example%' and message like 'Halo kak Evil httpphishexamplelogin,%' from public.notify_queue where kind = 'dicatat'), (select message from public.notify_queue where kind = 'dicatat' limit 1));
   update public.settings set data = data - 'notifyOn' where id = 'shop';
+
+  -- 21. kelola admin dari aplikasi
+  perform set_config('request.jwt.claims', '', false);
+  insert into public.admins values ('admin@test.id') on conflict do nothing;
+  delete from auth.users where lower(email) = 'admin@test.id';
+  insert into auth.users (email, email_confirmed_at) values ('admin@test.id', now());
+  perform set_config('request.jwt.claims', '{"email":"Admin@Test.id"}', false);
+  perform t.ck('21 admin_list: admin yang login terlihat, sudah masuk, dan ditandai is_me', (select count(*) from public.admin_list() where email = 'admin@test.id' and joined and is_me) = 1);
+  perform public.admin_add('  Baru.Admin@Example.com ');
+  perform t.ck('21 admin_add: email dinormalkan (huruf kecil, tanpa spasi)', exists (select 1 from public.admins where email = 'baru.admin@example.com'));
+  perform t.ck('21 admin baru belum pernah masuk (joined false)', (select not joined from public.admin_list() where email = 'baru.admin@example.com'));
+  perform public.admin_add('baru.admin@example.com');
+  perform t.ck('21 admin_add dua kali tidak menggandakan', (select count(*) from public.admins where email = 'baru.admin@example.com') = 1);
+  begin perform public.admin_add('bukan-email'); perform t.ck('21 email tidak valid ditolak', false); exception when others then perform t.ck('21 email tidak valid ditolak', sqlerrm = 'invalid_email'); end;
+  perform t.ck('21 tindakan tercatat di log aktivitas', exists (select 1 from public.activity_log where action = 'tambah_admin' and target = 'baru.admin@example.com'));
+  insert into auth.users (email, email_confirmed_at) values ('Baru.Admin@Example.com', now());
+  perform t.ck('21 email admin baru bisa membuat akun (trigger mengizinkan, huruf besar kecil tidak masalah)', exists (select 1 from auth.users where lower(email) = 'baru.admin@example.com'));
+  begin insert into auth.users (email) values ('penyusup@example.com'); perform t.ck('21 email selain admin tidak bisa membuat akun', false); exception when others then perform t.ck('21 email selain admin tidak bisa membuat akun', sqlerrm like 'Pendaftaran hanya untuk admin%', sqlerrm); end;
+  begin perform public.admin_remove('admin@test.id'); perform t.ck('21 tidak boleh menghapus diri sendiri', false); exception when others then perform t.ck('21 tidak boleh menghapus diri sendiri', sqlerrm = 'cannot_remove_self'); end;
+  perform public.admin_remove('baru.admin@example.com');
+  perform t.ck('21 admin_remove: admin lain terhapus dari daftar', not exists (select 1 from public.admins where email = 'baru.admin@example.com'));
+  perform t.ck('21 setelah dihapus: bukan admin lagi walau akun login ada', (select count(*) from public.admins where email = 'baru.admin@example.com') = 0);
+  delete from public.admins where email <> 'admin@test.id';
+  begin perform public.admin_remove('lain@example.com'); perform t.ck('21 admin terakhir tidak bisa dihapus', false); exception when others then perform t.ck('21 admin terakhir tidak bisa dihapus', sqlerrm in ('last_admin', 'cannot_remove_self'), sqlerrm); end;
+  perform set_config('request.jwt.claims', '{"email":"orang.lain@example.com"}', false);
+  begin perform public.admin_add('x@example.com'); perform t.ck('21 bukan admin tidak bisa menambah', false); exception when others then perform t.ck('21 bukan admin tidak bisa menambah', sqlerrm = 'forbidden'); end;
+  begin perform public.admin_list(); perform t.ck('21 bukan admin tidak bisa melihat daftar', false); exception when others then perform t.ck('21 bukan admin tidak bisa melihat daftar', sqlerrm = 'forbidden'); end;
+  perform t.ck('21 anon tidak punya hak memanggil fungsi kelola admin', not has_function_privilege('anon', 'public.admin_add(text)', 'execute') and not has_function_privilege('anon', 'public.admin_list()', 'execute') and not has_function_privilege('anon', 'public.admin_remove(text)', 'execute'));
+  perform set_config('request.jwt.claims', '', false);
 end $$;
 
 select case when ok then 'PASS' else 'FAIL' end as hasil, name, info from t.res order by n;
