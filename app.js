@@ -462,12 +462,20 @@ $("back1").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key ==
 
 const lineKey = (poId, l) => l.addon ? addonKey(poId, l.pid, l.addonId) : l.optIdx != null ? `${poId}::${l.pid}::${l.optIdx}` : `${poId}::${l.pid}`;
 function itemsHTML(gs){
-  return gs.map(g => `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + g.items.map(l => {
-    const k = lineKey(g.poId, l), plusOff = l.addon && (cart[k] || 0) >= mainQty(g.poId, l.pid);
-    const pr = shopList().find(x => x.id === l.pid), im = pr ? imgSrc(pr) : "";
-    const th = l.addon ? '<span class="lthumb addtile" aria-hidden="true">+</span>' : im ? `<img class="thumb lthumb" src="${esc(im)}" alt="" width="56" height="56" loading="lazy" decoding="async" data-fallback="${esc((pr && pr.emoji) || "🍽️")}">` : `<span class="thumb tile lthumb" aria-hidden="true">${esc((pr && pr.emoji) || "🍽️")}</span>`;
-    return `<div class="li${l.addon ? " add" : ""}">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}${l.addon ? "" : `<button type="button" class="editline" data-edit="${esc(g.poId + "::" + l.pid)}">Ubah</button>`}</div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
-  }).join("")).join("");
+  return gs.map(g => {
+    const row = l => {
+      const k = lineKey(g.poId, l), plusOff = l.addon && (cart[k] || 0) >= mainQty(g.poId, l.pid);
+      if (l.addon) return `<div class="li add"><div class="ln"><span class="n">+ ${esc(l.name)}</span></div><span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span>${stepper(k, l.name, plusOff)}</div>`;
+      const pr = shopList().find(x => x.id === l.pid), im = pr ? imgSrc(pr) : "";
+      const th = im ? `<img class="thumb lthumb" src="${esc(im)}" alt="" width="56" height="56" loading="lazy" decoding="async" data-fallback="${esc((pr && pr.emoji) || "🍽️")}">` : `<span class="thumb tile lthumb" aria-hidden="true">${esc((pr && pr.emoji) || "🍽️")}</span>`;
+      return `<div class="li">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}<button type="button" class="editline" data-edit="${esc(g.poId + "::" + l.pid)}">Ubah</button></div>${stepper(k, l.name, plusOff)}<span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span></div>`;
+    };
+    const mains = g.items.filter(l => !l.addon), adds = g.items.filter(l => l.addon), seen = {};
+    return `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + mains.map(l => {
+      const first = !seen[l.pid]; seen[l.pid] = 1;
+      return `<div class="lg">${row(l)}${first ? adds.filter(x => x.pid === l.pid).map(row).join("") : ""}</div>`;
+    }).join("");
+  }).join("");
 }
 $("sum-items").addEventListener("click", e => {
   const ed = e.target.closest("[data-edit]");

@@ -1453,3 +1453,18 @@ img.thumb{background:var(--soft)}
 .li .ln small{margin:0}
 .li .editline{margin-top:0;padding:2px 0;min-height:24px}
 .li{row-gap:4px;padding:12px 0}
+/* tambahan menyatu dengan menu utamanya */
+.li + .li{border-top:0}
+.lg + .lg{border-top:1px solid var(--line,rgba(59,44,39,.08))}
+.lg .li:first-child{padding-bottom:6px}
+.lg .li.add{grid-template-columns:minmax(0,1fr) auto auto;margin-left:68px;padding:4px 0 10px;column-gap:var(--sp-3);align-items:center}
+.lg .li.add .ln{grid-column:1;grid-row:1}
+.lg .li.add .p{grid-column:2;grid-row:1;justify-self:end;font-weight:500;font-size:.85rem;color:var(--muted,#6b5a52)}
+.lg .li.add .step{grid-column:3;grid-row:1}
+.lg .li.add .n{font-weight:500;font-size:.9rem}
+.lg .li.add .step button{width:34px;height:34px}
+.lg .li:first-child .p{grid-row:2}
+.lg .li.add{grid-template-columns:minmax(0,1fr) auto;row-gap:0;align-items:center}
+.lg .li.add .ln{grid-column:1;grid-row:1}
+.lg .li.add .p{grid-column:1;grid-row:2;justify-self:start}
+.lg .li.add .step{grid-column:2;grid-row:1 / span 2}
