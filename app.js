@@ -1236,7 +1236,7 @@ function renderNewForm(){
   const pl = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date))), list = products || [];
   const def = (pl.find(poOpenNow) || pl[0] || {}).id;
   $("a-new").innerHTML = `<div class="nform">
-    <div class="toolbar"><button class="btn line sm" data-nclose type="button">${ic("back")}Pesanan</button><b>Pesanan baru</b></div>
+    <div class="toolbar"><button class="btn line sm" data-nclose type="button">${ic("back")}Pesanan</button><h2 class="nf-t">Pesanan baru</h2></div>
     <div class="grid2">
       <div><label class="lb" for="n-po" style="margin-top:0">Tanggal PO</label><select id="n-po">${pl.map(po => `<option value="${esc(po.id)}" ${po.id === def ? "selected" : ""}>${esc(dShort(po.date))}${poOpenNow(po) ? "" : " (ditutup)"}</option>`).join("")}</select></div>
       <div><label class="lb" style="margin-top:0">Cara terima</label><div class="opts opts-row" id="n-fulfil"><label class="opt"><input type="radio" name="nf" value="antar" checked><span class="opt-t"><b>Antar</b></span><i class="dot" aria-hidden="true"></i></label><label class="opt"><input type="radio" name="nf" value="ambil"><span class="opt-t"><b>Ambil sendiri</b></span><i class="dot" aria-hidden="true"></i></label></div></div>
@@ -1471,7 +1471,7 @@ function renderAdminMenu(){
           </div></details>
         <div class="pbar"><label class="switch"><input type="checkbox" id="av-${esc(p.id)}" data-f="available" ${p.available === false ? "" : "checked"}><span class="track"></span><span>${p.available === false ? "Habis" : "Tersedia"}</span></label>
           <span class="pmove"><button class="textbtn iconbtn-t" data-move="up" type="button" aria-label="Naikkan ${esc(p.name)}" title="Naikkan" ${products.indexOf(p) === 0 ? "disabled" : ""}>${ic("up")}</button><button class="textbtn iconbtn-t" data-move="down" type="button" aria-label="Turunkan ${esc(p.name)}" title="Turunkan" ${products.indexOf(p) === products.length - 1 ? "disabled" : ""}>${ic("down")}</button></span>
-          <button class="textbtn ${armDel === p.id ? "dangerbtn" : ""}" data-del type="button">${armDel === p.id ? "Yakin hapus menu ini?" : ic("trash") + "Hapus"}</button></div>
+          <button class="textbtn ${armDel === p.id ? "dangerbtn" : ""}" data-del type="button">${armDel === p.id ? "Yakin hapus menu ini?" : ic("trash") + "Hapus menu"}</button></div>
       </div></div>`).join("");
   const noQuota = products.filter(p => p.available !== false && (p.quota == null));
   el.innerHTML = `
@@ -1864,7 +1864,7 @@ function renderSales(){
       <div class="panel"><h3>Antar atau ambil sendiri</h3>${base.length ? `<div class="stack">${seg("a", nAntar, "Antar")}${seg("b", nAmbil, "Ambil sendiri")}</div><div class="legend"><span><i class="sw a"></i>Antar <b>${nAntar}</b></span><span><i class="sw b"></i>Ambil sendiri <b>${nAmbil}</b></span></div>` : '<p class="note">Belum ada data.</p>'}</div>
       <div class="panel"><h3>Metode bayar</h3>${base.length ? (() => { const m = {}; base.forEach(o => { const k = o.method === "qris" ? "QRIS" : "Transfer"; const r = m[k] || (m[k] = { n:0, s:0 }); r.n++; r.s += o.total; }); return hbars(Object.keys(m).map(k => ({ label:k, value:m[k].n, a:m[k].n + " pesanan", c:rp(m[k].s) })).sort((x, y) => y.value - x.value)); })() : '<p class="note">Belum ada data.</p>'}</div>
       <div class="panel"><h3>Wilayah pengantaran</h3>${areaRows.length ? hbars(areaRows) : '<p class="note">Belum ada pesanan antar.</p>'}</div>
-      <div class="panel"><h3>Nasi dan sop</h3>${Object.keys(add).length ? hbars(Object.keys(add).map(n => ({ label:n, value:add[n].qty, a:add[n].qty + " porsi", c:add[n].rev ? rp(add[n].rev) : "Gratis" })).sort((a, b) => b.value - a.value)) : '<p class="note">Belum ada tambahan.</p>'}</div>
+      ${Object.keys(add).length ? `<div class="panel"><h3>Tambahan</h3>${hbars(Object.keys(add).map(n => ({ label:n, value:add[n].qty, a:add[n].qty + " porsi", c:add[n].rev ? rp(add[n].rev) : "Gratis" })).sort((a, b) => b.value - a.value))}</div>` : ""}
     </div>
     <div class="panel funnel">${funnelHTML()}</div>
     <details class="tview panel"><summary>Lihat sebagai tabel</summary><div class="tw"><table class="dt"><thead><tr><th>Tanggal PO</th><th class="r">Pesanan</th><th class="r">Porsi</th><th class="r">Penjualan</th></tr></thead><tbody>${poSorted.map(po => { const os = live.filter(o => o.poId === po.id && inBasis(o));
