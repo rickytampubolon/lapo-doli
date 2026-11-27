@@ -1570,3 +1570,19 @@ body:has(#s1.show:not([hidden])) .fab-share span{display:inline}
 #s1 .cbtn:first-child{margin-left:0}
 #s1 #menu-h{margin:14px 0 4px}
 .fab-share{right:auto;left:max(16px,calc((100% - 560px)/2 + 16px))}
+
+/* header ringkas di halaman Data dan Bayar: kembali, langkah, bantuan dalam satu baris */
+.top .minibar{display:none}
+#shop:not(.home) .top > .col:not(.minibar){display:none}
+#shop:not(.home) .top .minibar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px;padding-top:2px;padding-bottom:2px}
+#shop:not(.home) #steps{display:none}
+#shop:not(.home) main.col{padding-top:0}
+.minibar .hlink{display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:0}
+.minibar .hlink .ic{width:22px;height:22px}
+.steps.mini{margin:0;padding:0 4px;list-style:none;display:flex;align-items:center;min-width:0}
+.steps.mini li{display:flex;align-items:center;gap:6px;flex:none;font-size:14px}
+.steps.mini li:not(:last-child){flex:1 1 0}
+.steps.mini li:not(.now) span{display:none}
+.steps.mini li:not(:last-child)::after{margin:0 8px}
+.minibar .hlink{margin:0;min-width:44px;min-height:44px}
+#shop:not(.home) .top .minibar{min-height:52px;padding-top:0;padding-bottom:0}

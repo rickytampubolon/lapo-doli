@@ -448,7 +448,8 @@ function checkClosings(){
 function updateSteps(n){
   const bk = $("back1");
   if (n === 2) { bk.setAttribute("role", "button"); bk.setAttribute("tabindex", "0"); bk.setAttribute("aria-label", "Kembali ke menu"); } else { bk.removeAttribute("role"); bk.removeAttribute("tabindex"); bk.removeAttribute("aria-label"); }
-  document.querySelectorAll("#steps li").forEach((li, i) => { const k = i + 1; li.className = k < n ? "done" : k === n ? "now" : ""; li.querySelector("i").innerHTML = k < n ? ic("check") : String(k); li.setAttribute("aria-current", k === n ? "step" : "false"); });
+  const mb = $("mb-back"); mb.setAttribute("aria-label", n === 3 ? "Ke beranda" : "Kembali ke menu");
+  document.querySelectorAll("#steps li, #steps2 li").forEach((li, j) => { const i = j % 3; const k = i + 1; li.className = k < n ? "done" : k === n ? "now" : ""; li.querySelector("i").innerHTML = k < n ? ic("check") : String(k); li.setAttribute("aria-current", k === n ? "step" : "false"); });
 }
 function go(n){
   screen = n;
@@ -463,6 +464,7 @@ $("next").onclick = () => { track("mulai_checkout", { porsi:qtyTotal() }); go(2)
 $("addmore").onclick = () => go(1);
 /* di layar Data, langkah "Menu" di atas menjadi tombol kembali */
 $("back1").onclick = () => { if (screen === 2) go(1); };
+$("mb-back").onclick = () => { closeSheets(); if (screen === 2) go(1); else { setView("shop"); go(1); } };
 $("back1").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && screen === 2) { e.preventDefault(); go(1); } });
 
 const lineKey = (poId, l) => l.addon ? addonKey(poId, l.pid, l.addonId) : l.optIdx != null ? `${poId}::${l.pid}::${l.optIdx}` : `${poId}::${l.pid}`;
