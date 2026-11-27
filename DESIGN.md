@@ -171,3 +171,7 @@ Aturan:
 - **Pesanan sebelumnya (beranda):** lima pesanan terakhir yang tersimpan di perangkat. Ditampilkan sebagai daftar lipat di kartu pesanan terakhir, tiap baris punya tombol Pesan lagi. Hanya muncul kalau ada lebih dari satu pesanan, keranjang kosong, dan ada PO terbuka.
 - **Alamat tersimpan (checkout):** sampai empat alamat antar terakhir sebagai pil yang bisa digeser, dengan tombol hapus kecil. Muncul kalau ada dua alamat atau lebih.
 - **Istilah:** di sisi pembeli selalu "Nomor WhatsApp", bukan "No. HP" atau "Nomor HP".
+
+## Anti zoom di HP
+
+iPhone memperbesar halaman sendiri saat kolom isian diketuk kalau teksnya di bawah 16px. Aturannya: semua `input`, `select`, dan `textarea` di layar HP minimal 16px (17px di sisi pembeli). Ini dijaga oleh blok "Anti zoom di HP" paling bawah `style.css` (dengan `!important`, supaya gaya padat di admin tidak mengalahkannya). Tombol dan tautan memakai `touch-action: manipulation` supaya ketukan dua kali tidak memperbesar halaman. Jangan memakai `maximum-scale=1` di viewport, karena itu mematikan cubit untuk memperbesar bagi pengguna yang membutuhkannya.
