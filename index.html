@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261124p">
+<link rel="stylesheet" href="/style.css?v=20261125c">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="canonical" href="https://lapo-doli.vercel.app/">
 <meta property="og:type" content="website">
@@ -48,9 +48,9 @@
     <section id="s1" class="show">
       <div class="storecard">
         <div class="sc-top"><p class="sc-tag">Masakan Batak rumahan</p><span class="badge-po">PO mingguan</span></div>
-        <div class="sc-stats">
-          <div><b id="sc-hours">-</b><small>Antar/ambil</small></div>
-          <div><b>Jakarta saja</b><small>Area antar</small></div>
+        <div class="sc-meta">
+          <span class="sc-i"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><b id="sc-hours">-</b><small>antar atau ambil</small></span>
+          <span class="sc-i"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg><b>Jakarta saja</b></span>
         </div>
         <p class="cutnote" id="cutnote" hidden>PO tutup <b id="sc-cut"></b></p>
       </div>
@@ -66,9 +66,9 @@
       <button class="reorder" id="reorder" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg><span id="reorder-t">Pesan seperti sebelumnya</span></button>
       </div>
       <div id="po-wrap">
-        <div class="label">Pilih tanggal <small>dimasak khusus di tanggal itu</small></div>
+        <div class="label">Tanggal PO</div>
         <div class="chips" id="pochips"></div>
-        <div class="label">Pilih menu</div>
+        <div class="label" id="menu-h">Pilih menu</div>
         <div id="menu" class="menu" aria-busy="true"><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div><div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div></div>
       </div>
     </section>
@@ -237,7 +237,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261124p"></script>
+<script defer src="/app.js?v=20261125c"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

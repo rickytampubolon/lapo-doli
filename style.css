@@ -1535,3 +1535,38 @@ body:has(#admin:not([hidden])) .fab-share,body.sheet-open .fab-share{display:non
 .fab-share span{display:none}
 body:has(#s1.show:not([hidden])) .fab-share{width:auto;padding:0 16px 0 14px}
 body:has(#s1.show:not([hidden])) .fab-share span{display:inline}
+
+/* beranda v4: ringkas */
+.storecard{margin:12px 0 8px;padding:12px 14px;border-radius:16px}
+.sc-meta{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px}
+.sc-i{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:20px;color:var(--text-secondary)}
+.sc-i .ic{width:16px;height:16px;margin:0;color:var(--accent);flex:none}
+.sc-i b{font-weight:600;color:var(--text-primary,#3b2c27)}
+.sc-i small{font-size:13px}
+.cutnote{margin:6px 0 0}
+.quick{margin:8px 0 0;border:0;border-radius:14px;background:var(--soft);box-shadow:none}
+.quick .lastcard,.quick .reorder{min-height:44px;padding:6px 14px;font-size:14px}
+.quick > :not([hidden]) ~ :not([hidden]){border-top:1px solid rgba(59,44,39,.08)}
+#s1 .label{margin:16px 0 8px;font-size:15px;line-height:22px;font-weight:700}
+#s1 .label small{display:none}
+#s1 .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 6px;margin:0 -2px;scrollbar-width:none}
+#s1 .chips::-webkit-scrollbar{display:none}
+#s1 .cbtn{flex:none;position:relative;display:inline-flex;align-items:center;gap:5px;min-width:0;height:40px;padding:0 14px;border-radius:999px;box-shadow:none;font-size:14px}
+#s1 .cbtn .dow,#s1 .cbtn .mon,#s1 .cbtn .dnum{font-size:14px;line-height:20px;margin:0;font-weight:600}
+#s1 .cbtn .dnum{font-weight:700}
+#s1 .cbtn .ic{width:16px;height:16px;margin:0 2px 0 -2px}
+#s1 .cbtn[aria-pressed=true]{padding:0 14px;box-shadow:0 3px 8px rgba(125,58,49,.2)}
+#s1 .cbtn .cnt{top:-5px;right:-5px}
+#s1 #menu-h{margin-top:12px}
+/* tanggal kirim di halaman Data */
+.gh2{display:flex;align-items:center;gap:8px;margin:var(--sp-3) 0 var(--sp-2);padding:8px 12px;border-radius:12px;background:var(--soft);color:var(--text-primary,#3b2c27);font-size:14px;line-height:20px;font-weight:700}
+.gh2 .ic{width:18px;height:18px;margin:0;color:var(--accent);flex:none}
+.gh2 small{margin-left:auto;font-size:13px;font-weight:500;color:var(--text-secondary)}
+#s1 .label:not(#menu-h){display:none}
+#s1 .chips{margin-top:10px}
+
+/* keseimbangan beranda: tepi sejajar, ritme jarak seragam, tombol Ajak teman tidak menutupi tombol Tambah */
+#s1 .chips{margin:12px 0 0;padding:4px 0 6px}
+#s1 .cbtn:first-child{margin-left:0}
+#s1 #menu-h{margin:14px 0 4px}
+.fab-share{right:auto;left:max(16px,calc((100% - 560px)/2 + 16px))}
