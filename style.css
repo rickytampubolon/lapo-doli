@@ -1799,3 +1799,9 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
 #shop .top > .col:not(.minibar){min-height:52px}
 #shop .top .logo.sm{width:30px;height:30px}
 #shop:not(.home) .top .minibar,#help-view .top .minibar{min-height:50px}
+
+/* header admin (HP dan halaman login) sama tingginya dengan header pembeli: 51px + pita 4px */
+.ahead{padding-bottom:4px}
+.ahead::after{height:4px;background:var(--ulos-soft);-webkit-mask:none;mask:none}
+.ahead .col{padding-top:0;padding-bottom:0;min-height:51px}
+.ahead .logo.sm{width:30px;height:30px}
