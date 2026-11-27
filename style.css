@@ -1779,3 +1779,7 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
   #tabs button,.side .tabs button{transition:background-color .18s ease,color .18s ease}
   .stabs button,.chip,.sel{transition:background-color .15s ease,color .15s ease,border-color .15s ease}
 }
+
+/* judul sisi pembeli: sedikit lebih ringan (600), admin tetap 700 */
+:root{--fw-head-shop:600}
+#shop .mb-title,#help-view .mb-title,#shop .gc-h h2,#shop #menu-h,#shop .item h3,#shop .sc-tag,#shop .title,#shop .closed h2,#shop .empty.errstate h2,#help-view .sec-h,#help-view .ct,#help-view h2,.sheet h3,.item .sheet h3,#s2 .gc-h h2,#s3 .gc-h h2{font-weight:var(--fw-head-shop)}

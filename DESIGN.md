@@ -26,7 +26,7 @@ Aturan: jangan memakai hitam murni. Teks paling gelap adalah `--text-primary`. S
 
 ## Huruf
 
-Satu keluarga: **Figtree**. Hanya tiga bobot: 400 (isi), 600 (label), 700 (judul). Nomor pesanan dan nomor rekening memakai `--mono`.
+Satu keluarga: **Figtree**. Hanya tiga bobot: 400 (isi), 600 (label, dan judul di sisi pembeli), 700 (judul di admin dan angka penting seperti harga dan total). Judul pembeli sengaja sedikit lebih ringan (token `--fw-head-shop`) supaya tampilan terasa lembut. Nomor pesanan dan nomor rekening memakai `--mono`.
 
 | Peran | Token | Ukuran / tinggi baris | Bobot | Dipakai untuk |
 |---|---|---|---|---|
