@@ -1,11 +1,21 @@
 const $ = id => document.getElementById(id);
-const LS = { cart:"ld_cart", cust:"ld_cust", last:"ld_last", menu:"ld_menu", snap:"ld_snap" };
+const LS = { cart:"ld_cart", cust:"ld_cust", last:"ld_last", menu:"ld_menu", snap:"ld_snap", hist:"ld_hist", addrs:"ld_addrs" };
 const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 const jakartaToday = () => new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 10);
 const relDay = d => { const diff = Math.round((Date.parse(d + "T00:00:00Z") - Date.parse(jakartaToday() + "T00:00:00Z")) / 864e5); return diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : ""; };
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
 const LOAD_MS = 8000;
+/* tampilan admin bisa dibuka lewat /admin, ?admin=1, atau #admin. Di tampilan admin, aplikasi yang dipasang memakai manifest admin sendiri. */
+const IS_ADMIN_URL = /^\/admin\/?$/.test(location.pathname) || /[?&]admin=/.test(location.search) || location.hash === "#admin";
+if (IS_ADMIN_URL) {
+  try {
+    const mf = document.querySelector('link[rel="manifest"]'); if (mf) mf.href = "/admin.webmanifest";
+    document.title = "Lapo Doli Admin";
+    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = "#f7efe5";
+    let at = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (!at) { at = document.createElement("meta"); at.name = "apple-mobile-web-app-title"; document.head.appendChild(at); } at.content = "Admin";
+  } catch (e) {}
+}
 /* analitik: Vercel Analytics bila aktif; tanpa itu tidak melakukan apa pun */
 window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
 const track = (name, data) => { try { window.va("event", data ? { name, data } : { name }); } catch (e) {} funnelLog(name); };
@@ -17,7 +27,7 @@ function funnelSid(){
 }
 function funnelLog(name){
   try {
-    if (!FUNNEL.includes(name) || funnelSent.has(name) || typeof sb === "undefined" || !sb || isAdmin || session || /[?&]admin=|#admin/.test(location.search + location.hash)) return;
+    if (!FUNNEL.includes(name) || funnelSent.has(name) || typeof sb === "undefined" || !sb || isAdmin || session || IS_ADMIN_URL) return;
     funnelSent.add(name);
     Promise.resolve(sb.rpc("log_event", { p_sid:funnelSid(), p_name:name, p_po:typeof activePo === "string" ? activePo : "", p_device:window.innerWidth <= 640 ? "hp" : "desktop" })).catch(() => {});
   } catch (e) {}
@@ -64,11 +74,11 @@ const parseOptions = list => (list || []).map(s => String(s).trim()).filter(Bool
   return digits !== "" && i > 0 ? { name:nm, price:Number(digits) } : { name:nm };
 }).filter(o => o.name);
 const fromProduct = r => ({ id:r.id, name:r.name, desc:r.description, price:r.price, emoji:r.emoji, available:r.available, sort:r.sort, quota:r.quota == null ? null : Number(r.quota),
-  options:(r.options || []).map(o => o.price != null ? `${o.name}=${o.price}` : o.name), addons:r.addons || [], image:r.image, imageUrl:assetUrl(r.image), note:r.allow_note !== false });
+  options:(r.options || []).map(o => o.price != null ? `${o.name}=${o.price}` : o.name), addons:r.addons || [], image:r.image, imageUrl:assetUrl(r.image), note:r.allow_note !== false, tags:String(r.tags || "") });
 const toProductRow = patch => {
   const m = {};
   for (const k in patch) { const v = patch[k];
-    if (k === "note") m.allow_note = v; else if (k === "desc") m.description = v; else if (k === "options") m.options = parseOptions(v);
+    if (k === "note") m.allow_note = v; else if (k === "tags") m.tags = String(v || "").slice(0, 80); else if (k === "desc") m.description = v; else if (k === "options") m.options = parseOptions(v);
     else if (["name", "price", "emoji", "available", "sort", "addons", "image", "quota"].includes(k)) m[k] = v; }
   return m;
 };
@@ -175,6 +185,8 @@ function variantsHTML(p, keyBase, mk){
 }
 const openItems = new Set();
 const fromPrice = p => { const o = optsOf(p); return o.length ? Math.min(...o.map(x => x.price)) : Number(p.price) || 0; };
+const tagList = p => [...new Set(String(p.tags || "").split(",").map(x => x.trim().slice(0, 18)).filter(Boolean))].slice(0, 3);
+const tagsHTML = p => { const t = tagList(p); return t.length ? `<div class="tags">${t.map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div>` : ""; };
 const addonsOf = p => Array.isArray(p.addons) ? p.addons.filter(a => a && a.id && a.name) : [];
 const addonKey = (poId, pid, aid) => `${poId}::${pid}::+${aid}`;
 const isAddonKey = k => (k.split("::")[2] || "").startsWith("+");
@@ -260,7 +272,7 @@ function renderMenu(){
         <div class="sheet-f"><button type="button" class="btn" data-close>Selesai<span data-sub></span></button></div>
       </div>` : "";
     return `<div class="item ${off ? "off" : ""}" data-pid="${esc(p.id)}" data-po="${esc(act.id)}" style="--i:${i}">
-      <div class="ihead"><div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="irow2"><span class="price">${priceTxt}</span>${off ? '<span class="left sold">Habis</span>' : rem != null && rem > 0 && rem <= 10 ? `<span class="left">sisa ${rem}</span>` : ""}</div></div>${thumb}</div>
+      <div class="ihead"><div class="ibody"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p>${tagsHTML(p)}<div class="irow2"><span class="price">${priceTxt}</span>${off ? '<span class="left sold">Habis</span>' : rem != null && rem > 0 && rem <= 10 ? `<span class="left">sisa ${rem}</span>` : ""}</div></div>${thumb}</div>
       <div class="ifoot">${custom ? `<span class="cust">${ic("settings")}Bisa disesuaikan</span>` : "<span></span>"}${ctl}</div>
       ${sheet}${custom ? "" : note}</div>`;
   }).join("");
@@ -378,6 +390,23 @@ const grand = gs => gs.reduce((a, g) => a + g.total, 0);
 let stateReady = false;
 function saveCart(){ if (stateReady) lsSet(LS.cart, { cart, notes:itemNotes, po:activePo, fulfil }); }
 let mapsUrl = "";   // tautan Google Maps dari alamat yang dipilih pembeli
+/* alamat tersimpan: sampai empat alamat antar terakhir, tinggal ketuk untuk memakai lagi */
+const addrNorm = t => String(t || "").toLowerCase().replace(/\s+/g, " ").trim();
+const addrList = () => { const l = lsGet(LS.addrs); return Array.isArray(l) ? l.filter(x => x && x.alamat) : []; };
+function saveAddress(a){ const l = addrList().filter(x => addrNorm(x.alamat) !== addrNorm(a.alamat)); l.unshift({ alamat:String(a.alamat).slice(0, 300), area:a.area || "", maps:mapsSafe(a.maps) ? a.maps : "", q:a.q || "" }); lsSet(LS.addrs, l.slice(0, 4)); }
+const addrLabel = a => String(a.q || a.alamat).split(",")[0].trim().slice(0, 26);
+function renderSavedAddrs(){
+  const el = $("addr-saved"), l = addrList(), cur = addrNorm($("alamat").value);
+  el.hidden = l.length < 2 || isPick(); if (el.hidden) return;
+  el.innerHTML = '<span class="saved-l">Alamat tersimpan</span><div class="saved-r">' + l.map((a, i) => `<span class="sv${addrNorm(a.alamat) === cur ? " on" : ""}"><button type="button" data-addr="${i}">${ic("pin")}${esc(addrLabel(a))}</button><button type="button" class="x" data-addr-del="${i}" aria-label="Hapus alamat ${esc(addrLabel(a))}">${ic("x")}</button></span>`).join("") + "</div>";
+}
+$("addr-saved").addEventListener("click", e => {
+  const d = e.target.closest("[data-addr-del]"), u = e.target.closest("[data-addr]"), l = addrList();
+  if (d) { l.splice(Number(d.dataset.addrDel), 1); lsSet(LS.addrs, l); renderSavedAddrs(); return; }
+  if (u) { const a = l[Number(u.dataset.addr)]; if (!a) return;
+    $("alamat").value = a.alamat; $("area").value = a.area || ""; mapsUrl = mapsSafe(a.maps) ? a.maps : ""; $("addr-q").value = a.q || ""; showAddrHint(!!mapsUrl);
+    ["e-area", "e-alamat", "e-addr-q"].forEach(k => { const x = $(k); if (x) x.textContent = ""; }); saveCust(); renderSavedAddrs(); }
+});
 function saveCust(){ if (stateReady) lsSet(LS.cust, { nama:$("nama").value, hp:$("hp").value, area:$("area").value, alamat:$("alamat").value, maps:mapsUrl, q:$("addr-q").value }); }
 function restoreState(){
   const c = lsGet(LS.cart);
@@ -428,11 +457,22 @@ function renderReorder(){
   const snap = lsGet(LS.snap), mains = snap ? Object.keys(snap.cart).filter(k => !isAddonKey(k)).reduce((t, k) => t + snap.cart[k], 0) : 0;
   const show = screen === 1 && mains > 0 && !qtyTotal() && openPos().length > 0 && dbState === "ok";
   $("reorder").hidden = !show; if (show) $("reorder-t").textContent = "Pesan seperti sebelumnya (" + mains + " porsi)";
+  renderHist();
+}
+function syncQuick(){ const q = $("quick"); if (q) q.hidden = $("lastorder").hidden && $("reorder").hidden && $("hist").hidden; }
+/* riwayat pesanan: lima pesanan terakhir di perangkat ini, bisa dipesan lagi satu per satu */
+const histList = () => { const l = lsGet(LS.hist); return Array.isArray(l) ? l.filter(x => x && x.snap && x.snap.cart) : []; };
+function pushHistory(entry){ const l = histList().filter(x => x.id !== entry.id); l.unshift(entry); lsSet(LS.hist, l.slice(0, 5)); }
+function renderHist(){
+  const el = $("hist"), list = histList().slice(1), show = screen === 1 && list.length > 0 && !qtyTotal() && openPos().length > 0 && dbState === "ok";
+  el.hidden = !show; if (!show) { if (el.open) el.open = false; syncQuick(); return; }
+  $("hist-t").textContent = "Pesanan sebelumnya (" + list.length + ")";
+  $("hist-list").innerHTML = list.map((x, i) => `<li><div class="hi"><b>${esc(x.when || "")}</b><small>${esc(x.summary || "")}</small></div><span class="hp">${rp(x.total || 0)}</span><button type="button" class="pillbtn" data-hist="${i + 1}">Pesan lagi</button></li>`).join("");
   syncQuick();
 }
-function syncQuick(){ const q = $("quick"); if (q) q.hidden = $("lastorder").hidden && $("reorder").hidden; }
-function reorder(){
-  const snap = lsGet(LS.snap), po = openPos().find(x => x.id === activePo) || openPos()[0]; if (!snap || !po) return;
+$("hist-list").addEventListener("click", e => { const b = e.target.closest("[data-hist]"); if (!b) return; const x = histList()[Number(b.dataset.hist)]; if (x) { reorder(x.snap); $("hist").open = false; } });
+function reorder(snapArg){
+  const snap = snapArg && snapArg.cart ? snapArg : lsGet(LS.snap), po = openPos().find(x => x.id === activePo) || openPos()[0]; if (!snap || !po) return;
   let skipped = 0; const pids = new Set();
   Object.keys(snap.cart).forEach(k => {
     const rest = k.split("::").slice(1), nk = [po.id, ...rest].join("::");
@@ -450,7 +490,7 @@ function reorder(){
   renderMenu(); updateBar();
   toast(!kept ? "Menu sebelumnya sedang tidak tersedia." : skipped ? "Sebagian menu tidak tersedia atau kuotanya kurang. Cek keranjangmu." : "Keranjang diisi dari pesanan sebelumnya.");
 }
-$("reorder").onclick = reorder;
+$("reorder").onclick = () => reorder();
 function updateBar(){
   saveCart();
   const gs = groups();
@@ -548,7 +588,7 @@ function renderCheckout(){
   const gsx = groups();
   $("sum-items").innerHTML = itemsHTML(gsx); $("sum2").innerHTML = payRowsHTML(gsx); $("cb-total").textContent = rp(grand(gsx)); $("cb-count").textContent = gsx.reduce((t, g) => t + g.items.filter(l => !l.addon).reduce((x, l) => x + l.qty, 0), 0) + " porsi";
   $("pick-line").textContent = pickLoc();
-  $("addr-fields").hidden = isPick(); $("pick-box").hidden = true;
+  $("addr-fields").hidden = isPick(); $("pick-box").hidden = true; renderSavedAddrs();
   $("pick-loc").textContent = pickLoc(); $("pick-hours").textContent = pickHours();
   renderPayInfo();
 }
@@ -660,7 +700,7 @@ const OUT_JKT = /bekasi|tangerang|depok|bogor|bintaro|serpong|karawaci|cibubur/i
 const areaFromText = t => { const m = /Jakarta\s+(Pusat|Utara|Barat|Selatan|Timur)/i.exec(t || ""); return m ? "Jakarta " + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : ""; };
 const val = {
   nama:   v => v.trim().length >= 2 ? "" : "Isi nama kamu.",
-  hp:     v => /^(\+?62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g, "")) ? "" : "Nomor HP tidak valid. Contoh: 08123456789",
+  hp:     v => /^(\+?62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g, "")) ? "" : "Nomor WhatsApp tidak valid. Contoh: 08123456789",
   area:   v => AREAS.includes(v) ? "" : "Antar hanya untuk Jakarta. Cari alamatnya di atas, atau tulis kotanya, misalnya Jakarta Selatan.",
   alamat: v => v.trim().length >= 10 ? "" : "Alamat belum lengkap."
 };
@@ -680,7 +720,7 @@ function orderFailed(e){
   if (/menu_unavailable/.test(m)) { toast("Ada menu yang sudah habis. Muat ulang halaman lalu pilih lagi."); refreshProducts(); return; }
   if (/too_many_pending/.test(m)) { toast("Kamu masih punya 3 pesanan yang belum dibayar. Bayar atau batalkan dulu, lalu pesan lagi."); return; }
   if (/rate_limited/.test(m)) { toast("Terlalu banyak pesanan dari nomor ini dalam waktu singkat. Tunggu 10 menit lalu coba lagi."); return; }
-  if (/invalid_hp/.test(m)) { toast("Nomor HP tidak valid."); return; }
+  if (/invalid_hp/.test(m)) { toast("Nomor WhatsApp tidak valid."); return; }
   if (/invalid_(area|alamat)/.test(m)) { toast("Wilayah atau alamat belum benar."); return; }
   if (/invalid_nama/.test(m)) { toast("Nama belum benar."); return; }
   if (/po_not_found|option_required|invalid_(option|addon|qty|lines|groups|ref)|addon_exceeds_main|empty_group|duplicate_po/.test(m)) { toast("Isi pesanan tidak cocok dengan menu terbaru. Muat ulang halaman lalu pilih lagi."); refreshProducts(); refreshPos(); return; }
@@ -717,7 +757,13 @@ async function submitOrder(){
   if (grand(gs) !== grand(outGs)) toast("Harga menu berubah. Cek jumlah transfer di bawah.");
   $("sum3").innerHTML = summaryHTML(outGs, kodeSum);
   /* pesanan sudah tercatat: simpan isi keranjang untuk "pesan seperti sebelumnya", lalu kosongkan */
-  lsSet(LS.snap, { cart:{ ...cart }, notes:{ ...itemNotes }, fulfil });
+  const snapNow = { cart:{ ...cart }, notes:{ ...itemNotes }, fulfil };
+  lsSet(LS.snap, snapNow);
+  try {
+    const mains = lines().filter(l => !l.addon), sum = mains.slice(0, 3).map(l => `${l.qty}× ${l.name}`).join(", ") + (mains.length > 3 ? ` +${mains.length - 3}` : "");
+    pushHistory({ id:placed[0].id, at:Date.now(), when:gs.length ? dShort(gs[0].date) : "", summary:sum, total:placedPay.total + kodeSum, snap:snapNow });
+    if (fulfil !== "ambil" && $("alamat").value.trim().length >= 10) saveAddress({ alamat:$("alamat").value.trim(), area:$("area").value, maps:mapsUrl, q:$("addr-q").value });
+  } catch (e) {}
   track("pesan", { total:placedPay.total + kodeSum, tanggal:gs.length });
   for (const k in cart) delete cart[k]; for (const k in itemNotes) delete itemNotes[k]; $("notes").value = "";
   saveCart(); saveCust();
@@ -816,6 +862,17 @@ function statusLabel(o){
   if (o.payStatus !== "lunas") return o.proof ? ["Bukti dicek admin", "info"] : ["Menunggu bayar", "warn"];
   return (o.fulfil === "ambil" ? DLV_PICK : DLV)[o.status] || DLV.baru;
 }
+/* linimasa tahap pesanan: Dicatat, Bayar, Diproses, Diantar atau Siap diambil, Selesai */
+function renderTimeline({ recorded, cs, allCancel, allPaid, anyNo, pk }){
+  const el = $("tl"); if (!el) return;
+  if (!recorded || allCancel || !cs.length) { el.hidden = true; el.innerHTML = ""; return; }
+  const rank = { baru:2, diproses:2, diantar:3, selesai:4 };
+  const stage = !allPaid ? 1 : Math.min(...cs.map(c => rank[c.status] != null ? rank[c.status] : 2));
+  const names = ["Dicatat", "Bayar", "Diproses", pk ? "Siap diambil" : "Diantar", "Selesai"];
+  el.hidden = false;
+  el.innerHTML = names.map((n, i) => { const st = i < stage || (stage === 4 && i === 4) ? "done" : i === stage ? (i === 1 && anyNo ? "bad" : "now") : "todo";
+    return `<li class="${st}"${st === "now" || st === "bad" ? ' aria-current="step"' : ""}><i>${st === "done" ? ic("check") : st === "bad" ? ic("x") : ""}</i><span>${esc(n)}</span></li>`; }).join("");
+}
 function renderTracker(){
   const tr = $("track");
   const cs = placed.map(o => trackConf[o.id] || { payStatus:"cek", status:"baru" });
@@ -834,6 +891,7 @@ function renderTracker(){
   { const dl = cs.map(c => c.deadline ? Date.parse(c.deadline) : 0).filter(Boolean); if (dl.length) placedDeadline = Math.max(...dl); placedExtended = cs.some(c => c.extended); }
   placedRejected = anyNo; placedClaimed = allCancel && claimed; placedProof = placedProof || cs.some(c => c.proof); $("claim-wrap").hidden = !canClaim; payVisible = !!recorded && !allPaid && !allCancel; renderPay();
   $("d-title").textContent = title; $("d-sub").textContent = sub; $("d-dot").className = "dot " + (tone === "warn" ? "" : tone);
+  renderTimeline({ recorded, cs, allCancel, allPaid, anyNo, pk });
   tr.innerHTML = placed.map((o, i) => {
     const c = cs[i], [lb, cl] = statusLabel({ fulfil:o.fulfil, payStatus:c.payStatus, status:c.status, proof:c.proof || placedProof });
     return `<li><div><b>${esc(o.id)}</b><small>${ic("po")}${esc(dShort(o.poDate))}${ic("clock")}${esc(o.hours || hours())}</small></div><span class="chip ${cl}">${lb}</span></li>`;
@@ -1461,6 +1519,7 @@ function renderAdminMenu(){
           <div><label class="fl" for="pr-${esc(p.id)}">Harga (Rp)</label><input type="text" id="pr-${esc(p.id)}" data-f="price" value="${(Number(p.price) || 0).toLocaleString("id-ID")}" inputmode="numeric" autocomplete="off"></div>
           <div><label class="fl" for="q-${esc(p.id)}">Kuota per PO</label><input type="number" id="q-${esc(p.id)}" data-f="quota" value="${p.quota == null ? "" : p.quota}" min="0" step="1" inputmode="numeric" placeholder="Tanpa batas"></div>
           <div class="full"><label class="fl" for="d-${esc(p.id)}">Deskripsi</label><input type="text" id="d-${esc(p.id)}" data-f="desc" value="${esc(p.desc)}"></div>
+          <div class="full"><label class="fl" for="tg-${esc(p.id)}">Label</label><input type="text" id="tg-${esc(p.id)}" data-f="tags" maxlength="80" value="${esc(p.tags || "")}" placeholder="Babi, Pedas"><div class="tagpick" role="group" aria-label="Pilih label">${["Babi", "Ayam", "Ikan", "Pedas", "Tidak pedas"].map(t => `<button type="button" data-tagpick="${t}" aria-pressed="${tagList(p).some(x => x.toLowerCase() === t.toLowerCase())}">${t}</button>`).join("")}</div></div>
         </div>
         <details class="adv" data-adv="${esc(p.id)}" ${advOpen.has(p.id) ? "open" : ""}><summary>Varian dan tambahan</summary>
           <div class="fgrid">
@@ -1530,6 +1589,13 @@ menuEl.addEventListener("change", async e => {
 });
 menuEl.addEventListener("click", async e => {
   try {
+    const tp = e.target.closest("[data-tagpick]");
+    if (tp) {
+      const row = tp.closest("[data-pid]"), inp = row.querySelector('[data-f="tags"]'), word = tp.dataset.tagpick;
+      const cur = inp.value.split(",").map(x => x.trim()).filter(Boolean), has = cur.findIndex(x => x.toLowerCase() === word.toLowerCase());
+      if (has >= 0) cur.splice(has, 1); else if (cur.length >= 3) { toast("Maksimal 3 label. Lepas salah satu dulu."); return; } else cur.push(word);
+      inp.value = cur.join(", "); inp.dispatchEvent(new Event("change", { bubbles:true })); return;
+    }
     if (e.target.closest("[data-add]")) {
       const max = Math.max(0, ...(products || []).map(p => Number(p.sort) || 0));
       await api.addProduct({ name:"Menu baru", desc:"", price:0, emoji:"🍽️", available:false, sort:max + 1, addons:[] }); await refreshProducts();
@@ -1620,7 +1686,7 @@ async function fillAdmins(){
   } catch (e) { if ($("ad-list")) $("ad-list").innerHTML = '<li class="note">Daftar admin belum tersedia. Jalankan ulang schema.sql terbaru.</li>'; }
 }
 $("a-set").addEventListener("click", async e => {
-  if (e.target.closest("#ad-copy")) { copyText(location.origin + "/?admin=1", $("ad-copy"), "Link admin disalin"); return; }
+  if (e.target.closest("#ad-copy")) { copyText(location.origin + "/admin", $("ad-copy"), "Link admin disalin"); return; }
   const rm = e.target.closest("[data-adrm]");
   if (rm) {
     const em = rm.dataset.adrm;
@@ -2143,7 +2209,7 @@ $("ck-go").onclick = async () => {
     const rows = await api.trackOrders(ids, hp);
     out.innerHTML = rows.length ? rows.map(r => { const [lb, cl] = statusLabel({ fulfil:r.fulfil, payStatus:r.pay_status, status:r.status, proof:!!r.has_proof });
       return `<li><div><b>${esc(r.id)}</b><small>${esc(dShort(r.po_date))} · ${r.fulfil === "ambil" ? "Ambil" : "Antar"} jam ${esc(r.hours)}</small></div><span class="chip ${cl}">${lb}</span></li>`; }).join("")
-      : '<li><div class="note">Pesanan tidak ditemukan. Periksa nomor pesanan dan nomor HP yang dipakai saat memesan.</div></li>';
+      : '<li><div class="note">Pesanan tidak ditemukan. Periksa nomor pesanan dan nomor WhatsApp yang dipakai saat memesan.</div></li>';
   } catch (e) { $("ck-err").textContent = "Belum bisa memeriksa. Coba lagi sebentar lagi."; }
   $("ck-go").disabled = false;
 };
@@ -2184,7 +2250,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 24;
+const SCHEMA_VERSION = 25;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
@@ -2202,11 +2268,11 @@ function subscribeRealtime(){
 }
 async function init(){
   restoreState(); initLast(); loadMenuCache(); renderStatic();
-  ["nama", "hp", "alamat"].forEach(k => $(k).addEventListener("input", saveCust)); $("area").addEventListener("change", saveCust);
+  ["nama", "hp", "alamat"].forEach(k => $(k).addEventListener("input", saveCust)); $("alamat").addEventListener("input", () => { if (!$("addr-saved").hidden) renderSavedAddrs(); }); $("area").addEventListener("change", saveCust);
   renderMenu(); updateBar(); go(1);
   setInterval(checkClosings, 15000); document.addEventListener("visibilitychange", checkClosings);
   const q = new URLSearchParams(location.search), hasTokens = /access_token|refresh_token|error_description/.test(location.hash);
-  const wantAdmin = location.hash === "#admin" || !!q.get("admin");
+  const wantAdmin = IS_ADMIN_URL || location.hash === "#admin" || !!q.get("admin");
   if (!wantAdmin && !hasTokens) funnelLog("kunjungan");
   if (wantAdmin && !hasTokens) setView("admin");
   /* tautan status: /?cek=2511-09 membuka Bantuan dengan nomor pesanan terisi (dan langsung memeriksa bila nomor HP sudah tersimpan) */

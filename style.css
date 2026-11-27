@@ -1799,3 +1799,62 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
 #shop .top > .col:not(.minibar){min-height:52px}
 #shop .top .logo.sm{width:30px;height:30px}
 #shop:not(.home) .top .minibar,#help-view .top .minibar{min-height:50px}
+
+/* header admin (HP dan halaman login) sama tingginya dengan header pembeli: 51px + pita 4px */
+.ahead{padding-bottom:4px}
+.ahead::after{height:4px;background:var(--ulos-soft);-webkit-mask:none;mask:none}
+.ahead .col{padding-top:0;padding-bottom:0;min-height:51px}
+.ahead .logo.sm{width:30px;height:30px}
+
+/* label menu */
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tag{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;background:var(--soft);color:var(--text-secondary);font-size:var(--t-cap);line-height:var(--lh-cap);font-weight:600}
+.tagpick{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--sp-2)}
+.tagpick button{min-height:30px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--text-secondary);font:inherit;font-size:var(--t-cap);font-weight:600;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.tagpick button[aria-pressed=true]{background:var(--hero);border-color:var(--hero);color:#fff8ee}
+@media (max-width:640px){.tag{font-size:13px}}
+
+/* linimasa tahap pesanan di halaman Bayar */
+.tl{list-style:none;margin:0 0 var(--sp-4);padding:0;display:grid;grid-template-columns:repeat(5,1fr)}
+.tl li{position:relative;display:grid;justify-items:center;gap:6px;text-align:center;font-size:var(--t-cap);line-height:var(--lh-cap);color:var(--text-secondary)}
+.tl li:not(:first-child)::before{content:"";position:absolute;top:11px;right:50%;width:100%;height:2px;background:var(--line);z-index:0}
+.tl li.done:not(:first-child)::before,.tl li.now::before,.tl li.bad::before{background:var(--accent)}
+.tl i{position:relative;z-index:1;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid var(--line);box-sizing:border-box}
+.tl i .ic{width:14px;height:14px;margin:0;stroke-width:2.4}
+.tl li.done i{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tl li.now i{border-color:var(--hero);background:#fff;box-shadow:0 0 0 4px rgba(142,76,67,.16)}
+.tl li.now i::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--hero)}
+.tl li.bad i{background:var(--bad);border-color:var(--bad);color:#fff}
+.tl li.now,.tl li.bad{color:var(--text-primary);font-weight:600}
+.tl li.bad{color:var(--bad)}
+@media (max-width:640px){.tl li{font-size:13px;line-height:18px}}
+@media (prefers-reduced-motion:no-preference){.tl i{transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease}}
+
+/* riwayat pesanan di beranda dan alamat tersimpan di checkout */
+.hist{border-top:1px solid rgba(59,44,39,.08)}
+.hist > summary{display:flex;align-items:center;gap:var(--sp-3);min-height:44px;padding:6px 14px;font-size:var(--t-small);font-weight:600;color:var(--accent);cursor:pointer;list-style:none}
+.hist > summary::-webkit-details-marker{display:none}
+.hist > summary span{flex:1}
+.hist > summary .chev{margin:0;color:var(--text-secondary);transition:transform .18s ease}
+.hist[open] > summary .chev{transform:rotate(180deg)}
+.hist ul{list-style:none;margin:0;padding:0 14px 8px;display:grid}
+.hist li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:var(--sp-3);padding:10px 0;border-top:1px solid rgba(59,44,39,.08)}
+.hist .hi{display:grid;gap:2px;min-width:0}
+.hist .hi b{font-size:var(--t-label);line-height:var(--lh-label);font-weight:600}
+.hist .hi small{color:var(--text-secondary);font-size:var(--t-cap);line-height:var(--lh-cap);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist .hp{font-size:var(--t-small);font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-secondary)}
+.hist .pillbtn{min-height:36px}
+@media (prefers-reduced-motion:no-preference){.hist[open] ul{animation:fadein .18s ease-out backwards}}
+.saved{display:grid;gap:var(--sp-2);margin:var(--sp-3) 0 0}
+.saved-l{font-size:var(--t-label);line-height:var(--lh-label);font-weight:600}
+.saved-r{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.sv{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:#fff;overflow:hidden;transition:border-color .15s ease,background-color .15s ease}
+.sv.on{border-color:var(--hero);background:var(--amber-soft)}
+.sv button{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border:0;background:none;color:var(--text-primary);font:inherit;font-size:var(--t-small);font-weight:600;cursor:pointer}
+.sv button .ic{width:var(--ic-sm);height:var(--ic-sm);margin:0;color:var(--accent)}
+.sv .x{padding:0 10px 0 4px;min-width:36px;color:var(--text-secondary)}
+.sv .x .ic{color:inherit}
+.saved-r{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.saved-r::-webkit-scrollbar{display:none}
+.sv{flex:none}
+.sv button{min-height:36px}

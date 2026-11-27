@@ -171,6 +171,16 @@ Catatan teknis:
 - Tabel tidak bisa dibaca dari browser. Hanya admin yang bisa melihat angka lewat `admin_funnel`.
 - Perlu menjalankan ulang `supabase/schema.sql` (v24). Sebelum itu panel menampilkan petunjuk dan pencatatan diabaikan tanpa mengganggu pembeli.
 
+## Pasang admin di layar utama (PWA)
+
+Admin punya alamat sendiri: `https://lapo-doli.vercel.app/admin`. Buka alamat itu, lalu pasang ke layar utama:
+- **Android (Chrome):** menu tiga titik, **Instal aplikasi** (atau Tambahkan ke layar utama).
+- **iPhone (Safari):** tombol bagikan, **Tambah ke Layar Utama**.
+
+Aplikasi yang terpasang dari `/admin` memakai nama "Lapo Doli Admin", latar krem, dan langsung membuka tampilan admin. Aplikasi toko untuk pembeli tetap terpisah (dipasang dari alamat utama). Kalau sebelumnya sudah memasang dari alamat utama atau `?admin=1`, hapus ikon lama lalu pasang ulang dari `/admin`.
+
+Catatan iPhone: link masuk dari email selalu terbuka di Safari, bukan di aplikasi yang terpasang, dan penyimpanan login keduanya terpisah. Jadi login dilakukan di Safari dulu, atau pakai kode masuk 6 angka (belum dibuat).
+
 ## Captcha login admin (Cloudflare Turnstile)
 
 Form login admin bisa dilindungi Cloudflare Turnstile (gratis dan tidak mengganggu). Pemeriksaan dilakukan Supabase di server, bukan di browser.
