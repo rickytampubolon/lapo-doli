@@ -153,18 +153,11 @@ Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`,
 - Tombol bawah di checkout memakai kapsul yang sama dengan keranjang.
 - Pembeli bisa membatalkan pesanan sendiri di halaman bayar selama belum ada bukti bayar (`cancel_orders`, skema v13).
 
-## Pilih alamat dari Google Maps
+## Pilih alamat dari peta
 
-Di halaman pesanan, pembeli yang memilih "Antar" bisa mencari alamat lewat Google Maps. Pilihan mengisi alamat dan wilayah otomatis, dan tautan peta ikut tersimpan di pesanan (tombol "Buka peta" di detail pesanan admin). Alamat di luar Jakarta ditolak.
+Di halaman pesanan, pembeli yang memilih "Antar" bisa mencari alamat lewat OpenStreetMap (layanan Photon, gratis, tanpa kunci dan tanpa akun). Pilihan mengisi alamat dan wilayah otomatis, dan tautan peta (koordinat di Google Maps) ikut tersimpan di pesanan, jadi tombol "Buka peta" di detail pesanan admin langsung menuju titiknya. Hasil pencarian dibatasi ke area Jakarta dan alamat di luar Jakarta tidak muncul. Pembeli tetap bisa mengisi alamat manual kalau pencarian tidak menemukan atau layanan sedang gangguan.
 
-Aktifkan dengan satu kunci:
-
-1. Di Google Cloud Console buat project, aktifkan **Places API (New)**, dan pasang billing (ada kuota gratis bulanan).
-2. Buat **API key**. Batasi di bagian *Application restrictions* ke **Websites** dengan alamat `https://lapo-doli.vercel.app/*` (tambah domain lain jika ada), dan di *API restrictions* hanya **Places API (New)**.
-3. Isi `GOOGLE_MAPS_KEY` di `config.js`. Kunci browser memang terlihat publik, karena itu pembatasan domain wajib.
-4. Jalankan ulang `supabase/schema.sql` (v14) untuk kolom `maps_url`.
-
-Tanpa kunci, kolom pencarian tersembunyi dan pembeli mengetik alamat seperti biasa. Pasang juga pagu anggaran (budget alert) di Google Cloud supaya biaya tidak mengejutkan.
+Photon adalah layanan publik dengan batas pemakaian wajar. Untuk toko kecil ini cukup. Kalau trafik besar, jalankan Photon sendiri atau ganti `PHOTON` di `app.js`. CSP di `vercel.json` mengizinkan `https://photon.komoot.io`.
 
 ## Fitur admin
 
