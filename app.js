@@ -193,12 +193,15 @@ const countFor = poId => Object.keys(cart).filter(k => k.startsWith(poId + "::")
 
 function renderPoChips(){
   const el = $("pochips"), list = openPos();
-  if (poList() === null || !list.length) { el.innerHTML = ""; return; }
+  if (poList() === null || !list.length) { el.innerHTML = ""; $("menu-h").textContent = "Pilih menu"; return; }
   if (!activeChosen || !list.some(x => x.id === activePo)) activePo = list[0].id;
   el.innerHTML = list.map(po => { const n = countFor(po.id);
-    return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}"><span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
+    return `<button type="button" class="cbtn" data-po="${esc(po.id)}" aria-pressed="${po.id === activePo}">${po.id === activePo ? ic("check") : ""}<span class="dow">${esc(relDay(po.date) || fmtD(po.date, { weekday:"short" }))}</span><span class="dnum">${esc(fmtD(po.date, { day:"numeric" }))}</span><span class="mon">${esc(fmtD(po.date, { month:"short" }))}</span>${n ? `<span class="cnt" aria-label="${n} porsi dipilih">${n}</span>` : ""}</button>`; }).join("");
+  const cur = list.find(x => x.id === activePo) || list[0];
+  $("menu-h").textContent = "Menu untuk " + (relDay(cur.date) ? relDay(cur.date).toLowerCase() : dShort(cur.date));
   const hr = s => s.replace(/\s*-\s*/, "-");
   $("sc-hours").textContent = hours() === pickHours() ? hr(hours()) : hr(hours()) + ", " + hr(pickHours());
+  document.querySelector(".sc-i small").hidden = hours() !== pickHours();
   renderCountdown();
 }
 $("pochips").addEventListener("click", e => {
@@ -411,7 +414,7 @@ $("reorder").onclick = reorder;
 function updateBar(){
   saveCart();
   const gs = groups();
-  $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? " · " + gs.length + " tanggal" : "");
+  $("count").textContent = qtyTotal() + " porsi" + (gs.length > 1 ? ", " + gs.length + " tanggal" : gs.length ? ", " + dShort(gs[0].date) : "");
   $("subtotal").textContent = rp(gs.reduce((a, g) => a + g.food, 0));
   $("next").disabled = qtyTotal() === 0;
   const noPo = screen === 1 && poList() !== null && openPos().length === 0;
@@ -473,7 +476,7 @@ function itemsHTML(gs){
       return `<div class="li">${th}<div class="ln"><span class="n">${esc(l.name)}</span>${l.option ? `<small>${esc(l.option)}</small>` : ""}${l.note ? `<small class="nt">${esc(l.note)}</small>` : ""}<span class="meta"><span class="p">${l.price ? rp(l.price * l.qty) : "Gratis"}</span>${pr && (optsOf(pr).length || addonsOf(pr).length || pr.note !== false) ? `<button type="button" class="editline" data-edit="${esc(g.poId + "::" + l.pid)}">Ubah</button>` : ""}</span></div>${stepper(k, l.name, plusOff)}</div>`;
     };
     const mains = g.items.filter(l => !l.addon), adds = g.items.filter(l => l.addon), seen = {};
-    return `<div class="gh2">${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</div>` + mains.map(l => {
+    return `<div class="gh2">${ic("po")}<span>${g.fulfil === "ambil" ? "Ambil" : "Antar"} ${esc(dShort(g.date))}</span><small>${esc((g.fulfil === "ambil" ? pickHours() : hours()).replace(/\s*-\s*/, "-"))}</small></div>` + mains.map(l => {
       const first = !seen[l.pid]; seen[l.pid] = 1;
       return `<div class="lg">${row(l)}${first ? adds.filter(x => x.pid === l.pid).map(row).join("") : ""}</div>`;
     }).join("");
