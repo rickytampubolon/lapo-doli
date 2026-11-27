@@ -1767,3 +1767,15 @@ body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px +
 #shop.is-error #s1.show{display:flex;flex-direction:column;min-height:calc(100svh - 96px)}
 #shop.is-error #po-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:var(--sp-10)}
 @media (max-width:380px){#s1 .chips{gap:6px}#s1 .cbtn,#s1 .cbtn .dow,#s1 .cbtn .mon,#s1 .cbtn .dnum{font-size:14px}#s1 .cbtn{padding:0 11px;gap:4px}}
+
+/* audit admin: judul seragam, form pesanan baru, transisi panel */
+.nform > .toolbar{justify-content:flex-start;gap:var(--sp-3)}
+.nf-t{margin:0;font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700}
+.nform .label{margin:var(--sp-5) 0 var(--sp-2);font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700}
+#a-orders .group,#a-orders .group > span:first-child{font-size:var(--t-h2);line-height:var(--lh-h2);font-weight:700}
+@media (prefers-reduced-motion:no-preference){
+  #a-orders:not([hidden]),#a-new:not([hidden]),#a-sales:not([hidden]),#a-rekap:not([hidden]),#a-cust:not([hidden]),#a-po:not([hidden]),#a-menu:not([hidden]),#a-set:not([hidden]){animation:pagein .22s ease-out backwards}
+  .odetail{animation:fadein .18s ease-out backwards}
+  #tabs button,.side .tabs button{transition:background-color .18s ease,color .18s ease}
+  .stabs button,.chip,.sel{transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+}

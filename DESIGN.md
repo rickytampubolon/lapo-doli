@@ -154,3 +154,12 @@ Aturan:
 - **PO belum dibuka atau tutup:** logo, judul, satu kalimat arahan, dan tombol Chat admin, di tengah layar. Kartu toko tetap menampilkan jam antar dan ambil.
 - **Galat memuat:** judul "Menu belum bisa dimuat", satu kalimat penyebab dan arahan, dan tombol Coba lagi.
 - **Kuota habis:** kartu menu pudar dengan lencana Habis. Tombol Tambah tidak tampil.
+
+## Aturan khusus admin
+
+- **Judul:** panel dan kelompok memakai H2 (16/700): judul panel, kelompok tanggal di daftar pesanan, judul form "Pesanan baru", dan "Menu" di form pesanan manual. Judul sub-bagian di dalam panel memakai label (14/600).
+- **Form dengan tombol kembali:** tombol kembali di kiri, judul langsung di sebelahnya (rata kiri), bukan di ujung kanan.
+- **Tindakan yang berbahaya diberi nama lengkap:** "Hapus menu" untuk menghapus menu, "Hapus" untuk foto di dalam kotak foto. Dua tombol di satu kartu tidak boleh memakai kata yang sama untuk hal yang berbeda.
+- **Panel yang kosong disembunyikan** kalau tidak ada gunanya, misalnya panel "Tambahan" di Penjualan hanya muncul kalau ada tambahan yang terjual.
+- **Perpindahan tab** memakai gerak yang sama dengan perpindahan halaman pembeli (geser 6px, 220ms), dan detail pesanan yang dibuka memudar masuk (180ms). Semua mati bila gerak dikurangi.
+- **Panel analytics** memakai kartu angka (soft), saran bernada (amber untuk perlu perhatian, hijau untuk baik, hero untuk info), dan batang horizontal. Warna amber hanya untuk hal yang perlu tindakan.
