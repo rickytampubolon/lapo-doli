@@ -449,7 +449,8 @@ function updateSteps(n){
   const bk = $("back1");
   if (n === 2) { bk.setAttribute("role", "button"); bk.setAttribute("tabindex", "0"); bk.setAttribute("aria-label", "Kembali ke menu"); } else { bk.removeAttribute("role"); bk.removeAttribute("tabindex"); bk.removeAttribute("aria-label"); }
   const mb = $("mb-back"); mb.setAttribute("aria-label", n === 3 ? "Ke beranda" : "Kembali ke menu");
-  document.querySelectorAll("#steps li, #steps2 li").forEach((li, j) => { const i = j % 3; const k = i + 1; li.className = k < n ? "done" : k === n ? "now" : ""; li.querySelector("i").innerHTML = k < n ? ic("check") : String(k); li.setAttribute("aria-current", k === n ? "step" : "false"); });
+  $("mb-title").textContent = n === 3 ? "Bayar" : "Isi data";
+  document.querySelectorAll("#steps li").forEach((li, i) => { const k = i + 1; li.className = k < n ? "done" : k === n ? "now" : ""; li.querySelector("i").innerHTML = k < n ? ic("check") : String(k); li.setAttribute("aria-current", k === n ? "step" : "false"); });
 }
 function go(n){
   screen = n;

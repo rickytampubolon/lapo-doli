@@ -1586,3 +1586,6 @@ body:has(#s1.show:not([hidden])) .fab-share span{display:inline}
 .steps.mini li:not(:last-child)::after{margin:0 8px}
 .minibar .hlink{margin:0;min-width:44px;min-height:44px}
 #shop:not(.home) .top .minibar{min-height:52px;padding-top:0;padding-bottom:0}
+.mb-title{margin:0;text-align:center;font-size:17px;line-height:24px;font-weight:700;color:var(--ink)}
+.minibar .mb-back{justify-self:start}
+.minibar [data-help]{justify-self:end}
