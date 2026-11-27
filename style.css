@@ -1589,3 +1589,5 @@ body:has(#s1.show:not([hidden])) .fab-share span{display:inline}
 .mb-title{margin:0;text-align:center;font-size:17px;line-height:24px;font-weight:700;color:var(--ink)}
 .minibar .mb-back{justify-self:start}
 .minibar [data-help]{justify-self:end}
+/* toast di atas bar bawah pembeli, jangan menutupi tombol lanjut */
+body:has(#bar:not([hidden])) .toast,body:has(#s2.show) .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}

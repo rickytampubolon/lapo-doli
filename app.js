@@ -206,7 +206,14 @@ function renderPoChips(){
 }
 $("pochips").addEventListener("click", e => {
   const b = e.target.closest("[data-po]"); if (!b) return;
-  activePo = b.dataset.po; activeChosen = true; renderMenu();
+  const old = activePo, next = b.dataset.po, po = openPos().find(x => x.id === next);
+  activePo = next; activeChosen = true;
+  if (old !== next && po && Object.keys(cart).some(k => k.startsWith(old + "::"))) {
+    const r = moveCart(old, next); renderMenu(); renderPoChips(); updateBar();
+    toastUndo("Pesanan dipindah ke " + dShort(po.date) + (r.dropped ? ". " + r.dropped + " menu tidak tersedia di tanggal ini" : ""), () => { restoreCart(r.prev); activePo = old; renderMenu(); renderPoChips(); updateBar(); });
+    return;
+  }
+  renderMenu();
 });
 
 function renderMenu(){
@@ -306,6 +313,23 @@ function bumpCart(key, delta){
   return true;
 }
 
+/* satu pesanan untuk satu tanggal: ganti tanggal memindahkan isi keranjang ke tanggal baru */
+function moveCart(from, to){
+  const prev = { cart:{ ...cart }, notes:{ ...itemNotes }, po:activePo }, pids = new Set(); let dropped = 0;
+  Object.keys(cart).filter(k => k.startsWith(from + "::")).forEach(k => {
+    const pid = k.split("::")[1], q = cart[k], p = (shopList() || []).find(x => x.id === pid), rem = remainOf(to, pid); delete cart[k];
+    if (!p || p.available === false || rem === 0) { dropped++; return; }
+    const nk = to + k.slice(from.length); cart[nk] = (cart[nk] || 0) + q; pids.add(pid);
+  });
+  Object.keys(itemNotes).filter(k => k.startsWith(from + "::")).forEach(k => { const nk = to + k.slice(from.length); if (!itemNotes[nk]) itemNotes[nk] = itemNotes[k]; delete itemNotes[k]; });
+  pids.forEach(pid => {
+    const rem = remainOf(to, pid);
+    if (rem != null) Object.keys(cart).filter(k => k.split("::")[0] === to && k.split("::")[1] === pid && !isAddonKey(k)).forEach(k => { const over = mainQty(to, pid) - rem; if (over > 0) { cart[k] = Math.max(0, cart[k] - over); if (!cart[k]) delete cart[k]; } });
+    clampAddons(to, pid);
+  });
+  return { prev, dropped };
+}
+function restoreCart(prev){ Object.keys(cart).forEach(k => delete cart[k]); Object.keys(itemNotes).forEach(k => delete itemNotes[k]); Object.assign(cart, prev.cart); Object.assign(itemNotes, prev.notes); activePo = prev.po; }
 
 const itemNotes = {};
 $("menu").addEventListener("click", e => { if (e.target.closest("[data-retry]")) { dbState = "loading"; products = null; renderMenu(); refreshProducts(); refreshPos(); } });
@@ -344,6 +368,8 @@ function saveCust(){ if (stateReady) lsSet(LS.cust, { nama:$("nama").value, hp:$
 function restoreState(){
   const c = lsGet(LS.cart);
   if (c && c.cart) { Object.assign(cart, c.cart); Object.assign(itemNotes, c.notes || {}); if (c.po && Object.keys(c.cart).length) { activePo = c.po; activeChosen = true; }
+    const pos = [...new Set(Object.keys(cart).map(k => k.split("::")[0]))];
+    if (pos.length > 1) { const keep = pos.includes(c.po) ? c.po : pos.sort()[0]; pos.filter(x => x !== keep).forEach(x => moveCart(x, keep)); activePo = keep; activeChosen = true; }
     if (c.fulfil === "ambil") { fulfil = "ambil"; const r = document.querySelector("[name=fulfil][value=ambil]"); if (r) r.checked = true; } }
   const u = lsGet(LS.cust);
   if (u) { ["nama", "hp", "alamat"].forEach(k => { if (u[k]) $(k).value = u[k]; }); if (u.area) $("area").value = u.area; if (mapsSafe(u.maps) && u.q) { mapsUrl = u.maps; $("addr-q").value = u.q; showAddrHint(true); } }
