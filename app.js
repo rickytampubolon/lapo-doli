@@ -6,6 +6,16 @@ const jakartaToday = () => new Date(Date.now() + 7 * 36e5).toISOString().slice(0
 const relDay = d => { const diff = Math.round((Date.parse(d + "T00:00:00Z") - Date.parse(jakartaToday() + "T00:00:00Z")) / 864e5); return diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : ""; };
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
 const LOAD_MS = 8000;
+/* tampilan admin bisa dibuka lewat /admin, ?admin=1, atau #admin. Di tampilan admin, aplikasi yang dipasang memakai manifest admin sendiri. */
+const IS_ADMIN_URL = /^\/admin\/?$/.test(location.pathname) || /[?&]admin=/.test(location.search) || location.hash === "#admin";
+if (IS_ADMIN_URL) {
+  try {
+    const mf = document.querySelector('link[rel="manifest"]'); if (mf) mf.href = "/admin.webmanifest";
+    document.title = "Lapo Doli Admin";
+    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = "#f7efe5";
+    let at = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (!at) { at = document.createElement("meta"); at.name = "apple-mobile-web-app-title"; document.head.appendChild(at); } at.content = "Admin";
+  } catch (e) {}
+}
 /* analitik: Vercel Analytics bila aktif; tanpa itu tidak melakukan apa pun */
 window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
 const track = (name, data) => { try { window.va("event", data ? { name, data } : { name }); } catch (e) {} funnelLog(name); };
@@ -17,7 +27,7 @@ function funnelSid(){
 }
 function funnelLog(name){
   try {
-    if (!FUNNEL.includes(name) || funnelSent.has(name) || typeof sb === "undefined" || !sb || isAdmin || session || /[?&]admin=|#admin/.test(location.search + location.hash)) return;
+    if (!FUNNEL.includes(name) || funnelSent.has(name) || typeof sb === "undefined" || !sb || isAdmin || session || IS_ADMIN_URL) return;
     funnelSent.add(name);
     Promise.resolve(sb.rpc("log_event", { p_sid:funnelSid(), p_name:name, p_po:typeof activePo === "string" ? activePo : "", p_device:window.innerWidth <= 640 ? "hp" : "desktop" })).catch(() => {});
   } catch (e) {}
@@ -1676,7 +1686,7 @@ async function fillAdmins(){
   } catch (e) { if ($("ad-list")) $("ad-list").innerHTML = '<li class="note">Daftar admin belum tersedia. Jalankan ulang schema.sql terbaru.</li>'; }
 }
 $("a-set").addEventListener("click", async e => {
-  if (e.target.closest("#ad-copy")) { copyText(location.origin + "/?admin=1", $("ad-copy"), "Link admin disalin"); return; }
+  if (e.target.closest("#ad-copy")) { copyText(location.origin + "/admin", $("ad-copy"), "Link admin disalin"); return; }
   const rm = e.target.closest("[data-adrm]");
   if (rm) {
     const em = rm.dataset.adrm;
@@ -2262,7 +2272,7 @@ async function init(){
   renderMenu(); updateBar(); go(1);
   setInterval(checkClosings, 15000); document.addEventListener("visibilitychange", checkClosings);
   const q = new URLSearchParams(location.search), hasTokens = /access_token|refresh_token|error_description/.test(location.hash);
-  const wantAdmin = location.hash === "#admin" || !!q.get("admin");
+  const wantAdmin = IS_ADMIN_URL || location.hash === "#admin" || !!q.get("admin");
   if (!wantAdmin && !hasTokens) funnelLog("kunjungan");
   if (wantAdmin && !hasTokens) setView("admin");
   /* tautan status: /?cek=2511-09 membuka Bantuan dengan nomor pesanan terisi (dan langsung memeriksa bila nomor HP sudah tersimpan) */
