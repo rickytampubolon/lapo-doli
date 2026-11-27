@@ -8,7 +8,20 @@ const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeo
 const LOAD_MS = 8000;
 /* analitik: Vercel Analytics bila aktif; tanpa itu tidak melakukan apa pun */
 window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
-const track = (name, data) => { try { window.va("event", data ? { name, data } : { name }); } catch (e) {} };
+const track = (name, data) => { try { window.va("event", data ? { name, data } : { name }); } catch (e) {} funnelLog(name); };
+/* corong pembeli: id sesi acak (hilang saat tab ditutup), tanpa data pribadi; admin tidak dihitung */
+const FUNNEL = ["kunjungan", "tambah_keranjang", "mulai_checkout", "pesan", "bukti_terkirim"], funnelSent = new Set();
+function funnelSid(){
+  try { let v = sessionStorage.getItem("ld_sid"); if (!v) { v = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => (b % 36).toString(36)).join(""); sessionStorage.setItem("ld_sid", v); } return v; }
+  catch (e) { return (funnelSid.m = funnelSid.m || Math.random().toString(36).slice(2, 14).padEnd(12, "x")); }
+}
+function funnelLog(name){
+  try {
+    if (!FUNNEL.includes(name) || funnelSent.has(name) || typeof sb === "undefined" || !sb || isAdmin || session || /[?&]admin=|#admin/.test(location.search + location.hash)) return;
+    funnelSent.add(name);
+    Promise.resolve(sb.rpc("log_event", { p_sid:funnelSid(), p_name:name, p_po:typeof activePo === "string" ? activePo : "", p_device:window.innerWidth <= 640 ? "hp" : "desktop" })).catch(() => {});
+  } catch (e) {}
+}
 const SKEL = '<div class="skel" aria-hidden="true"><i></i><div><b></b><b></b><b></b></div></div>'.repeat(3);
 const ic = (n, c = "") => `<svg class="ic ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -94,6 +107,7 @@ const api = {
   notifyTest: async hp => must(await sb.rpc("notify_test", { p_hp:hp })),
   loadNotifyQueue: async () => must(await sb.from("notify_queue").select("*").order("id", { ascending:false }).limit(12)),
   adminList: async () => must(await sb.rpc("admin_list")),
+  funnel: async days => must(await sb.rpc("admin_funnel", { p_days:days })),
   adminAdd: async email => must(await sb.rpc("admin_add", { p_email:email })),
   adminRemove: async email => must(await sb.rpc("admin_remove", { p_email:email })),
   claimPaid: async (gid, phone) => must(await sb.rpc("claim_paid", { p_gid:gid, phone })),
@@ -308,6 +322,7 @@ function bumpCart(key, delta){
   const [poId, pid] = key.split("::"), rem = isAddonKey(key) ? null : remainOf(poId, pid);
   if (delta > 0 && rem != null && mainQty(poId, pid) >= rem) { toast("Sisa " + rem + " porsi untuk menu ini"); return false; }
   cart[key] = Math.max(0, (cart[key] || 0) + delta);
+  if (delta > 0) funnelLog("tambah_keranjang");
   if (!cart[key]) delete cart[key];
   if (!isAddonKey(key)) clampAddons(poId, pid);
   return true;
@@ -1703,6 +1718,75 @@ setEl.addEventListener("click", e => { if (e.target.closest("[data-qris-del]")) 
 
 /* --- penjualan --- */
 let salesPo = "semua", salesBasis = "lunas", salesRange = 0, custFilter = "semua";
+let funnelData = null, funnelDays = 30, funnelState = "idle";
+const FUNNEL_LABEL = { kunjungan:"Membuka toko", tambah_keranjang:"Menambah menu", mulai_checkout:"Lanjut isi data", pesan:"Memesan", bukti_terkirim:"Kirim bukti bayar" };
+const FUNNEL_TIP = {
+  tambah_keranjang:"Banyak yang membuka toko tapi belum menambah menu. Cek foto, harga, dan pastikan menu terlihat jelas tanpa banyak scroll di HP.",
+  mulai_checkout:"Pembeli sudah menambah menu tapi tidak lanjut. Coba pastikan tombol lanjut mudah terlihat dan ongkir tidak mengejutkan.",
+  pesan:"Banyak yang berhenti di halaman Data. Cek apakah form terasa panjang, atau ongkir dan syarat Jakarta bikin ragu.",
+  bukti_terkirim:"Sudah memesan tapi belum kirim bukti bayar. Pertimbangkan batas waktu bayar yang lebih longgar atau pengingat WhatsApp."
+};
+const DAY_ID = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], DAY_SHORT = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+async function loadFunnel(){
+  funnelState = "loading";
+  try { funnelData = await api.funnel(funnelDays); funnelState = "ok"; } catch (e) { funnelState = "err"; }
+  if (tab === "sales") renderSales();
+}
+const pctOf = (a, b) => b > 0 ? Math.round(a / b * 1000) / 10 : 0;
+const fmtPct = n => (Math.round(n * 10) / 10).toString().replace(".", ",") + "%";
+function deltaChip(now, prev, unit){
+  if (!(prev > 0)) return '<small class="fn-d none">belum ada pembanding</small>';
+  const diff = unit === "pt" ? now - prev : (now - prev) / prev * 100, up = diff >= 0, v = Math.abs(Math.round(diff * 10) / 10);
+  if (!v) return '<small class="fn-d none">sama dengan sebelumnya</small>';
+  return `<small class="fn-d ${up ? "up" : "down"}">${ic(up ? "up" : "down")}${String(v).replace(".", ",")}${unit === "pt" ? " poin" : "%"} dari periode lalu</small>`;
+}
+function funnelInsights(f){
+  const st = f.steps || [], n = k => Number((st.find(x => x.name === k) || {}).n) || 0, pv = k => Number((st.find(x => x.name === k) || {}).prev) || 0;
+  const visits = n("kunjungan"), out = [];
+  if (visits < 20) return [{ tone:"info", t:"Data masih sedikit", d:`Baru ${visits} sesi dalam ${f.days} hari. Saran lebih akurat setelah 20 pengunjung atau lebih.` }];
+  let worst = null;
+  for (let i = 1; i < st.length; i++) { const a = Number(st[i - 1].n) || 0, b = Number(st[i].n) || 0; if (a >= 10) { const drop = 1 - b / a; if (!worst || drop > worst.drop) worst = { drop, name:st[i].name, a, b }; } }
+  if (worst && worst.drop >= 0.25) out.push({ tone:"warn", t:`Paling banyak berhenti di "${FUNNEL_LABEL[worst.name]}"`, d:`${Math.round(worst.drop * 100)}% tidak lanjut dari langkah sebelumnya (${worst.a} jadi ${worst.b}). ${FUNNEL_TIP[worst.name] || ""}` });
+  const dv = f.device || {}, hp = dv.hp, dk = dv.desktop;
+  if (hp && dk && hp.v >= 10 && dk.v >= 10) { const ch = pctOf(hp.p, hp.v), cd = pctOf(dk.p, dk.v);
+    if (Math.abs(ch - cd) >= 5) out.push({ tone:ch < cd ? "warn" : "good", t:ch < cd ? "Konversi di HP lebih rendah" : "Konversi di HP lebih tinggi", d:`${fmtPct(ch)} memesan di HP dibanding ${fmtPct(cd)} di desktop.${ch < cd ? " Coba pesan sendiri dari HP dan cari bagian yang menyulitkan." : " Tampilan HP sudah bekerja baik."}` }); }
+  const dh = f.hours || [], dd = f.dow || [], hs = dh.reduce((a, b) => a + b, 0), ds = dd.reduce((a, b) => a + b, 0);
+  if (hs >= 30 && ds >= 30) { const ph = dh.indexOf(Math.max(...dh)), pd = dd.indexOf(Math.max(...dd));
+    out.push({ tone:"info", t:`Paling ramai ${DAY_ID[pd]} sekitar jam ${String(ph).padStart(2, "0")}.00`, d:"Kirim pengingat PO atau buka PO sebelum waktu itu supaya lebih banyak yang sempat memesan." }); }
+  const pvv = pv("kunjungan");
+  if (pvv >= 10 && out.length < 3) { const ch = (visits - pvv) / pvv * 100; if (Math.abs(ch) >= 20) out.push({ tone:ch > 0 ? "good" : "warn", t:ch > 0 ? "Pengunjung naik" : "Pengunjung turun", d:`${Math.abs(Math.round(ch))}% dibanding ${f.days} hari sebelumnya.${ch < 0 ? " Bagikan link toko dan jadwal PO ke grup pelanggan." : ""}` }); }
+  if (!out.length) out.push({ tone:"good", t:"Corong terlihat sehat", d:"Tidak ada langkah yang menonjol sebagai penyebab pembeli berhenti." });
+  return out.slice(0, 3);
+}
+function funnelHTML(){
+  const head = `<div class="fn-h"><div><h3>Corong pembeli</h3><p class="fn-sub">Dari buka toko sampai kirim bukti bayar, ${funnelData && funnelData.days ? funnelData.days : funnelDays} hari terakhir</p></div><div class="stabs" role="group" aria-label="Rentang waktu">${[7, 30, 90].map(n => `<button type="button" data-fdays="${n}" aria-pressed="${funnelDays === n}">${n} hari</button>`).join("")}</div></div>`;
+  if (funnelState === "idle" || funnelState === "loading") return head + '<p class="note">Memuat...</p>';
+  if (funnelState === "err" || !funnelData) return head + '<p class="note">Belum bisa dimuat. Jalankan ulang <code>supabase/schema.sql</code> (v24) di Supabase SQL Editor.</p>';
+  const f = funnelData, st = f.steps || [];
+  if (!st.length || !(Number(st[0].n) > 0)) return head + '<p class="note">Belum ada data. Angka muncul setelah ada pembeli yang membuka toko.</p>';
+  const n = k => Number((st.find(x => x.name === k) || {}).n) || 0, pv = k => Number((st.find(x => x.name === k) || {}).prev) || 0;
+  const v = n("kunjungan"), o = n("pesan"), b = n("bukti_terkirim"), pvv = pv("kunjungan"), po = pv("pesan"), pb = pv("bukti_terkirim");
+  const conv = pctOf(o, v), pconv = pctOf(po, pvv), proof = pctOf(b, o), pproof = pctOf(pb, po);
+  const kpis = `<div class="fn-kpis"><div class="fn-k"><span>Pengunjung</span><b>${v}</b>${deltaChip(v, pvv)}</div><div class="fn-k"><span>Memesan</span><b>${o}</b>${deltaChip(o, po)}</div><div class="fn-k"><span>Dari buka toko ke pesan</span><b>${fmtPct(conv)}</b>${deltaChip(conv, pconv, "pt")}</div><div class="fn-k"><span>Pesan lanjut kirim bukti</span><b>${fmtPct(proof)}</b>${deltaChip(proof, pproof, "pt")}</div></div>`;
+  const ins = funnelInsights(f), insHTML = `<div class="fn-ins" role="list">${ins.map(i => `<div class="fn-i ${i.tone}" role="listitem"><b>${esc(i.t)}</b><p>${esc(i.d)}</p></div>`).join("")}</div>`;
+  let worst = -1, worstDrop = 0; st.forEach((x, i) => { if (!i) return; const a = Number(st[i - 1].n) || 0; if (a >= 10) { const d = 1 - (Number(x.n) || 0) / a; if (d > worstDrop && d >= 0.25) { worstDrop = d; worst = i; } } });
+  const top = Math.max(1, Number(st[0].n) || 0);
+  const rows = st.map((x, i) => { const c = Number(x.n) || 0, prev = i ? Number(st[i - 1].n) || 0 : 0, cont = i && prev ? Math.round(c / prev * 100) : null;
+    return `<li class="fn-r${i === worst ? " worst" : ""}"><div class="fn-l"><span>${esc(FUNNEL_LABEL[x.name] || x.name)}</span><b>${c}</b></div><div class="fn-bar" role="img" aria-label="${c} sesi, ${Math.round(c / top * 100)}% dari yang membuka toko"><i style="width:${Math.max(2, Math.round(c / top * 100))}%"></i></div><small>${i === 0 ? "sesi unik, semua yang membuka toko" : `${cont}% lanjut dari langkah sebelumnya${i === worst ? ", paling banyak berhenti" : ""}`}</small></li>`; }).join("");
+  const days = f.daily || [], dmax = Math.max(1, ...days.map(x => Number(x.v) || 0));
+  const spark = `<div class="fn-sp" role="img" aria-label="Pengunjung per hari">${days.map(x => { const vv = Number(x.v) || 0, pp = Number(x.p) || 0; return `<div class="fn-c" data-tip tabindex="0" data-a="${esc(fmtD(x.d, { day:"numeric", month:"short" }))}" data-b="${vv} pengunjung" data-c="${pp} memesan"><i class="v" style="height:${Math.max(vv ? 6 : 2, Math.round(vv / dmax * 100))}%"></i>${pp ? `<i class="p" style="height:${Math.max(6, Math.round(pp / dmax * 100))}%"></i>` : ""}</div>`; }).join("")}</div><div class="fn-ax"><span>${days.length ? esc(fmtD(days[0].d, { day:"numeric", month:"short" })) : ""}</span><span>${days.length ? esc(fmtD(days[days.length - 1].d, { day:"numeric", month:"short" })) : ""}</span></div>`;
+  const hrs = f.hours || [], hmax = Math.max(1, ...hrs), dws = f.dow || [], wmax = Math.max(1, ...dws), hp = hrs.indexOf(Math.max(...hrs)), wp = dws.indexOf(Math.max(...dws));
+  const hourBars = `<div class="fn-hr" role="img" aria-label="Pengunjung per jam">${hrs.map((c, h) => `<div class="fn-hb${h === hp && c ? " top" : ""}" data-tip tabindex="0" data-a="Jam ${String(h).padStart(2, "0")}.00" data-b="${c} pengunjung"><i style="height:${Math.max(c ? 8 : 3, Math.round(c / hmax * 100))}%"></i></div>`).join("")}</div><div class="fn-ax hr"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>`;
+  const dayBars = `<div class="fn-wk" role="img" aria-label="Pengunjung per hari dalam seminggu">${dws.map((c, i) => `<div class="fn-wb${i === wp && c ? " top" : ""}" data-tip tabindex="0" data-a="${DAY_ID[i]}" data-b="${c} pengunjung"><i style="height:${Math.max(c ? 8 : 3, Math.round(c / wmax * 100))}%"></i><span>${DAY_SHORT[i]}</span></div>`).join("")}</div>`;
+  const dv = f.device || {}, hpv = Number((dv.hp || {}).v) || 0, dkv = Number((dv.desktop || {}).v) || 0, dt = hpv + dkv;
+  const devRow = (k, lab, x) => `<div class="fn-dv"><div class="fn-l"><span>${lab}</span><b>${dt ? Math.round((Number(x.v) || 0) / dt * 100) : 0}%</b></div><div class="fn-bar"><i style="width:${dt ? Math.max(2, Math.round((Number(x.v) || 0) / dt * 100)) : 0}%"></i></div><small>${Number(x.v) || 0} pengunjung, ${fmtPct(pctOf(Number(x.p) || 0, Number(x.v) || 0))} memesan</small></div>`;
+  const dev = dt ? devRow("hp", "HP", dv.hp || {}) + devRow("desktop", "Desktop", dv.desktop || {}) : '<p class="note">Belum ada data perangkat.</p>';
+  return head + kpis + `<div class="fn-sec"><h4>Yang bisa dilakukan</h4>${insHTML}</div>
+    <div class="fn-grid"><div class="fn-sec"><h4>Langkah pembeli</h4><ul class="fn">${rows}</ul></div>
+    <div class="fn-sec"><h4>Pengunjung per hari</h4>${spark}<p class="note fn-leg"><i class="lv"></i>pengunjung <i class="lp"></i>memesan</p>${days.length && days.some(x => Number(x.v)) ? `<div class="fn-hl"><div><span>Rata-rata per hari</span><b>${Math.round(days.reduce((a, x) => a + (Number(x.v) || 0), 0) / days.length)}</b></div><div><span>Hari tertinggi</span><b>${Math.max(...days.map(x => Number(x.v) || 0))}</b><small>${esc(fmtD((days.reduce((m, x) => (Number(x.v) || 0) > (Number(m.v) || 0) ? x : m, days[0])).d, { day:"numeric", month:"short" }))}</small></div></div>` : ""}</div></div>
+    <div class="fn-grid three"><div class="fn-sec"><h4>Hari tersibuk${dws.some(x => x) ? `: ${DAY_ID[wp]}` : ""}</h4>${dayBars}</div><div class="fn-sec"><h4>Jam tersibuk${hrs.some(x => x) ? `: ${String(hp).padStart(2, "0")}.00` : ""}</h4>${hourBars}</div><div class="fn-sec"><h4>Perangkat</h4>${dev}</div></div>
+    <p class="note fn-s">Data anonim per sesi browser, tanpa nama atau nomor HP, tersimpan 90 hari. Admin tidak dihitung.</p>`;
+}
 const fmtShort = n => n >= 1e6 ? (n / 1e6).toLocaleString("id-ID", { maximumFractionDigits:1 }) + " jt" : n >= 1e3 ? Math.round(n / 1e3) + " rb" : String(Math.round(n));
 const niceMax = v => { if (v <= 0) return 100000; const p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; };
 const foodOf = o => Math.max(0, o.total - o.ongkir);
@@ -1730,7 +1814,8 @@ function exportSales(){
 function renderSales(){
   const el = $("a-sales");
   if (ordersState === "loading") { el.innerHTML = '<p class="note">Memuat data penjualan...</p>'; return; }
-  if (!orders.length) { el.innerHTML = '<div class="empty">Belum ada pesanan. Grafik penjualan muncul setelah pesanan pertama masuk.</div>'; return; }
+  if (funnelState === "idle" && sb && isAdmin) loadFunnel();
+  if (!orders.length) { el.innerHTML = '<div class="empty">Belum ada pesanan. Grafik penjualan muncul setelah pesanan pertama masuk.</div><div class="panel funnel">' + funnelHTML() + '</div>'; return; }
   const poSorted = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
   if (salesPo !== "semua" && !poSorted.some(p => p.id === salesPo)) salesPo = "semua";
   const live = orders.filter(o => o.status !== "batal" && o.payStatus !== "ditolak");
@@ -1781,6 +1866,7 @@ function renderSales(){
       <div class="panel"><h3>Wilayah pengantaran</h3>${areaRows.length ? hbars(areaRows) : '<p class="note">Belum ada pesanan antar.</p>'}</div>
       <div class="panel"><h3>Nasi dan sop</h3>${Object.keys(add).length ? hbars(Object.keys(add).map(n => ({ label:n, value:add[n].qty, a:add[n].qty + " porsi", c:add[n].rev ? rp(add[n].rev) : "Gratis" })).sort((a, b) => b.value - a.value)) : '<p class="note">Belum ada tambahan.</p>'}</div>
     </div>
+    <div class="panel funnel">${funnelHTML()}</div>
     <details class="tview panel"><summary>Lihat sebagai tabel</summary><div class="tw"><table class="dt"><thead><tr><th>Tanggal PO</th><th class="r">Pesanan</th><th class="r">Porsi</th><th class="r">Penjualan</th></tr></thead><tbody>${poSorted.map(po => { const os = live.filter(o => o.poId === po.id && inBasis(o));
       return `<tr><td>${esc(dShort(po.date))}</td><td class="r">${os.length}</td><td class="r">${os.reduce((a, o) => a + portionsOf(o), 0)}</td><td class="r">${rp(os.reduce((a, o) => a + foodOf(o), 0))}</td></tr>`; }).join("")}</tbody></table></div>
       <div class="tw"><table class="dt"><thead><tr><th>Menu</th><th class="r"></th><th class="r">Porsi</th><th class="r">Penjualan</th></tr></thead><tbody>${Object.keys(menu).map(n => `<tr><td>${esc(n)}</td><td class="r"></td><td class="r">${menu[n].qty}</td><td class="r">${rp(menu[n].rev)}</td></tr>`).join("") || '<tr><td colspan="3">Belum ada data.</td></tr>'}</tbody></table></div></details>
@@ -1803,6 +1889,7 @@ salesEl.addEventListener("pointerleave", () => { tipEl.hidden = true; });
 salesEl.addEventListener("focusin", e => { const t = e.target.closest("[data-tip]"); if (t) { const r = t.getBoundingClientRect(); showTip(t, r.left + r.width / 2, r.top); } });
 salesEl.addEventListener("focusout", () => { tipEl.hidden = true; });
 salesEl.addEventListener("click", e => {
+  const fd = e.target.closest("[data-fdays]"); if (fd) { funnelDays = Number(fd.dataset.fdays); loadFunnel(); renderSales(); return; }
   const rg = e.target.closest("[data-srange]"); if (rg) { salesRange = Number(rg.dataset.srange); renderSales(); return; }
   if (e.target.closest("[data-goto-cust]")) { custFilter = "repeat"; setTab("cust"); return; }
   if (e.target.closest("[data-sexport]")) { exportSales(); return; }
@@ -2098,7 +2185,7 @@ async function refreshOrders(){
   try { setOrders(await api.loadOrders()); } catch (e) { ordersState = "ok"; renderAdmin(); }
 }
 let ordersChannel = null;
-const SCHEMA_VERSION = 23;
+const SCHEMA_VERSION = 24;
 async function checkSchema(){
   let v = 0;
   try { v = Number(must(await sb.rpc("schema_version"))) || 0; } catch (e) { v = 0; }
@@ -2121,6 +2208,7 @@ async function init(){
   setInterval(checkClosings, 15000); document.addEventListener("visibilitychange", checkClosings);
   const q = new URLSearchParams(location.search), hasTokens = /access_token|refresh_token|error_description/.test(location.hash);
   const wantAdmin = location.hash === "#admin" || !!q.get("admin");
+  if (!wantAdmin && !hasTokens) funnelLog("kunjungan");
   if (wantAdmin && !hasTokens) setView("admin");
   /* tautan status: /?cek=2511-09 membuka Bantuan dengan nomor pesanan terisi (dan langsung memeriksa bila nomor HP sudah tersimpan) */
   const cek = q.get("cek");

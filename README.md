@@ -156,6 +156,21 @@ Fredoka, Geist, dan Geist Mono (lisensi SIL OFL) disajikan dari `assets/fonts/`,
 - Tombol bawah di checkout memakai kapsul yang sama dengan keranjang.
 - Pembeli bisa membatalkan pesanan sendiri di halaman bayar selama belum ada bukti bayar (`cancel_orders`, skema v13).
 
+## Analytics corong pembeli
+
+Tab **Penjualan** di admin punya panel "Corong pembeli" dengan rentang 7, 30, atau 90 hari:
+
+- **Kartu angka:** pengunjung, jumlah yang memesan, konversi dari buka toko ke pesan, dan berapa yang lanjut kirim bukti bayar. Masing-masing dibandingkan dengan periode sebelumnya yang sama panjang.
+- **Yang bisa dilakukan:** hingga tiga saran otomatis, misalnya langkah tempat pembeli paling banyak berhenti beserta penyebab yang mungkin, perbedaan konversi HP dan desktop, serta hari dan jam tersibuk. Kalau datanya kurang dari 20 pengunjung, panel hanya memberi tahu bahwa data masih sedikit.
+- **Langkah pembeli, tren harian, hari dan jam tersibuk, serta perangkat (HP dan desktop).**
+
+Catatan teknis:
+- Datanya disimpan di tabel `events` di Supabase toko sendiri, tanpa pihak ketiga.
+- Anonim: hanya id sesi acak yang hilang saat tab ditutup, nama kejadian, PO, dan jenis perangkat. Tidak ada nomor HP, nama, atau alamat. Kejadian lebih dari 90 hari dihapus otomatis.
+- Admin yang sedang login tidak dihitung. Maksimal 40 kejadian per sesi per jam.
+- Tabel tidak bisa dibaca dari browser. Hanya admin yang bisa melihat angka lewat `admin_funnel`.
+- Perlu menjalankan ulang `supabase/schema.sql` (v24). Sebelum itu panel menampilkan petunjuk dan pencatatan diabaikan tanpa mengganggu pembeli.
+
 ## Captcha login admin (Cloudflare Turnstile)
 
 Form login admin bisa dilindungi Cloudflare Turnstile (gratis dan tidak mengganggu). Pemeriksaan dilakukan Supabase di server, bukan di browser.
