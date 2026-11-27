@@ -610,10 +610,11 @@ $("copy-status").onclick = () => copyText(location.origin + "/?cek=" + placed.ma
 $("copy-no").onclick = () => copyText(String(settings.bankNumber), $("d-bank-no"), "Nomor rekening disalin");
 $("copy-amt").onclick = () => copyText(String(placedPay.total + placedPay.kode), $("d-amt"), "Jumlah disalin");
 
+const areaFromText = t => { const m = /Jakarta\s+(Pusat|Utara|Barat|Selatan|Timur)/i.exec(t || ""); return m ? "Jakarta " + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : ""; };
 const val = {
   nama:   v => v.trim().length >= 2 ? "" : "Isi nama kamu.",
   hp:     v => /^(\+?62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g, "")) ? "" : "Nomor HP tidak valid. Contoh: 08123456789",
-  area:   v => AREAS.includes(v) ? "" : "Pilih wilayah di Jakarta.",
+  area:   v => AREAS.includes(v) ? "" : "Antar hanya untuk Jakarta. Cari alamatnya di atas, atau tulis kotanya, misalnya Jakarta Selatan.",
   alamat: v => v.trim().length >= 10 ? "" : "Alamat belum lengkap."
 };
 
@@ -648,7 +649,7 @@ async function submitOrder(){
   let ok = true;
   const chk = (k, m) => { $("e-" + k).textContent = m; if (m) ok = false; };
   chk("nama", val.nama($("nama").value)); chk("hp", val.hp($("hp").value));
-  if (isPick()) { chk("area", ""); chk("alamat", ""); } else { chk("area", val.area($("area").value)); chk("alamat", val.alamat($("alamat").value)); }
+  if (isPick()) { chk("area", ""); chk("alamat", ""); } else { const at = areaFromText($("alamat").value); if (at) $("area").value = at; chk("alamat", val.alamat($("alamat").value)); if (!ok || !$("alamat").value.trim()) chk("area", ""); else chk("alamat", val.area($("area").value)); }
   if (!ok) { const f = [...document.querySelectorAll("#s2 .err")].find(x => x.textContent && !x.closest("[hidden]")); if (f) f.scrollIntoView({ behavior:"smooth", block:"center" }); return; }
   if (!sb) { toast("Toko belum siap dipakai. Coba lagi nanti."); return; }
   const btn = $("paid"); btn.disabled = true; $("paid-t").textContent = "Memproses...";
