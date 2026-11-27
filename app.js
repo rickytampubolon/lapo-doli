@@ -700,16 +700,18 @@ function gRender(){
 const gUniq = arr => arr.filter((x, i) => x && arr.findIndex(y => String(y).toLowerCase() === String(x).toLowerCase()) === i);
 function gParse(f){
   const p = f.properties || {}, c = (f.geometry && f.geometry.coordinates) || [], area = gAreaOf(p);
-  if (!area || c.length < 2) return null;
+  const reg = [p.state, p.county, p.city, p.district, p.locality].filter(Boolean).join(" ");
+  /* kotak pencarian juga menyentuh Tangerang, Bekasi, Depok: tolak yang jelas di luar Jakarta */
+  if (c.length < 2 || (reg && !/jakarta|dki/i.test(reg))) return null;
   const st = [p.street, p.housenumber].filter(Boolean).join(" ");
   const main = p.name || st || p.district || "";
-  const rest = gUniq([st, p.district || p.locality, area, p.postcode]).filter(x => x !== main);
+  const rest = gUniq([st, p.district || p.locality, area || "Jakarta", p.postcode]).filter(x => x !== main);
   if (!main) return null;
   return { main, sub:rest.join(", "), area, full:gUniq([main, ...rest]).join(", "), lat:Number(c[1]), lon:Number(c[0]) };
 }
 async function gSuggest(q){
   if (gAbort) gAbort.abort(); gAbort = new AbortController();
-  const res = await fetch(PHOTON + "?limit=10&bbox=" + JKT_BBOX + "&q=" + encodeURIComponent(q + " Jakarta"), { signal:gAbort.signal });
+  const res = await fetch(PHOTON + "?limit=12&bbox=" + JKT_BBOX + "&q=" + encodeURIComponent(q), { signal:gAbort.signal });
   if (!res.ok) throw new Error("photon " + res.status);
   const j = await res.json(), seen = new Set();
   return (j.features || []).map(gParse).filter(x => x && !seen.has(x.full) && seen.add(x.full)).slice(0, 5);
@@ -717,9 +719,10 @@ async function gSuggest(q){
 function gPick(i){
   const s = gItems[i]; if (!s) return; gClose();
   $("addr-q").value = s.main; $("e-addr-q").textContent = "";
-  $("area").value = s.area; $("alamat").value = s.full.slice(0, 300);
+  $("area").value = s.area || ""; $("alamat").value = s.full.slice(0, 300);
   mapsUrl = Number.isFinite(s.lat) && Number.isFinite(s.lon) ? `https://www.google.com/maps/search/?api=1&query=${s.lat.toFixed(6)},${s.lon.toFixed(6)}` : "";
   ["e-area", "e-alamat"].forEach(k => { $(k).textContent = ""; }); showAddrHint(true); saveCust(); track("alamat_peta");
+  if (!s.area) { $("e-area").textContent = "Pilih wilayah Jakarta."; $("area").focus(); }
 }
 {
   $("addr-search").hidden = false;
