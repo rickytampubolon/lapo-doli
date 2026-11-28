@@ -1868,3 +1868,6 @@ a,button,summary,label,select,input,textarea,[role=button],[role=tab]{touch-acti
 }
 #admin-gate .codein{text-align:center;letter-spacing:.4em;font-size:22px!important;font-weight:600;font-variant-numeric:tabular-nums}
 .codein::placeholder{letter-spacing:.2em;font-weight:400}
+a.side-brand{text-decoration:none;color:inherit;cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent}
+a.side-brand:focus-visible,.ahead a.brandrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ahead a.brandrow{text-decoration:none;color:inherit;cursor:pointer}

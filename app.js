@@ -1288,6 +1288,8 @@ function openNew(){
   newOpen = true; for (const k in mcart) delete mcart[k];
   $("a-orders").hidden = true; $("a-new").hidden = false; renderNewForm();
 }
+/* ketuk logo Lapo Doli di admin: kembali ke halaman Pesanan */
+document.querySelectorAll("[data-admin-home]").forEach(l => { l.onclick = e => { e.preventDefault(); if (newOpen) closeNew(); setTab("orders"); window.scrollTo({ top:0 }); }; });
 function closeNew(){ newOpen = false; $("a-new").hidden = true; $("a-orders").hidden = false; renderAdminOrders(); }
 function renderNewForm(){
   const pl = [...(pos || [])].sort((a, b) => String(a.date).localeCompare(String(b.date))), list = products || [];

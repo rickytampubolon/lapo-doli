@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://nzdmfmqtdyvhjzkzqutr.supabase.co" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css?v=20261201f">
+<link rel="stylesheet" href="/style.css?v=20261201g">
 <link rel="manifest" href="/admin.webmanifest">
 </head>
 <body>
@@ -187,13 +187,13 @@
 
 <div id="admin" hidden>
   <header class="ahead"><div class="col wide">
-    <div class="brandrow"><span class="logo sm" role="img" aria-label="Logo Lapo Doli"></span><span class="brand">Lapo Doli</span></div><span class="tag">Admin</span><span class="sp"></span>
+    <a class="brandrow" href="/admin" data-admin-home aria-label="Lapo Doli, ke Pesanan"><span class="logo sm" role="img" aria-label="Logo Lapo Doli"></span><span class="brand">Lapo Doli</span></a><span class="tag">Admin</span><span class="sp"></span>
     <button class="textbtn" id="to-shop-top" type="button">Lihat toko</button>
     <button class="menubtn" id="menu-btn" type="button" aria-expanded="false" aria-controls="sidenav" aria-label="Buka menu" title="Menu"><svg class="ic" aria-hidden="true"><use href="#i-burger"/></svg><span class="n" id="n-cek-top" hidden>0</span></button>
   </div></header>
   <div class="shell">
     <aside class="side" id="sidenav" aria-label="Navigasi admin">
-      <div class="side-brand"><span class="logo sm" role="img" aria-label="Logo Lapo Doli"></span><span class="brand">Lapo Doli</span><span class="tag">Admin</span></div>
+      <a class="side-brand" href="/admin" data-admin-home aria-label="Lapo Doli, ke Pesanan"><span class="logo sm" role="img" aria-label="Logo Lapo Doli"></span><span class="brand">Lapo Doli</span><span class="tag">Admin</span></a>
       <nav class="tabs" role="tablist" id="tabs" aria-orientation="vertical">
         <button role="tab" data-tab="orders" aria-selected="true"><svg class="ic" aria-hidden="true"><use href="#i-orders"/></svg><span class="lbl">Pesanan</span><span class="n" id="n-cek" hidden>0</span></button>
         <button role="tab" data-tab="sales" aria-selected="false"><svg class="ic" aria-hidden="true"><use href="#i-sales"/></svg><span class="lbl">Penjualan</span></button>
@@ -232,7 +232,7 @@
 
 <script defer src="/config.js"></script>
 <script defer src="/vendor/supabase.js"></script>
-<script defer src="/app.js?v=20261201f"></script>
+<script defer src="/app.js?v=20261201g"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
