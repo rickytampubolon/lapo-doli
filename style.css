@@ -1866,3 +1866,5 @@ a,button,summary,label,select,input,textarea,[role=button],[role=tab]{touch-acti
   input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{font-size:16px!important}
   #shop input:not([type=checkbox]):not([type=radio]),#shop textarea,#shop select,#help-view input,#help-view select,#help-view textarea{font-size:17px!important}
 }
+#admin-gate .codein{text-align:center;letter-spacing:.4em;font-size:22px!important;font-weight:600;font-variant-numeric:tabular-nums}
+.codein::placeholder{letter-spacing:.2em;font-weight:400}

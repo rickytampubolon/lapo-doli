@@ -181,7 +181,19 @@ Aplikasi yang terpasang dari `/admin` memakai nama "Lapo Admin", latar krem, dan
 
 `/admin` dilayani dari file `admin.html`, yang dibuat otomatis dari `index.html` dengan `node tools/sync-admin.js` (jalankan setiap kali `index.html` berubah). Manifest harus ada di HTML-nya karena Safari di iPhone tidak membaca manifest yang diganti lewat JavaScript.
 
-Catatan iPhone: link masuk dari email selalu terbuka di Safari, bukan di aplikasi yang terpasang, dan penyimpanan login keduanya terpisah. Jadi login dilakukan di Safari dulu, atau pakai kode masuk 6 angka (belum dibuat).
+Catatan iPhone: link masuk dari email selalu terbuka di Safari, bukan di aplikasi yang terpasang, dan penyimpanan login keduanya terpisah. Karena itu, masuklah dengan kode masuk 6 angka (lihat bagian di bawah).
+
+## Kode masuk 6 angka untuk admin
+
+Selain link, halaman login admin menerima **kode 6 angka** yang dikirim ke email yang sama. Ini berguna di aplikasi admin di iPhone, karena link email selalu terbuka di Safari dan login tidak terbawa ke aplikasi yang terpasang. Dengan kode, admin cukup mengetik angkanya di dalam aplikasi.
+
+Supaya kodenya ikut terkirim, ubah template email di Supabase (sekali saja):
+1. Buka **Authentication, Emails** (atau Email Templates).
+2. Buka template **Magic Link** dan tambahkan satu baris di isinya: `<p>Kode masuk: <b>{{ .Token }}</b></p>`. Simpan.
+3. Lakukan hal yang sama di template **Confirm signup**. Template ini dipakai saat admin masuk untuk pertama kali.
+4. Panjang kode diatur di **Authentication, Sign In / Providers, Email** (Email OTP Length). Biarkan 6.
+
+Cara kerja di aplikasi: setelah menekan "Kirim link masuk", muncul kolom "Kode 6 angka". Kode terisi otomatis dari saran keyboard di iPhone dan langsung diperiksa begitu enam angka terisi. Maksimal 5 percobaan salah, lalu harus meminta kode baru. Email yang tidak terdaftar sebagai admin mendapat tampilan yang sama persis, jadi daftar admin tidak bisa ditebak. Link di email tetap bisa dipakai seperti biasa.
 
 ## Captcha login admin (Cloudflare Turnstile)
 

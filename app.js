@@ -2154,7 +2154,27 @@ function renderGate(){
   $("gate-send").onclick = sendMagic; mountTurnstile(); if (magicNext > Date.now()) startCooldown();
   $("gate-email").addEventListener("keydown", e => { if (e.key === "Enter") sendMagic(); });
 }
-let magicNext = 0, cdTimer = null;
+let magicNext = 0, cdTimer = null, codeTries = 0, codeBusy = false;
+/* masuk dengan kode 6 angka dari email (berguna di aplikasi iPhone, karena link email terbuka di Safari) */
+async function verifyCode(email){
+  if (codeBusy) return;
+  const code = String($("gate-code").value || "").replace(/\D/g, ""), err = $("gate-cerr");
+  if (code.length !== 6) { err.textContent = "Isi 6 angka kode dari email."; return; }
+  if (codeTries >= 5) { err.textContent = "Terlalu banyak percobaan. Pilih Pakai email lain untuk meminta kode baru."; return; }
+  codeBusy = true; err.textContent = ""; $("gate-verify").disabled = true; $("gate-verify").textContent = "Memeriksa...";
+  let error = null;
+  try { ({ error } = await sb.auth.verifyOtp({ email, token:code, type:"email" })); } catch (e) { error = e || new Error("x"); }
+  codeBusy = false;
+  if (error) {
+    const b = $("gate-verify"); if (!b) return;
+    const net = error.status === 0 || /fetch|network/i.test(String(error.message || ""));
+    if (!net) codeTries++;
+    b.disabled = false; b.textContent = "Masuk";
+    err.textContent = net ? "Belum tersambung. Periksa koneksi lalu coba lagi." : codeTries >= 5 ? "Terlalu banyak percobaan. Pilih Pakai email lain untuk meminta kode baru." : "Kode salah atau sudah kedaluwarsa.";
+    const c = $("gate-code"); if (c) { c.value = ""; c.focus({ preventScroll:true }); }
+  }
+  /* kalau berhasil, onAuthStateChange memasang sesi dan layar admin terbuka sendiri */
+}
 /* hitung mundur jeda kirim ulang: tombol nonaktif dan angkanya berjalan tiap detik */
 function startCooldown(){
   clearInterval(cdTimer);
@@ -2194,8 +2214,18 @@ async function sendMagic(){
   if (error && !unknown) { $("gate-send").disabled = false; err.textContent = "Link belum terkirim. Periksa koneksi lalu coba lagi."; return; }
   magicNext = Date.now() + 60000;
   /* pesan sama untuk email yang dikenal maupun tidak, supaya daftar admin tidak bisa ditebak */
-  $("admin-gate").innerHTML = `<div class="card"><h3>Cek email Anda</h3><p class="fhint" style="margin:0">Kalau ${esc(email)} terdaftar sebagai admin, link masuk sudah dikirim. Cek juga folder spam.</p><button class="btn line sm" id="gate-back" type="button" style="margin-top:12px">Pakai email lain</button></div>`;
+  codeTries = 0;
+  $("admin-gate").innerHTML = `<div class="card"><h3>Cek email Anda</h3><p class="fhint" style="margin:0">Kalau ${esc(email)} terdaftar sebagai admin, link masuk dan kode 6 angka sudah dikirim. Ketuk link di email, atau ketik kodenya di bawah. Cek juga folder spam.</p>
+    <label class="fl" for="gate-code" style="margin-top:14px">Kode 6 angka</label>
+    <input type="text" id="gate-code" class="codein" inputmode="numeric" pattern="[0-9]*" maxlength="7" autocomplete="one-time-code" placeholder="123456" aria-describedby="gate-cerr">
+    <div class="err" id="gate-cerr" role="alert"></div>
+    <button class="btn" id="gate-verify" type="button" style="margin-top:6px">Masuk</button>
+    <button class="btn line sm" id="gate-back" type="button" style="margin-top:12px">Pakai email lain</button></div>`;
   $("gate-back").onclick = renderGate;
+  $("gate-verify").onclick = () => verifyCode(email);
+  $("gate-code").addEventListener("input", e => { const v = e.target.value.replace(/\D/g, "").slice(0, 6); e.target.value = v; if (v.length === 6) verifyCode(email); });
+  $("gate-code").addEventListener("keydown", e => { if (e.key === "Enter") verifyCode(email); });
+  setTimeout(() => { const c = $("gate-code"); if (c) c.focus({ preventScroll:true }); }, 150);
 }
 async function signOut(){ try { await sb.auth.signOut(); } catch (e) {} await applySession(null); }
 $("logout").onclick = signOut;
